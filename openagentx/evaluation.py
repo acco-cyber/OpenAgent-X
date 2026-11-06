@@ -187,8 +187,15 @@ def _trace_drill(task: dict) -> list:
 
 
 def _team_drill(task: dict) -> list:
-    """Two-role handoff: lead writes a brief, specialist consumes it — one journal."""
+    """Two-role handoff: lead writes a brief, specialist consumes it — one journal.
+
+    Honest contract: exactly one reserved ``handoff`` event (lead→specialist,
+    reason recorded), role phases ordered, the lead's brief reaches disk and the
+    specialist reads it back through the journal, the reply comes after the
+    handoff and matches ``expect.reply`` — all on one dense shared journal.
+    """
     wd = _fresh_wd("team")
+    exp = _expect(task)
     lead = ScriptedLLM([str(s) for s in task.get("lead_script", [])], name="lead")
     spec = ScriptedLLM([str(s) for s in task.get("specialist_script", [])], name="specialist")
     runner = TeamRunner(
@@ -202,6 +209,7 @@ def _team_drill(task: dict) -> list:
     h = handoffs[0].payload if handoffs else {}
     role_starts = [e.payload.get("role") for e in events if e.type == "role_start"]
     replies = [e for e in events if e.type == "reply"]
+    brief_marker = str(exp.get("brief_marker", "brief: compute 6*7"))
     brief_path = os.path.join(wd, "brief.txt")
     lead_writes = [e for e in events if e.type == "tool_call"
                    and e.payload.get("role") == "lead"
@@ -211,17 +219,17 @@ def _team_drill(task: dict) -> list:
                   and e.payload.get("tool") == "read_file" and e.payload.get("ok")]
     brief_on_disk = open(brief_path, encoding="utf-8").read() if os.path.exists(brief_path) else ""
     jp = os.path.join(wd, "journal.jsonl")
-    return [
+    checks = [
         Check("journal_dense_shared", sequence_dense(events), f"{len(events)} events"),
         Check("handoff_event_present",
               len(handoffs) == 1 and h.get("from_role") == "lead"
               and h.get("to_role") == "specialist", str(h)[:80]),
         Check("handoff_reason_recorded", bool(h.get("reason")), str(h.get("reason", ""))[:60]),
         Check("role_phases_ordered", role_starts == ["lead", "specialist"], str(role_starts)),
-        Check("lead_wrote_brief", bool(lead_writes) and "brief: compute 6*7" in brief_on_disk,
+        Check("lead_wrote_brief", bool(lead_writes) and brief_marker in brief_on_disk,
               f"writes={len(lead_writes)} disk={brief_on_disk[:30]!r}"),
         Check("specialist_read_brief",
-              bool(spec_reads) and "brief: compute 6*7" in str((spec_reads[0].payload.get("result") or {}).get("text", "")),
+              bool(spec_reads) and brief_marker in str((spec_reads[0].payload.get("result") or {}).get("text", "")),
               "observation flows through the journal"),
         Check("reply_after_handoff",
               bool(replies) and bool(handoffs) and replies[0].seq > handoffs[0].seq
@@ -233,6 +241,14 @@ def _team_drill(task: dict) -> list:
               "one journal, one run identity"),
         Check("reopen_dense", sequence_dense(_reopen(jp))),
     ]
+    if "reply" in exp:
+        checks.append(Check("specialist_reply_matches", result.reply == exp["reply"],
+                            f"got {result.reply!r} want {exp['reply']!r}"))
+    if "handoffs" in exp:
+        checks.append(Check("handoff_count_matches",
+                            result.handoffs == int(exp["handoffs"]) == len(handoffs),
+                            f"result={result.handoffs} events={len(handoffs)}"))
+    return checks
 
 
 def _router_drill(task: dict) -> list:
