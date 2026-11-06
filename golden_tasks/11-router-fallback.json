@@ -1,0 +1,13 @@
+{
+  "id": "11-router-fallback",
+  "title": "Router fallback: primary fails loudly, fallback serves the turn, total outage stops explicitly",
+  "drill": "router",
+  "task_text": "answer this turn even though the primary model is down; the fallback adapter must serve it",
+  "max_steps": 6,
+  "fallback_script": [
+    "{\"reply\": \"served by the fallback adapter\"}"
+  ],
+  "expect": {
+    "reply": "served by the fallback adapter"
+  }
+}
