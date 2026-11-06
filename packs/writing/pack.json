@@ -1,0 +1,7 @@
+{
+  "name": "writing",
+  "version": "0.1.0",
+  "description": "Technical writing and documentation: structure, editing passes, and plain-language discipline.",
+  "triggers": ["write", "documentation", "readme", "blog", "article", "draft", "copy", "email", "summary", "docs"],
+  "permissions": ["P0", "P1"]
+}

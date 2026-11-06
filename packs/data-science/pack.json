@@ -1,0 +1,7 @@
+{
+  "name": "data-science",
+  "version": "0.1.0",
+  "description": "Data analysis and ML work: profiling, validation, leakage traps, and reproducibility discipline.",
+  "triggers": ["data", "dataset", "csv", "pandas", "dataframe", "model", "train", "statistics", "plot", "analysis", "sql"],
+  "permissions": ["P0", "P1", "P2"]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "web-dev",
+  "version": "0.1.0",
+  "description": "Modern web development: architecture, performance, security, and testing checklists distilled for agentic work.",
+  "triggers": ["web", "frontend", "react", "next", "css", "html", "api route", "responsive", "browser", "landing page"],
+  "permissions": ["P0", "P1", "P3"]
+}

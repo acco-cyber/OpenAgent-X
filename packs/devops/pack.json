@@ -1,0 +1,7 @@
+{
+  "name": "devops",
+  "version": "0.1.0",
+  "description": "Operations and reliability: CI/CD, infrastructure-as-code, incident response, and rollback discipline.",
+  "triggers": ["deploy", "docker", "kubernetes", "ci", "pipeline", "server", "infrastructure", "monitoring", "incident", "rollback", "devops"],
+  "permissions": ["P0", "P1", "P2"]
+}

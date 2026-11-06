@@ -1,0 +1,7 @@
+{
+  "name": "research",
+  "version": "0.1.0",
+  "description": "Research method: source hierarchy, citation discipline, and synthesis under uncertainty.",
+  "triggers": ["research", "find information", "sources", "compare", "survey", "literature", "investigate", "fact check", "evidence"],
+  "permissions": ["P0", "P3"]
+}
