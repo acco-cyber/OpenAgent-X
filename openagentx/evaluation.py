@@ -348,6 +348,60 @@ def _budget_drill(task: dict) -> list:
     ]
 
 
+def _stop_drill(task: dict) -> list:
+    """The reserved stop tool: an explicit, reasoned stop — never a tool_call.
+
+    Honest contract: ``stop`` is control-plane (reserved, unjournaled as a tool
+    call, budget-free), the stop reason lands in the final ``run_end`` payload,
+    prior work stays in the journal, and the scripted reply tail is never
+    consumed — stopping is not replying.
+    """
+    wd = _fresh_wd("stop")
+    script = _script(task)
+    llm = ScriptedLLM(script)
+    runner = AgentRunner(
+        llm, builtin_tools(wd), os.path.join(wd, "journal.jsonl"),
+        max_steps=int(task.get("max_steps", 8)),
+        max_tool_calls=int(task.get("max_tool_calls", 0)),
+        workdir=wd, run_id=str(task.get("run_id", "stop-drill")),
+    )
+    result = runner.run(str(task.get("task_text", "stop drill")))
+    events, _torn = load_trace(os.path.join(wd, "journal.jsonl"))
+    exp = _expect(task)
+    run_end = events[-1]
+    stop_calls = [e for e in events if e.type == "tool_call"
+                  and e.payload.get("tool") == "stop"]
+    results_ok = [e for e in events if e.type == "tool_result" and e.payload.get("ok")]
+    exp_value = exp.get("last_result_value")
+    if exp_value is None:
+        prior_ok, prior_detail = True, "no value expected"
+    else:
+        val = (results_ok[-1].payload.get("result") or {}).get("value") if results_ok else None
+        prior_ok, prior_detail = val == exp_value, f"last result value={val!r} want {exp_value!r}"
+    return [
+        Check("stop_reason_stop_tool",
+              result.stop_reason == "stop_tool" and run_end.type == "run_end"
+              and run_end.payload.get("stop_reason") == "stop_tool",
+              f"got {result.stop_reason}"),
+        Check("stop_reason_recorded", run_end.payload.get("reason") == exp.get("reason", ""),
+              str(run_end.payload)[:80]),
+        Check("stop_never_a_tool_call", not stop_calls,
+              f"{len(stop_calls)} stop tool_call events"),
+        Check("tool_calls_counted",
+              sum(1 for e in events if e.type == "tool_call") == exp.get("tool_calls", 0)),
+        Check("prior_work_preserved", prior_ok, prior_detail),
+        Check("steps_match_expect", result.steps == exp.get("steps", len(script) - 1),
+              f"steps={result.steps}"),
+        Check("script_tail_unconsumed", llm.cursor < len(script),
+              f"cursor={llm.cursor}/{len(script)} — stop fired before the reply line"),
+        Check("no_reply_fabricated", not any(e.type == "reply" for e in events)),
+        Check("events_end_with_run_end", run_end.type == "run_end"),
+        Check("journal_dense_reopen",
+              sequence_dense(events)
+              and sequence_dense(_reopen(os.path.join(wd, "journal.jsonl")))),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -355,6 +409,7 @@ DRILLS = {
     "team": _team_drill,
     "router": _router_drill,
     "budget": _budget_drill,
+    "stop": _stop_drill,
 }
 
 
