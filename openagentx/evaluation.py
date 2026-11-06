@@ -291,12 +291,70 @@ def _router_drill(task: dict) -> list:
     ]
 
 
+def _budget_drill(task: dict) -> list:
+    """The tool-call governor: a capped run stops BEFORE the rejected call.
+
+    Honest contract: the ``budget`` event names the rejected tool, the cap is
+    recorded at run_start, executed calls all precede the budget line, no reply
+    is fabricated, and the scripted tail stays unconsumed (script exhaustion
+    and budget exhaustion are different animals).
+    """
+    wd = _fresh_wd("budget")
+    script = _script(task)
+    cap = int(task.get("max_tool_calls", 2))
+    llm = ScriptedLLM(script)
+    runner = AgentRunner(
+        llm, builtin_tools(wd), os.path.join(wd, "journal.jsonl"),
+        max_steps=int(task.get("max_steps", 8)), max_tool_calls=cap,
+        workdir=wd, run_id=str(task.get("run_id", "budget-drill")),
+    )
+    result = runner.run(str(task.get("task_text", "budget drill")))
+    events, _torn = load_trace(os.path.join(wd, "journal.jsonl"))
+    exp = _expect(task)
+    budget_evts = [e for e in events if e.type == "budget"]
+    b = budget_evts[0].payload if budget_evts else {}
+    tool_calls = [e for e in events if e.type == "tool_call"]
+    rejected = str(exp.get("rejected_tool", ""))
+    return [
+        Check("stop_reason_budget",
+              result.stop_reason == "budget" and events[-1].type == "run_end"
+              and events[-1].payload.get("stop_reason") == "budget",
+              f"got {result.stop_reason}"),
+        Check("budget_event_present", len(budget_evts) == 1,
+              f"{len(budget_evts)} budget events"),
+        Check("budget_payload_honest",
+              b.get("kind") == "tool_calls" and b.get("used") == cap
+              and b.get("cap") == cap and b.get("rejected_tool") == rejected,
+              str(b)[:90]),
+        Check("budget_precedes_run_end",
+              bool(budget_evts) and budget_evts[0].seq < events[-1].seq),
+        Check("rejected_tool_never_ran",
+              len(tool_calls) == exp.get("tool_calls", cap)
+              and all(e.seq < budget_evts[0].seq for e in tool_calls)
+              and not any(e.seq > budget_evts[0].seq for e in events
+                          if e.type == "tool_result"),
+              f"{len(tool_calls)} calls, all before the budget line"),
+        Check("cap_recorded_at_start",
+              any(e.type == "run_start" and e.payload.get("max_tool_calls") == cap
+                  for e in events)),
+        Check("capped_attempt_counts_a_step",
+              result.steps == exp.get("steps", cap + 1), f"steps={result.steps}"),
+        Check("script_tail_unconsumed", llm.cursor < len(script),
+              f"cursor={llm.cursor}/{len(script)} — budget, not script exhaustion"),
+        Check("no_reply_fabricated", not any(e.type == "reply" for e in events)),
+        Check("journal_dense_reopen",
+              sequence_dense(events)
+              and sequence_dense(_reopen(os.path.join(wd, "journal.jsonl")))),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
     "trace": _trace_drill,
     "team": _team_drill,
     "router": _router_drill,
+    "budget": _budget_drill,
 }
 
 
