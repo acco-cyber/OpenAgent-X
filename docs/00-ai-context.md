@@ -44,11 +44,17 @@ trace.py       load_trace (safe), replay (pure deterministic fold),
 evaluation.py  golden-task harness: JSON specs → drills of named Checks;
                exceptions fold into failing harness_error; DRILLS registry
                (loop, redact, trace, team, router, budget, stop,
-               redact_nested, audit)
+               redact_nested, audit, pack, sbom)
 doctor.py      python>=3.10, stdlib purity (AST import scan vs sys.stdlib_module_names),
                offline purity (no net modules), required files, task contracts
 audit.py       secret-scan of the whole tree; must be 0 findings on this repo
-cli.py         oax eval|doctor|audit|examples|trace|report|run
+pack.py        deterministic tree manifests: sha256 per file, sorted
+               timestamp-free entries, canonical JSON, verify_manifest()
+               itemizes missing/modified/extra honestly
+sbom.py        stdlib bill of materials: imports classified stdlib/local/
+               foreign per module; stdlib_only is a computed verdict;
+               network modules flagged separately; deterministic bom hash
+cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom
 ```
 
 ## Invariants (never break)

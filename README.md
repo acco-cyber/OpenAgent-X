@@ -7,9 +7,11 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (7 tasks / 66 checks)
+oax eval      # run every golden task drill, all green or exit 1   (9 tasks / 86 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
+oax pack .    # deterministic tree manifest (build + --check verify)
+oax sbom .    # stdlib bill of materials — purity verdict is computed (exit 1 if not pure)
 oax examples  # execute every offline example end-to-end
 ```
 

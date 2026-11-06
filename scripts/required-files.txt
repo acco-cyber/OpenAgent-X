@@ -11,6 +11,8 @@ openagentx/trace.py
 openagentx/evaluation.py
 openagentx/doctor.py
 openagentx/audit.py
+openagentx/pack.py
+openagentx/sbom.py
 openagentx/cli.py
 openagentx/__main__.py
 golden_tasks/01-loop-stop.json
@@ -20,6 +22,8 @@ golden_tasks/04-loop-budget.json
 golden_tasks/05-stop-tool.json
 golden_tasks/06-redact-nested.json
 golden_tasks/07-audit-self.json
+golden_tasks/08-pack-roundtrip.json
+golden_tasks/09-sbom-pure.json
 examples/01_hello_loop.py
 examples/02_redaction_demo.py
 examples/03_team_handoff.py
