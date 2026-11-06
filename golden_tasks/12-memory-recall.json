@@ -1,0 +1,32 @@
+{
+  "id": "12-memory-recall",
+  "title": "Memory-lite: TF-IDF recall over past runs — right run first, read-only, redaction intact",
+  "drill": "memory",
+  "task_text": "two past runs (one touches the vault); later queries must recall the run that actually talked about the topic",
+  "runs": [
+    {
+      "run_id": "deploy-run",
+      "task_text": "deploy the api service to staging",
+      "max_steps": 6,
+      "script": [
+        "{\"action\": {\"tool\": \"echo\", \"args\": {\"text\": \"deploying the api service to staging\"}}, \"thought\": \"announce the rollout\"}",
+        "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"2+2\"}}, \"thought\": \"sanity check before rollout\"}",
+        "{\"reply\": \"api service deployed to staging\"}"
+      ]
+    },
+    {
+      "run_id": "bugfix-run",
+      "task_text": "fix the login bug in the auth flow",
+      "max_steps": 6,
+      "script": [
+        "{\"action\": {\"tool\": \"vault_read\", \"args\": {\"key\": \"github\"}}, \"thought\": \"fetch the credential for the auth gateway\"}",
+        "{\"action\": {\"tool\": \"echo\", \"args\": {\"text\": \"patching the login handler in auth\"}}, \"thought\": \"fix the login bug\"}",
+        "{\"reply\": \"login bug fixed in the auth flow\"}"
+      ]
+    }
+  ],
+  "queries": [
+    {"q": "deploy the api service", "top": "deploy-run"},
+    {"q": "login bug in auth", "top": "bugfix-run"}
+  ]
+}

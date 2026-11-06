@@ -644,6 +644,149 @@ def _sbom_drill(task: dict) -> list:
     ]
 
 
+def _memory_drill(task: dict) -> list:
+    """TF-IDF recall over past runs: right run first, redaction intact, read-only.
+
+    Honest contract: memory indexes only what the redacted journals already
+    say, ranks the run that actually talked about the query first —
+    deterministically — returns nothing for an unknown query instead of a
+    hallucinated hit, never writes to the journals, and never surfaces a raw
+    fixture token even when a past run genuinely touched the vault.
+    """
+    from .memory import MemoryLite
+
+    wd = _fresh_wd("memory")
+    runs_spec = list(task.get("runs", []))
+    journals = []
+    for r in runs_spec:
+        jp = os.path.join(wd, f"journal-{r.get('run_id', 'run')}.jsonl")
+        AgentRunner(
+            ScriptedLLM([str(s) for s in r.get("script", [])]),
+            builtin_tools(wd), jp,
+            max_steps=int(r.get("max_steps", 6)), workdir=wd,
+            run_id=str(r.get("run_id", "")),
+        ).run(str(r.get("task_text", "memory drill run")))
+        journals.append(jp)
+    before = {jp: open(jp, "rb").read() for jp in journals}
+    mem = MemoryLite()
+    for jp in journals:
+        mem.index_journal(jp)
+    queries = list(task.get("queries", []))
+    checks = [Check("runs_indexed", mem.runs == len(runs_spec),
+                    f"{mem.runs}/{len(runs_spec)}")]
+    first_hits = []
+    for i, q in enumerate(queries, 1):
+        hits = mem.recall(str(q.get("q", "")), k=3)
+        first_hits.append(hits)
+        checks.append(Check(f"recall_{i}_top_hit",
+                            bool(hits) and hits[0]["run_id"] == str(q.get("top", "")),
+                            str([(h["run_id"], h["score"]) for h in hits])[:70]))
+    q0 = str(queries[0].get("q", "")) if queries else ""
+    checks.extend([
+        Check("recall_deterministic",
+              bool(first_hits) and mem.recall(q0, k=3) == first_hits[0],
+              "same query, same ranking"),
+        Check("k_limit_respected", len(mem.recall(q0, k=1)) == 1,
+              "k=1 returns exactly one hit"),
+        Check("unknown_query_empty", mem.recall("quantum widget zzzq") == [],
+              "no hallucinated hits"),
+    ])
+    top = first_hits[0][0] if first_hits and first_hits[0] else None
+    checks.append(Check(
+        "snippet_lives_in_journal",
+        bool(top) and str(top["snippet"]) in open(top["journal"], encoding="utf-8").read(),
+        str(top)[:60] if top else "no hit"))
+    checks.append(Check(
+        "memory_is_read_only",
+        all(open(jp, "rb").read() == before[jp] for jp in journals),
+        "journals byte-identical after index+recall"))
+    seen_text = "".join(open(jp, encoding="utf-8").read() for jp in journals) + str(first_hits)
+    checks.append(Check("redaction_preserved", vault_value("github") not in seen_text,
+                        "raw fixture token never reaches memory"))
+    checks.append(Check("journals_dense_reopen",
+                        all(sequence_dense(_reopen(jp)) for jp in journals)))
+    return checks
+
+
+def _compact_drill(task: dict) -> list:
+    """Compaction: denser secondary journal, original untouched, folds honest.
+
+    Honest contract: the source journal stays byte-identical, the compacted
+    copy loads dense with every adjacent tool_call+tool_result pair folded
+    into one ``tool_fold`` carrying {tool, ok, redactions}, run bounds /
+    reply / thoughts survive verbatim, replay stays sane, and a second
+    compaction is byte-identical.
+    """
+    from .compact import compact_journal
+
+    wd = _fresh_wd("compact")
+    src = os.path.join(wd, "journal.jsonl")
+    events, _result = _run_offline(task, wd)
+    src_before = open(src, "rb").read()
+    dst1 = os.path.join(wd, "journal.compact.jsonl")
+    dst2 = os.path.join(wd, "journal.compact2.jsonl")
+    stats = compact_journal(src, dst1)
+    compact_journal(src, dst2)
+    src_after = open(src, "rb").read()
+    c_events, torn = load_trace(dst1)
+    pairs = []
+    pending = None
+    for e in events:
+        if e.type == "tool_call":
+            pending = str((e.payload or {}).get("tool", ""))
+        elif e.type == "tool_result" and pending is not None:
+            pairs.append((pending, bool((e.payload or {}).get("ok"))))
+            pending = None
+    folds = [e for e in c_events if e.type == "tool_fold"]
+    fold_tools = [(f.payload.get("tool"), f.payload.get("ok")) for f in folds]
+    src_reds = sum(int((e.payload or {}).get("redactions", 0) or 0)
+                   for e in events if e.type == "tool_result")
+    exp = _expect(task)
+    reply_text = str(exp.get("reply", ""))
+    st = replay(c_events)
+    return [
+        Check("original_untouched", src_after == src_before,
+              "append-only invariant holds"),
+        Check("compacted_loads_dense", not torn and sequence_dense(c_events),
+              f"{len(c_events)} events, torn={torn}"),
+        Check("smaller_event_count",
+              stats["dst_events"] < stats["src_events"] and stats["ratio"] < 1.0,
+              f"{stats['src_events']} -> {stats['dst_events']} (ratio {stats['ratio']})"),
+        Check("stats_honest", stats["dst_events"] == len(c_events)
+              and stats["tool_folds"] == len(folds),
+              "reported numbers match the file"),
+        Check("bookkeeping_dropped",
+              not any(e.type in ("step_start", "step_end") for e in c_events)),
+        Check("tool_pairs_folded",
+              not any(e.type in ("tool_call", "tool_result") for e in c_events)
+              and fold_tools == pairs,
+              str(fold_tools)[:70]),
+        Check("fold_redactions_sum",
+              sum(int(f.payload.get("redactions", 0) or 0) for f in folds) == src_reds,
+              f"folds={sum(int(f.payload.get('redactions', 0) or 0) for f in folds)} src={src_reds}"),
+        Check("run_bounds_preserved",
+              c_events[0].type == "run_start" and c_events[-1].type == "run_end"
+              and c_events[-1].payload.get("stop_reason") == exp.get("stop_reason", "reply"),
+              str(c_events[-1].payload)[:60]),
+        Check("reply_text_preserved",
+              any(e.type == "reply" and e.payload.get("text") == reply_text
+                  for e in c_events), reply_text[:50]),
+        Check("thoughts_kept",
+              sum(1 for e in events if e.type == "thought")
+              == sum(1 for e in c_events if e.type == "thought"),
+              "the reasoning narrative survives"),
+        Check("compaction_deterministic",
+              open(dst1, "rb").read() == open(dst2, "rb").read(),
+              "byte-identical re-compaction"),
+        Check("replay_compacted_sane",
+              st["runs_opened"] == 1 and st["replies"] == 1
+              and st["final_stop"] == exp.get("stop_reason", "reply"),
+              str(st)[:80]),
+        Check("view_renders_compacted", reply_text in view(c_events, "text"),
+              "views work on the folded stream"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -656,6 +799,8 @@ DRILLS = {
     "audit": _audit_drill,
     "pack": _pack_drill,
     "sbom": _sbom_drill,
+    "memory": _memory_drill,
+    "compact": _compact_drill,
 }
 
 

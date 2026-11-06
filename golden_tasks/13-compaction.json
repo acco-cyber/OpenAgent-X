@@ -1,0 +1,17 @@
+{
+  "id": "13-compaction",
+  "title": "Journal compaction: tool pairs fold honestly, run truth survives, original stays byte-identical",
+  "drill": "compact",
+  "task_text": "compute and record the answer, then compact the journal into a denser copy",
+  "max_steps": 8,
+  "script": [
+    "{\"action\": {\"tool\": \"echo\", \"args\": {\"text\": \"alpha\"}}, \"thought\": \"echo alpha first\"}",
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"20*4+2\"}}, \"thought\": \"compute the answer\"}",
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"answer.txt\", \"text\": \"the answer is 82\"}}, \"thought\": \"record the answer\"}",
+    "{\"reply\": \"the answer is 82\"}"
+  ],
+  "expect": {
+    "stop_reason": "reply",
+    "reply": "the answer is 82"
+  }
+}

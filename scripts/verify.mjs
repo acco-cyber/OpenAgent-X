@@ -15,10 +15,11 @@ for (const f of req) {
 
 // 2) golden tasks are valid JSON with id + known drill
 const drills = new Set(['loop', 'redact', 'trace', 'team', 'router', 'budget', 'stop',
-                        'redact_nested', 'audit', 'pack', 'sbom']);
+                        'redact_nested', 'audit', 'pack', 'sbom', 'memory', 'compact']);
 const runnerDrills = new Set(['loop', 'redact', 'trace', 'budget', 'stop', 'redact_nested']); // need script[]
 const teamDrills = new Set(['team']);    // need lead_script[] + specialist_script[]
 const routerDrills = new Set(['router']); // need fallback_script[]
+const memoryDrills = new Set(['memory']); // need runs[] (each with script[]) + queries[]
 const gdir = join(root, 'golden_tasks');
 let nTasks = 0;
 if (existsSync(gdir)) {
@@ -38,12 +39,17 @@ if (existsSync(gdir)) {
       else if (routerDrills.has(t.drill) && (!Array.isArray(t.fallback_script) || !t.fallback_script.length)) {
         console.error('EMPTY SCRIPT', f, '(router needs fallback_script)'); fail++;
       }
+      else if (memoryDrills.has(t.drill) && (!Array.isArray(t.runs) || !t.runs.length
+                                           || !t.runs.every(r => Array.isArray(r.script) && r.script.length)
+                                           || !Array.isArray(t.queries) || !t.queries.length)) {
+        console.error('EMPTY SCRIPT', f, '(memory needs runs[].script + queries[])'); fail++;
+      }
     } catch (e) { console.error('INVALID JSON', f, e.message); fail++; }
   }
 } else { console.error('MISSING golden_tasks/'); fail++; }
 
 // 3) eval count only moves forward (honest growth)
-if (nTasks < 11) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 11`); fail++; }
+if (nTasks < 13) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 13`); fail++; }
 
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);
