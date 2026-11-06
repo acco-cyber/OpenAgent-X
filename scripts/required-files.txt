@@ -1,0 +1,11 @@
+# Required repository files — extended as each part lands.
+# Format: one path per line, relative to repo root. Lines starting with # are ignored.
+README.md
+LICENSE
+SECURITY.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+.gitignore
+scripts/verify.mjs
+scripts/required-files.txt
+.github/workflows/ci.yml
