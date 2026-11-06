@@ -1,0 +1,170 @@
+"""oax — the OpenAgent-X command line.
+
+Subcommands: eval | doctor | audit | examples | trace | report | run.
+Every subcommand is offline and stdlib-only; exit codes are contracts
+(0 = green, 1 = anything else).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import runpy
+import sys
+import tempfile
+
+from .audit import run_audit
+from .doctor import run_doctor
+
+
+def _cmd_eval(args) -> int:
+    from .evaluation import run_eval
+
+    reports, ok = run_eval(args.dir)
+    for r in reports:
+        print(f"{r.task_id:<28} {r.drill:<10} {r.passed}/{len(r.checks):<3} "
+              f"{'OK' if r.ok else 'FAIL'}")
+        if not r.ok:
+            for c in r.checks:
+                if not c.ok:
+                    print(f"   FAIL {c.name}: {c.detail}")
+    total = sum(len(r.checks) for r in reports)
+    green = sum(r.passed for r in reports)
+    print(f"eval: {len(reports)} tasks, {green}/{total} checks "
+          f"{'green' if ok else 'FAILING'}")
+    return 0 if ok else 1
+
+
+def _cmd_doctor(args) -> int:
+    checks = run_doctor(args.root)
+    for name, ok, detail in checks:
+        print(f"{'PASS' if ok else 'FAIL':<5} {name:<22} {detail}")
+    bad = [c for c in checks if not c[1]]
+    print(f"doctor: {'OK' if not bad else 'FAIL'} ({len(checks) - len(bad)}/{len(checks)})")
+    return 0 if not bad else 1
+
+
+def _cmd_audit(args) -> int:
+    findings = run_audit(args.root)
+    for f in findings:
+        print(f"LEAK {f['file']}:{f['line']} {f['kind']} :: {f['snippet']}")
+    print(f"audit: {len(findings)} findings")
+    return 0 if not findings else 1
+
+
+def _cmd_examples(args) -> int:
+    ex_dir = args.dir
+    if not os.path.isdir(ex_dir):
+        print(f"examples: no dir {ex_dir}")
+        return 1
+    fails = 0
+    for name in sorted(os.listdir(ex_dir)):
+        if not name.endswith(".py"):
+            continue
+        print(f"--- {name}")
+        try:
+            runpy.run_path(os.path.join(ex_dir, name), run_name="__main__")
+        except SystemExit as e:
+            if e.code not in (None, 0):
+                fails += 1
+                print(f"FAIL {name}: exit {e.code}")
+        except Exception as e:  # noqa: BLE001
+            fails += 1
+            print(f"FAIL {name}: {type(e).__name__}: {e}")
+    print(f"examples: {'OK' if fails == 0 else f'{fails} failed'}")
+    return 0 if fails == 0 else 1
+
+
+def _cmd_trace(args) -> int:
+    from .trace import text_timeline
+
+    print(text_timeline(args.journal))
+    return 0
+
+
+def _cmd_report(args) -> int:
+    from .trace import html_report
+
+    out = args.out or (os.path.splitext(args.journal)[0] + ".html")
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write(html_report(args.journal, title=args.title))
+    print(f"report: wrote {out}")
+    return 0
+
+
+def _cmd_run(args) -> int:
+    """Run a single-line-JSON script file against builtin tools, offline."""
+    from .events import sequence_dense
+    from .llm import ScriptedLLM
+    from .runner import AgentRunner
+    from .trace import load_trace, text_timeline
+
+    with open(args.script, encoding="utf-8") as fh:
+        script = [line.strip() for line in fh if line.strip()]
+    wd = args.workdir or tempfile.mkdtemp(prefix="oax-run-")
+    os.makedirs(wd, exist_ok=True)
+    jp = os.path.join(wd, "journal.jsonl")
+    result = AgentRunner(ScriptedLLM(script), _tools_for(wd), jp,
+                         max_steps=args.max_steps, workdir=wd,
+                         run_id=args.run_id).run(args.task)
+    events, _torn = load_trace(jp)
+    if args.timeline:
+        print(text_timeline(jp))
+    dense = sequence_dense(events)
+    print(f"run: stop={result.stop_reason} steps={result.steps} "
+          f"events={result.events} dense={dense} journal={jp}")
+    return 0 if result.stop_reason in ("reply", "stop_tool") and dense else 1
+
+
+def _tools_for(wd: str):
+    from .tools import builtin_tools
+
+    return builtin_tools(wd)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="oax", description="OpenAgent-X control plane")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    e = sub.add_parser("eval", help="run every golden task drill")
+    e.add_argument("dir", nargs="?", default="golden_tasks")
+    e.set_defaults(fn=_cmd_eval)
+
+    d = sub.add_parser("doctor", help="purity + integrity gate")
+    d.add_argument("root", nargs="?", default=".")
+    d.set_defaults(fn=_cmd_doctor)
+
+    a = sub.add_parser("audit", help="secret-scan a tree")
+    a.add_argument("root", nargs="?", default=".")
+    a.set_defaults(fn=_cmd_audit)
+
+    x = sub.add_parser("examples", help="execute all offline examples")
+    x.add_argument("dir", nargs="?", default="examples")
+    x.set_defaults(fn=_cmd_examples)
+
+    t = sub.add_parser("trace", help="print a journal timeline")
+    t.add_argument("journal")
+    t.set_defaults(fn=_cmd_trace)
+
+    r = sub.add_parser("report", help="render a self-contained HTML report")
+    r.add_argument("journal")
+    r.add_argument("--out", default="")
+    r.add_argument("--title", default="OpenAgent-X trace")
+    r.set_defaults(fn=_cmd_report)
+
+    rn = sub.add_parser("run", help="run a scripted agent turn-loop offline")
+    rn.add_argument("script", help="file of single-line JSON turns")
+    rn.add_argument("--task", default="oax run")
+    rn.add_argument("--workdir", default="")
+    rn.add_argument("--max-steps", type=int, default=8)
+    rn.add_argument("--run-id", default="")
+    rn.add_argument("--timeline", action="store_true")
+    rn.set_defaults(fn=_cmd_run)
+
+    return p
+
+
+def main(argv=None) -> int:
+    args = build_parser().parse_args(argv)
+    return args.fn(args)
