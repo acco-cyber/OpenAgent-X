@@ -93,13 +93,24 @@ class EchoLLM:
             (m["content"] for m in reversed(messages) if m.get("role") == "user"),
             "",
         )
-        snippet = " ".join(str(last_user).split())[:160]
-        text = (
-            "[echo-1] Understood. Plan: (1) restate the goal — "
-            f"{snippet!r}; (2) take the smallest reversible action; "
-            "(3) report evidence. This is a deterministic offline reply "
-            "from EchoLLM — wire a real provider via OPENAGENTX_API_KEY."
-        )
+        # After a protocol nudge, EchoLLM answers with a valid terminal action
+        # so offline demos end cleanly instead of looping on the nudge.
+        if "[protocol-error]" in str(last_user):
+            import json as _json
+
+            text = _json.dumps(
+                {"reply": "[echo-1] Offline run complete: no real model is attached. "
+                          "Set OPENAGENTX_API_KEY (and optionally OPENAGENTX_BASE_URL / "
+                          "OPENAGENTX_MODEL) to run with a live provider."}
+            )
+        else:
+            snippet = " ".join(str(last_user).split())[:160]
+            text = (
+                "[echo-1] Understood. Plan: (1) restate the goal — "
+                f"{snippet!r}; (2) take the smallest reversible action; "
+                "(3) report evidence. This is a deterministic offline reply "
+                "from EchoLLM — wire a real provider via OPENAGENTX_API_KEY."
+            )
         prompt_tokens = sum(len(str(m.get("content", ""))) // 4 + 1 for m in messages)
         completion_tokens = len(text) // 4 + 1
         return LLMResponse(

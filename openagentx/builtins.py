@@ -70,7 +70,7 @@ def fs_list(path: str = ".") -> ToolResult:
     for child in sorted(target.iterdir())[:200]:
         kind = "dir" if child.is_dir() else "file"
         size = "" if child.is_dir() else f" {child.stat().st_size}B"
-        entries.append(f"{child.name}/ {kind}{size}".replace("/ dir", "dir/").replace("/ file", ""))
+        entries.append(f"{child.name}{'/' if child.is_dir() else ''} {kind}{size}")
     return ToolResult(ok=True, output="\n".join(entries) or "(empty)")
 
 

@@ -133,9 +133,7 @@ class EventEnvelope:
     def to_dict(self) -> dict[str, Any]:
         """Serializable form, with payload secrets redacted on the way out."""
         payload = redact(self.payload)
-        redacted = payload is not self.payload or any(
-            isinstance(v, str) and _REDACTED in v for v in payload.values()
-        )
+        redacted = payload != self.payload
         return {
             "event_id": self.event_id,
             "task_id": self.task_id,
