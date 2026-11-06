@@ -15,6 +15,7 @@ import json
 import os
 from dataclasses import dataclass
 
+from .audit import run_audit
 from .events import Journal, sequence_dense
 from .llm import ScriptedLLM
 from .redact import REDACTED_PREFIX
@@ -455,6 +456,51 @@ def _redact_nested_drill(task: dict) -> list:
     ]
 
 
+def _audit_drill(task: dict) -> list:
+    """The repo audits itself: planted leaks found, runtime concatenation invisible.
+
+    Honest contract: the scanner finds a literal written at runtime into a
+    scratch tree (kind, file, line all correct) while redacting its own
+    snippet; source-form concatenation and non-source suffixes stay invisible;
+    and the repository itself always scans to 0 findings.
+    """
+    wd = _fresh_wd("audit")
+    tok = vault_value("aws")
+    with open(os.path.join(wd, "planted.py"), "w", encoding="utf-8") as fh:
+        fh.write("FACTOR = 1\n" + f'key = "{tok}"\n')  # literal lands on line 2
+    with open(os.path.join(wd, "clean.py"), "w", encoding="utf-8") as fh:
+        fh.write('key = "AKIA" + "12AB" * 4\n')  # source-form concat: never a literal
+    with open(os.path.join(wd, "skipme.bin"), "wb") as fh:
+        fh.write(b"token=" + tok.encode())  # non-source suffix: never scanned
+    findings1 = run_audit(wd)
+    findings2 = run_audit(wd)
+    exp = _expect(task)
+    planted = [f for f in findings1 if f["file"] == exp.get("planted_file", "planted.py")]
+    p = planted[0] if planted else {}
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repo_findings = run_audit(repo_root)
+    return [
+        Check("planted_found", len(planted) == 1, f"{len(planted)} findings"),
+        Check("finding_kind_correct", p.get("kind") == exp.get("planted_kind", "aws_key"),
+              str(p.get("kind"))),
+        Check("finding_located", p.get("line") == exp.get("planted_line", 2),
+              f"line {p.get('line')}"),
+        Check("snippet_redacted",
+              f"{MARKER}aws_key]" in str(p.get("snippet", "")) and tok not in str(p.get("snippet", "")),
+              str(p.get("snippet", ""))[:60]),
+        Check("clean_concat_invisible",
+              not any(f["file"] == "clean.py" for f in findings1)),
+        Check("binary_suffix_skipped",
+              not any("skipme.bin" in f["file"] for f in findings1)),
+        Check("findings_total_consistent", len(findings1) == 1, f"total {len(findings1)}"),
+        Check("finding_shape",
+              all(set(f) == {"file", "line", "kind", "snippet"} for f in findings1)),
+        Check("repo_self_audit_clean", repo_findings == [],
+              f"{len(repo_findings)} findings in the repository itself"),
+        Check("audit_deterministic", findings1 == findings2),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -464,6 +510,7 @@ DRILLS = {
     "budget": _budget_drill,
     "stop": _stop_drill,
     "redact_nested": _redact_nested_drill,
+    "audit": _audit_drill,
 }
 
 
