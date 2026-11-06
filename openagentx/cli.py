@@ -1,8 +1,8 @@
 """oax — the OpenAgent-X command line.
 
 Subcommands: eval | doctor | audit | examples | trace | report | run | pack |
-sbom. Every subcommand is offline and stdlib-only; exit codes are contracts
-(0 = green, 1 = anything else).
+sbom | recall | compact. Every subcommand is offline and stdlib-only; exit
+codes are contracts (0 = green, 1 = anything else).
 """
 
 from __future__ import annotations
@@ -154,6 +154,31 @@ def _cmd_run(args) -> int:
     return 0 if result.stop_reason in ("reply", "stop_tool") and dense else 1
 
 
+def _cmd_recall(args) -> int:
+    """TF-IDF recall over past-run journals (read-only, deterministic)."""
+    from .memory import MemoryLite
+
+    mem = MemoryLite()
+    indexed = mem.index_dir(args.dir)
+    hits = mem.recall(args.query, k=args.k) if args.query else []
+    for h in hits:
+        print(f"HIT {h['run_id']:<16} score={h['score']:<10} {h['snippet'][:70]}")
+    print(f"recall: {len(hits)} hit(s) over {indexed} indexed journal(s)")
+    return 0
+
+
+def _cmd_compact(args) -> int:
+    """Fold a journal into a denser secondary journal; original untouched."""
+    from .compact import compact_journal
+
+    out = args.out or (os.path.splitext(args.journal)[0] + ".compact.jsonl")
+    stats = compact_journal(args.journal, out)
+    print(f"compact: {stats['src_events']} -> {stats['dst_events']} events "
+          f"(tool_folds={stats['tool_folds']}, ratio={stats['ratio']})")
+    print(f"compact: wrote {out}")
+    return 0
+
+
 def _tools_for(wd: str):
     from .tools import builtin_tools
 
@@ -210,6 +235,17 @@ def build_parser() -> argparse.ArgumentParser:
     rn.add_argument("--run-id", default="")
     rn.add_argument("--timeline", action="store_true")
     rn.set_defaults(fn=_cmd_run)
+
+    rc = sub.add_parser("recall", help="TF-IDF recall over past-run journals")
+    rc.add_argument("dir", help="directory containing *.jsonl journals")
+    rc.add_argument("--query", required=True, help="natural-language query")
+    rc.add_argument("--k", type=int, default=3, help="max hits (default 3)")
+    rc.set_defaults(fn=_cmd_recall)
+
+    cp = sub.add_parser("compact", help="fold a journal into a denser copy")
+    cp.add_argument("journal")
+    cp.add_argument("--out", default="", help="destination (default <stem>.compact.jsonl)")
+    cp.set_defaults(fn=_cmd_compact)
 
     return p
 
