@@ -15,14 +15,20 @@ failing `harness_error` check. The matrix only grows.
 | 07 | audit-self | audit (10) | scanner finds planted runtime literals (kind/file/line, redacted snippet), repo self-audit 0 |
 | 08 | pack-roundtrip | pack (10) | deterministic manifests, hashes match independent hashlib, modified/extra/missing each detected |
 | 09 | sbom-pure | sbom (10) | BOM purity verdict is computed: repo stdlib-only, imports classified, foreign flips verdict |
+| 10 | team-handoff | team (12) | lead briefs on disk, reserved `handoff` event (reason recorded), specialist reads + answers after the handoff on one dense shared journal |
+| 11 | router-fallback | router (10) | primary fails loudly, fallback serves the turn with every attempt logged, total outage stops `model_unavailable` without a fabricated reply |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **9 tasks, 86 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **11 tasks, 108 checks**.
 
 ## Adding a task (rules)
 
 1. JSON: `{id, title, drill, task_text, max_steps, script[], expect{}}`.
 2. Script turns are single-line JSON (`{"action":{...},"thought":...}` / `{"reply":...}`).
-3. Any fixture secret must be runtime-concatenated inside Python — never in JSON.
-4. Checks must observe real behavior from *this* run; no snapshots/caches.
-5. Update `scripts/verify.mjs` drill allowlist when adding a new drill.
-6. Eval count must never regress; new checks attach to new or existing tasks.
+3. Shape per drill family: runner drills need `script[]`; `team` needs
+   `lead_script[]` + `specialist_script[]`; `router` needs `fallback_script[]`
+   (the primary/failure adapters are fault-injected by the drill itself);
+   `audit` needs `expect.planted_*`; `pack`/`sbom` need no script at all.
+4. Any fixture secret must be runtime-concatenated inside Python — never in JSON.
+5. Checks must observe real behavior from *this* run; no snapshots/caches.
+6. Update `scripts/verify.mjs` drill allowlist when adding a new drill.
+7. Eval count must never regress; new checks attach to new or existing tasks.

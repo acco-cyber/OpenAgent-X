@@ -7,13 +7,34 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (9 tasks / 86 checks)
+oax eval      # run every golden task drill, all green or exit 1   (11 tasks / 108 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
 oax sbom .    # stdlib bill of materials — purity verdict is computed (exit 1 if not pure)
 oax examples  # execute every offline example end-to-end
 ```
+
+Quickstart (no API keys, ever):
+
+```
+git clone <this repo> && cd OpenAgent-X
+python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
+python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
+python3 -m openagentx examples # four runnable end-to-end demos
+```
+
+## What the agent runtime guarantees
+
+- **Budget governor** — `max_tool_calls` stops the loop *before* the rejected
+  call; the `budget` event names the tool that was refused, the cap is recorded
+  at `run_start`, and a capped attempt still counts as a step.
+- **Reserved control plane** — `stop` and team `handoff` are never journaled as
+  tool calls; a stop carries its reason in `run_end`, a handoff switches the
+  active role and hands delegated context to the specialist through the journal.
+- **Model routing** — `FallbackRouter` walks its adapter chain per turn, logs
+  every attempt honestly, and a total outage stops `model_unavailable` — never
+  a fabricated reply.
 
 ## Why it matters
 
