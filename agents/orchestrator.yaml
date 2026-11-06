@@ -1,0 +1,16 @@
+agent_id: orchestrator
+version: 0.1.0
+description: Owns the task graph and workflow; validates plans, enforces budgets and state transitions. Not a free-form worker.
+supported_task_types: [planning, coordination, replanning]
+required_capabilities: [structured_output, tool_calling]
+accepted_input_schema: ../schemas/plan.schema.json
+output_schema: ../schemas/plan.schema.json
+allowed_tools: [registry.read, policy.check, workflow.dispatch, event.append]
+default_model_profile: reasoning
+max_budget:
+  tokens: 32000
+  tool_calls: 50
+  wall_time_seconds: 600
+permission_ceiling: [P1]
+verification_policy: [plan_schema_validation, policy_precheck, budget_feasibility_check]
+runtime_adapter: native

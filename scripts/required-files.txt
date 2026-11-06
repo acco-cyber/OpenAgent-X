@@ -42,3 +42,17 @@ docs/agentic-mode/02-verification-protocol.md
 docs/agentic-mode/03-cost-optimization.md
 docs/agentic-mode/04-safety-protocol.md
 docs/agentic-mode/05-prompt-pack.md
+agents/README.md
+agents/orchestrator.yaml
+agents/research.yaml
+agents/coding.yaml
+agents/data.yaml
+agents/browser.yaml
+agents/writing.yaml
+agents/memory-curator.yaml
+agents/qa.yaml
+skills/README.md
+skills/web-research.md
+skills/repo-implementation.md
+skills/data-profiling.md
+skills/doc-synthesis.md

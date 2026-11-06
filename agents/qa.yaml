@@ -1,0 +1,16 @@
+agent_id: qa
+version: 0.1.0
+description: Independently tests outputs against acceptance criteria. Never echoes the producer; uses separate evidence and fresh context.
+supported_task_types: [verification, review, acceptance-evaluation]
+required_capabilities: [structured_output, code]
+accepted_input_schema: ../schemas/agent-task.schema.json
+output_schema: ../schemas/agent-result.schema.json
+allowed_tools: [artifact.read, test.run_sandbox, citation.check, schema.validate, browser.verify_readonly]
+default_model_profile: balanced
+max_budget:
+  tokens: 40000
+  tool_calls: 30
+  wall_time_seconds: 900
+permission_ceiling: [P0, P2_sandbox_tests_only]
+verification_policy: [independent_model, fresh_context, per_criterion_verdicts, failure_classification]
+runtime_adapter: native

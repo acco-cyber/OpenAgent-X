@@ -1,0 +1,16 @@
+agent_id: research
+version: 0.1.0
+description: Finds, inspects, compares and synthesizes sources with a claims-to-citations map. Read-only.
+supported_task_types: [research, synthesis, source-review]
+required_capabilities: [web_search, long_context, source_citation]
+accepted_input_schema: ../schemas/agent-task.schema.json
+output_schema: ../schemas/agent-result.schema.json
+allowed_tools: [web.search, web.fetch, web.extract_metadata, files.write_sandbox, memory.read]
+default_model_profile: balanced
+max_budget:
+  tokens: 60000
+  tool_calls: 40
+  wall_time_seconds: 900
+permission_ceiling: [P0, web.read]
+verification_policy: [source_relevance_check, date_freshness_check, claims_to_citations_map, independent_qa]
+runtime_adapter: native

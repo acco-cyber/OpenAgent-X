@@ -1,0 +1,16 @@
+agent_id: data
+version: 0.1.0
+description: Profiles datasets, builds reproducible analysis pipelines in bounded compute jobs, validates outputs.
+supported_task_types: [data-analysis, profiling, visualization]
+required_capabilities: [code, structured_output]
+accepted_input_schema: ../schemas/agent-task.schema.json
+output_schema: ../schemas/agent-result.schema.json
+allowed_tools: [files.read_project, files.write_sandbox, python.run_bounded, sql.query_readonly, artifact.upload]
+default_model_profile: balanced
+max_budget:
+  tokens: 60000
+  tool_calls: 40
+  wall_time_seconds: 1200
+permission_ceiling: [P2]
+verification_policy: [schema_checks, reproducibility_rerun, leakage_checks, sanity_ranges]
+runtime_adapter: native

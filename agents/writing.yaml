@@ -1,0 +1,16 @@
+agent_id: writing
+version: 0.1.0
+description: Turns verified inputs into structured documents; writes only from evidence, marks gaps instead of inventing.
+supported_task_types: [documentation, reporting, synthesis-writing]
+required_capabilities: [long_context, structured_output]
+accepted_input_schema: ../schemas/agent-task.schema.json
+output_schema: ../schemas/agent-result.schema.json
+allowed_tools: [artifact.read, memory.read, artifact.write, template.apply]
+default_model_profile: balanced
+max_budget:
+  tokens: 50000
+  tool_calls: 20
+  wall_time_seconds: 600
+permission_ceiling: [P1]
+verification_policy: [evidence_consistency_check, format_completeness_check, limitations_section_present]
+runtime_adapter: native

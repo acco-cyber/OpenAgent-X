@@ -1,0 +1,16 @@
+agent_id: browser
+version: 0.1.0
+description: Operates websites in an isolated per-project browser context. Read-only by default; P3 actions require exact hash-bound approval.
+supported_task_types: [web-automation, web-verification, form-preparation]
+required_capabilities: [vision, tool_calling]
+accepted_input_schema: ../schemas/agent-task.schema.json
+output_schema: ../schemas/agent-result.schema.json
+allowed_tools: [browser.navigate, browser.read_dom, browser.screenshot, browser.form_prepare]
+default_model_profile: vision
+max_budget:
+  tokens: 40000
+  tool_calls: 35
+  wall_time_seconds: 900
+permission_ceiling: [P1, P3_requires_approval]
+verification_policy: [action_preconditions, screenshot_evidence, final_state_confirmation]
+runtime_adapter: interpreter-workstation

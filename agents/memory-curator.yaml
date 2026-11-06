@@ -1,0 +1,16 @@
+agent_id: memory-curator
+version: 0.1.0
+description: Extracts candidate project facts and decisions from task traces; every record starts as candidate with provenance.
+supported_task_types: [memory-curation]
+required_capabilities: [structured_output]
+accepted_input_schema: ../schemas/agent-task.schema.json
+output_schema: ../schemas/memory-record.schema.json
+allowed_tools: [memory.read, memory.create_candidate, artifact.read]
+default_model_profile: fast
+max_budget:
+  tokens: 20000
+  tool_calls: 15
+  wall_time_seconds: 300
+permission_ceiling: [P1]
+verification_policy: [provenance_check, confidence_assigned, contradiction_detection, no_secrets_scan]
+runtime_adapter: native

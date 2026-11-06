@@ -1,0 +1,16 @@
+agent_id: coding
+version: 0.1.0
+description: Modifies repository code in an isolated workspace, runs scoped checks, returns diffs and real test logs.
+supported_task_types: [coding, testing, code-review, refactoring]
+required_capabilities: [code, tool_calling, structured_output]
+accepted_input_schema: ../schemas/agent-task.schema.json
+output_schema: ../schemas/agent-result.schema.json
+allowed_tools: [git.clone, git.branch, git.diff, git.commit_sandbox, files.read_project, files.write_project, shell.run_sandbox, test.run]
+default_model_profile: coding
+max_budget:
+  tokens: 100000
+  tool_calls: 60
+  wall_time_seconds: 1800
+permission_ceiling: [P2]
+verification_policy: [diff_review, deterministic_tests, static_checks, dependency_review]
+runtime_adapter: openhands
