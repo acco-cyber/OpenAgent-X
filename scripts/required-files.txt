@@ -36,3 +36,9 @@ schemas/memory-record.schema.json
 schemas/approval.schema.json
 schemas/manifest.schema.json
 contracts/types.ts
+docs/agentic-mode/README.md
+docs/agentic-mode/01-planning-protocol.md
+docs/agentic-mode/02-verification-protocol.md
+docs/agentic-mode/03-cost-optimization.md
+docs/agentic-mode/04-safety-protocol.md
+docs/agentic-mode/05-prompt-pack.md
