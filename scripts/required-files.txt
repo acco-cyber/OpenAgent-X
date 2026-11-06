@@ -27,6 +27,7 @@ golden_tasks/09-sbom-pure.json
 examples/01_hello_loop.py
 examples/02_redaction_demo.py
 examples/03_team_handoff.py
+examples/04_pack_sbom.py
 scripts/verify.mjs
 scripts/required-files.txt
 docs/00-ai-context.md
