@@ -14,3 +14,15 @@ CLAUDE.md
 openagent-x.manifest.json
 .github/copilot-instructions.md
 docs/00-ai-context.md
+docs/blueprint/README.md
+docs/blueprint/01-executive-vision.md
+docs/blueprint/05-orchestration.md
+docs/blueprint/11-security.md
+docs/blueprint/17-roadmap.md
+docs/blueprint/24-appendices.md
+docs/references/README.md
+docs/references/openagent.md
+docs/references/mira.md
+docs/references/openhands.md
+docs/references/agent-zero.md
+docs/references/interpreter-workstation.md
