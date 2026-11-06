@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 
 from .audit import run_audit
@@ -501,6 +502,132 @@ def _audit_drill(task: dict) -> list:
     ]
 
 
+def _pack_drill(task: dict) -> list:
+    """Pack manifests: deterministic bytes; the verifier reports every mutation.
+
+    Honest contract: entries carry exactly {path, bytes, sha256} (no volatile
+    fields), rebuilds are byte-identical, hashes match an independent hashlib
+    computation, and verify_manifest itemizes modified/extra/missing files —
+    then goes green again once the tree is restored.
+    """
+    import hashlib as _hashlib
+
+    from .pack import build_manifest, manifest_json, verify_manifest, write_manifest
+
+    wd = _fresh_wd("pack")
+    with open(os.path.join(wd, "a.txt"), "w", encoding="utf-8") as fh:
+        fh.write("alpha payload\n")
+    os.makedirs(os.path.join(wd, "sub"))
+    with open(os.path.join(wd, "sub", "b.json"), "w", encoding="utf-8") as fh:
+        fh.write('{"n": 1}\n')
+    with open(os.path.join(wd, "notes.md"), "w", encoding="utf-8") as fh:
+        fh.write("# notes\n")
+    exp = _expect(task)
+    m1, m2 = build_manifest(wd), build_manifest(wd)
+    paths = [e["path"] for e in m1["files"]]
+    a_entry = next(e for e in m1["files"] if e["path"] == "a.txt")
+    a_digest = _hashlib.sha256(open(os.path.join(wd, "a.txt"), "rb").read()).hexdigest()
+    written = write_manifest(wd)
+    import json as _json
+
+    reloaded = _json.loads(manifest_json(written))
+    base_ok, base_problems = verify_manifest(wd, reloaded)
+    # tamper: modify, then extra, then missing — each detected honestly
+    with open(os.path.join(wd, "a.txt"), "a", encoding="utf-8") as fh:
+        fh.write("tampered\n")
+    mod_ok, mod_probs = verify_manifest(wd, written)
+    with open(os.path.join(wd, "a.txt"), "w", encoding="utf-8") as fh:
+        fh.write("alpha payload\n")
+    with open(os.path.join(wd, "extra.txt"), "w", encoding="utf-8") as fh:
+        fh.write("sneaky\n")
+    extra_ok, extra_probs = verify_manifest(wd, written)
+    os.remove(os.path.join(wd, "extra.txt"))
+    os.remove(os.path.join(wd, "sub", "b.json"))
+    miss_ok, miss_probs = verify_manifest(wd, written)
+    with open(os.path.join(wd, "sub", "b.json"), "w", encoding="utf-8") as fh:
+        fh.write('{"n": 1}\n')
+    final_ok, final_problems = verify_manifest(wd, written)
+    return [
+        Check("manifest_lists_all_files",
+              m1["file_count"] == exp.get("file_count", 3)
+              and paths == sorted(paths) == ["a.txt", "notes.md", "sub/b.json"],
+              str(paths)),
+        Check("entries_canonical",
+              all(set(e) == {"path", "bytes", "sha256"} for e in m1["files"])
+              and set(m1) == {"algo", "root", "file_count", "tree_sha256", "files"}),
+        Check("tree_hash_64hex", bool(re.fullmatch(r"[0-9a-f]{64}", m1["tree_sha256"]))),
+        Check("build_is_deterministic", manifest_json(m1) == manifest_json(m2)),
+        Check("hash_matches_independent_hashlib", a_entry["sha256"] == a_digest),
+        Check("written_manifest_roundtrips", base_ok and base_problems == [],
+              str(base_problems)),
+        Check("detect_modification",
+              not mod_ok and mod_probs == ["modified: a.txt"], str(mod_probs)),
+        Check("detect_extra",
+              not extra_ok and extra_probs == ["extra: extra.txt"], str(extra_probs)),
+        Check("detect_missing",
+              not miss_ok and miss_probs == ["missing: sub/b.json"], str(miss_probs)),
+        Check("verify_green_after_restore", final_ok and final_problems == []),
+    ]
+
+
+def _sbom_drill(task: dict) -> list:
+    """The BOM's purity verdict is computed, not promised.
+
+    Honest contract: the repo BOM lists every module with an independent-shape
+    entry and hashes, is stdlib-only with zero network modules, and is
+    byte-reproducible; a controlled scratch package classifies imports exactly
+    and one foreign import flips ``stdlib_only`` to False.
+    """
+    from .sbom import build_sbom, sbom_json
+
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    s1 = build_sbom(repo_root)
+    s2 = build_sbom(repo_root)
+    n_src = len([f for f in os.listdir(os.path.join(repo_root, "openagentx"))
+                 if f.endswith(".py")])
+    exp = _expect(task)
+    mods = {m["module"]: m for m in s1["modules"]}
+    # controlled scratch package: stdlib + relative + absolute-local + foreign
+    wd = _fresh_wd("sbom")
+    p = os.path.join(wd, exp.get("package", "openagentx") + "-scratch", "mypkg")
+    os.makedirs(p)
+    with open(os.path.join(p, "__init__.py"), "w", encoding="utf-8") as fh:
+        fh.write("")
+    with open(os.path.join(p, "alpha.py"), "w", encoding="utf-8") as fh:
+        fh.write("import json\nimport os\nfrom . import beta_helper\n")
+    with open(os.path.join(p, "beta.py"), "w", encoding="utf-8") as fh:
+        fh.write("import mypkg.alpha\nfrom mypkg.alpha import x\n")
+    scratch = build_sbom(wd, pkg_dir=p)
+    by = {m["module"]: m for m in scratch["modules"]}
+    alpha = by.get("mypkg.alpha", {})
+    with open(os.path.join(p, "gamma.py"), "w", encoding="utf-8") as fh:
+        fh.write("import not_a_real_stdlib_module\n")
+    flipped = build_sbom(wd, pkg_dir=p)
+    return [
+        Check("repo_modules_all_listed", s1["module_count"] == n_src,
+              f"{s1['module_count']} vs {n_src} source files"),
+        Check("repo_every_module_hashed",
+              all(re.fullmatch(r"[0-9a-f]{64}", m["sha256"]) for m in s1["modules"])),
+        Check("repo_entry_shape",
+              all(set(m) == {"module", "path", "sha256", "stdlib_imports",
+                             "local_imports", "foreign_imports"}
+                  for m in s1["modules"])),
+        Check("repo_pure_stdlib", s1["stdlib_only"] is True),
+        Check("repo_no_network_modules", s1["network_modules"] == []),
+        Check("repo_entrypoints_covered",
+              "openagentx" in mods and "openagentx.__main__" in mods),
+        Check("bom_deterministic", sbom_json(s1) == sbom_json(s2)),
+        Check("scratch_imports_classified",
+              alpha.get("stdlib_imports") == ["json", "os"]
+              and alpha.get("local_imports") == ["."]
+              and by.get("mypkg.beta", {}).get("local_imports") == ["mypkg.alpha"],
+              str(alpha)[:80]),
+        Check("scratch_verdict_flips_on_foreign", flipped["stdlib_only"] is False),
+        Check("scratch_shape_matches_repo",
+              all(set(m) == set(next(iter(mods.values()))) for m in scratch["modules"])),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -511,6 +638,8 @@ DRILLS = {
     "stop": _stop_drill,
     "redact_nested": _redact_nested_drill,
     "audit": _audit_drill,
+    "pack": _pack_drill,
+    "sbom": _sbom_drill,
 }
 
 

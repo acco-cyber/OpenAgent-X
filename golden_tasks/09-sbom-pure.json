@@ -1,0 +1,9 @@
+{
+  "id": "09-sbom-pure",
+  "title": "SBOM: computed purity verdict — repo is stdlib-only, foreign imports flip it",
+  "drill": "sbom",
+  "task_text": "build the BOM for the repo package and a controlled scratch package",
+  "expect": {
+    "package": "openagentx"
+  }
+}

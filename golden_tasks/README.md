@@ -13,8 +13,10 @@ failing `harness_error` check. The matrix only grows.
 | 05 | stop-tool | stop (10) | reserved `stop` tool: reason in run_end, never a tool_call, prior work preserved |
 | 06 | redact-nested | redact_nested (10) | deep redaction: bundle secrets marked at leaves, structure + plain fields intact, views re-redact |
 | 07 | audit-self | audit (10) | scanner finds planted runtime literals (kind/file/line, redacted snippet), repo self-audit 0 |
+| 08 | pack-roundtrip | pack (10) | deterministic manifests, hashes match independent hashlib, modified/extra/missing each detected |
+| 09 | sbom-pure | sbom (10) | BOM purity verdict is computed: repo stdlib-only, imports classified, foreign flips verdict |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **7 tasks, 66 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **9 tasks, 86 checks**.
 
 ## Adding a task (rules)
 

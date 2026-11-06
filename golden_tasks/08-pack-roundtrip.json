@@ -1,0 +1,9 @@
+{
+  "id": "08-pack-roundtrip",
+  "title": "Pack manifests: deterministic bytes, verifier reports every mutation",
+  "drill": "pack",
+  "task_text": "manifest a scratch tree, verify, tamper three ways, restore to green",
+  "expect": {
+    "file_count": 3
+  }
+}
