@@ -402,6 +402,59 @@ def _stop_drill(task: dict) -> list:
     ]
 
 
+def _redact_nested_drill(task: dict) -> list:
+    """Deep redaction: ``vault_bundle`` secrets rewritten at leaves only.
+
+    Honest contract: both credential kinds are marked, no raw token reaches the
+    journal or any view, the payload keeps its shape (dict keys, list order)
+    and its plain fields — redaction never mangles structure.
+    """
+    wd = _fresh_wd("redact_nested")
+    events, result = _run_offline(task, wd)
+    jp = os.path.join(wd, "journal.jsonl")
+    journal_raw = open(jp, encoding="utf-8").read()
+    gh, aws = vault_value("github"), vault_value("aws")
+    exp = _expect(task)
+    bundles = [e for e in events if e.type == "tool_result"
+               and e.payload.get("tool") == "vault_bundle"]
+    payload = bundles[0].payload if bundles else {}
+    data = payload.get("result") or {}
+    creds = data.get("creds") or []
+    tview, hview = view(events, "text"), view(events, "html")
+    return [
+        Check("stop_reason_reply",
+              result.stop_reason == exp.get("stop_reason", "reply")
+              and events[-1].type == "run_end",
+              f"got {result.stop_reason}"),
+        Check("bundle_fetched_once",
+              len(bundles) == 1 and payload.get("ok") is True
+              and sum(1 for e in events if e.type == "tool_call"
+                      and e.payload.get("tool") == "vault_bundle") == 1),
+        Check("both_markers_in_journal",
+              f"{MARKER}github_token]" in journal_raw
+              and f"{MARKER}aws_key]" in journal_raw),
+        Check("raw_tokens_absent", gh not in journal_raw and aws not in journal_raw),
+        Check("structure_preserved",
+              len(creds) == 2
+              and [c.get("kind") for c in creds] == ["github", "aws"]
+              and creds[0].get("token") == f"{MARKER}github_token]"
+              and creds[1].get("token") == f"{MARKER}aws_key]",
+              str(creds)[:90]),
+        Check("plain_fields_untouched",
+              (data.get("profile") or {}).get("name") == "ci-bot"
+              and (data.get("profile") or {}).get("org") == "fixture"),
+        Check("redaction_count_recorded",
+              int(payload.get("redactions", 0) or 0) >= 2,
+              f"redactions={payload.get('redactions')}"),
+        Check("views_redacted_too",
+              gh not in tview and aws not in tview
+              and MARKER in tview and MARKER in hview
+              and gh not in hview and aws not in hview),
+        Check("sequence_dense", sequence_dense(events)),
+        Check("journal_reopen_dense", sequence_dense(_reopen(jp))),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -410,6 +463,7 @@ DRILLS = {
     "router": _router_drill,
     "budget": _budget_drill,
     "stop": _stop_drill,
+    "redact_nested": _redact_nested_drill,
 }
 
 

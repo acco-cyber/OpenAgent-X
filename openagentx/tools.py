@@ -119,7 +119,9 @@ def vault_value(key: str) -> str:
     if key == "github":
         return "ghp_" + "A1b2C3d4E5" * 3 + "F9ab12"
     if key == "aws":
-        return "AKIA" + "IO3XT7Q9RL2M" + "4Y8KDQZB"
+        # canonical AWS access-key shape: exactly 20 chars (AKIA + 16) so the
+        # high-confidence pattern consumes the whole value — no residue leaks
+        return "AKIA" + "IO3XT7Q9RL2M" + "4Y8K"
     raise ToolError(f"unknown vault key '{key}'")
 
 
