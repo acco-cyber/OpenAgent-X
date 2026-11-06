@@ -43,6 +43,7 @@ trace.py       load_trace (safe), replay (pure deterministic fold),
                truncate_torn_tail (recovery), views
 evaluation.py  golden-task harness: JSON specs → drills of named Checks;
                exceptions fold into failing harness_error; DRILLS registry
+               (loop, redact, trace, team, router, budget, stop)
 doctor.py      python>=3.10, stdlib purity (AST import scan vs sys.stdlib_module_names),
                offline purity (no net modules), required files, task contracts
 audit.py       secret-scan of the whole tree; must be 0 findings on this repo
