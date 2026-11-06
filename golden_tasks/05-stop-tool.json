@@ -1,0 +1,19 @@
+{
+  "id": "05-stop-tool",
+  "title": "Reserved stop tool: explicit reasoned stop, never journaled as a tool_call",
+  "drill": "stop",
+  "task_text": "compute 6*7, then stop with a reason instead of replying",
+  "max_steps": 6,
+  "script": [
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"6*7\"}}, \"thought\": \"compute first\"}",
+    "{\"action\": {\"tool\": \"stop\", \"args\": {\"reason\": \"answer is 42, goal complete\"}}, \"thought\": \"explicit control-plane stop\"}",
+    "{\"reply\": \"unreachable - stop fired first\"}"
+  ],
+  "expect": {
+    "stop_reason": "stop_tool",
+    "steps": 2,
+    "tool_calls": 1,
+    "reason": "answer is 42, goal complete",
+    "last_result_value": 42
+  }
+}

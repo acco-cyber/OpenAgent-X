@@ -1,0 +1,20 @@
+{
+  "id": "04-loop-budget",
+  "title": "Budget governor: max_tool_calls stops the loop BEFORE the rejected call",
+  "drill": "budget",
+  "task_text": "echo three times, but the budget allows only two tool calls",
+  "max_steps": 6,
+  "max_tool_calls": 2,
+  "script": [
+    "{\"action\": {\"tool\": \"echo\", \"args\": {\"text\": \"one\"}}, \"thought\": \"call 1/3\"}",
+    "{\"action\": {\"tool\": \"echo\", \"args\": {\"text\": \"two\"}}, \"thought\": \"call 2/3\"}",
+    "{\"action\": {\"tool\": \"echo\", \"args\": {\"text\": \"three\"}}, \"thought\": \"this one must be rejected by the governor\"}",
+    "{\"reply\": \"never reached - budget fires first\"}"
+  ],
+  "expect": {
+    "stop_reason": "budget",
+    "steps": 3,
+    "tool_calls": 2,
+    "rejected_tool": "echo"
+  }
+}
