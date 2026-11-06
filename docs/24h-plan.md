@@ -61,7 +61,7 @@ green.
   event-sourced runner, team handoff runner, fallback router, views/replay
   (report/trace), honest eval harness + golden tasks 01–03 (26 checks),
   doctor + audit + CLI + verify.mjs + example 01 ✅ 3 tasks, 26 checks green
-- [ ] S02-E3 — golden tasks 04 `loop-budget` + 05 `stop-tool` + example 02 (redaction demo)
+- [x] S02-E3 — golden tasks 04 `loop-budget` + 05 `stop-tool` + example 02 (redaction demo) ✅ 5 tasks, 46 checks green
 - [ ] S03-E3 — task 06 `redact-nested` + task 07 `audit-self` + example 03 (team handoff)
 - [ ] S04-E3 — packs (deterministic manifest) + sbom (stdlib BOM) + tasks 08–09
 - [ ] S05-E3 — task 10 `team` + task 11 `router` golden tasks + README polish

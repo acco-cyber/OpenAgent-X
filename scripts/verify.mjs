@@ -14,8 +14,8 @@ for (const f of req) {
 }
 
 // 2) golden tasks are valid JSON with id + known drill
-const drills = new Set(['loop', 'redact', 'trace', 'team', 'router']);
-const runnerDrills = new Set(['loop', 'redact', 'trace']); // need script[]
+const drills = new Set(['loop', 'redact', 'trace', 'team', 'router', 'budget', 'stop']);
+const runnerDrills = new Set(['loop', 'redact', 'trace', 'budget', 'stop']); // need script[]
 const teamDrills = new Set(['team']);    // need lead_script[] + specialist_script[]
 const routerDrills = new Set(['router']); // need fallback_script[]
 const gdir = join(root, 'golden_tasks');
@@ -42,7 +42,7 @@ if (existsSync(gdir)) {
 } else { console.error('MISSING golden_tasks/'); fail++; }
 
 // 3) eval count only moves forward (honest growth)
-if (nTasks < 3) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 3`); fail++; }
+if (nTasks < 5) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 5`); fail++; }
 
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);
