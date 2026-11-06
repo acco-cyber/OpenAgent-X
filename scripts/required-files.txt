@@ -56,3 +56,11 @@ skills/web-research.md
 skills/repo-implementation.md
 skills/data-profiling.md
 skills/doc-synthesis.md
+docs/ROADMAP.md
+docs/adr/README.md
+docs/adr/ADR-001-canonical-orchestration.md
+docs/adr/ADR-005-mcp-a2a-boundaries.md
+docs/adr/ADR-007-policy-outside-prompts.md
+docs/adr/ADR-010-benchmark-protocol.md
+docs/evaluation/benchmark-plan.md
+docs/operations/runbooks.md
