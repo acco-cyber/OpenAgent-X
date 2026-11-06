@@ -1,7 +1,7 @@
 """oax — the OpenAgent-X command line.
 
-Subcommands: eval | doctor | audit | examples | trace | report | run.
-Every subcommand is offline and stdlib-only; exit codes are contracts
+Subcommands: eval | doctor | audit | examples | trace | report | run | pack |
+sbom. Every subcommand is offline and stdlib-only; exit codes are contracts
 (0 = green, 1 = anything else).
 """
 
@@ -74,6 +74,43 @@ def _cmd_examples(args) -> int:
             print(f"FAIL {name}: {type(e).__name__}: {e}")
     print(f"examples: {'OK' if fails == 0 else f'{fails} failed'}")
     return 0 if fails == 0 else 1
+
+
+def _cmd_pack(args) -> int:
+    """Deterministic manifest: build (+write) or honestly verify."""
+    from .pack import build_manifest, manifest_json, verify_manifest
+
+    if args.check:
+        with open(args.check, encoding="utf-8") as fh:
+            manifest = json.load(fh)
+        ok, problems = verify_manifest(args.root, manifest)
+        for p in problems:
+            print(f"PACK {p}")
+        print(f"pack: {'OK' if ok else 'FAIL'} ({args.check})")
+        return 0 if ok else 1
+    m = build_manifest(args.root)
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as fh:
+            fh.write(manifest_json(m))
+        print(f"pack: wrote {args.out}")
+    print(f"pack: {m['file_count']} files tree_sha256={m['tree_sha256']}")
+    return 0
+
+
+def _cmd_sbom(args) -> int:
+    """Stdlib BOM: purity is a computed verdict; exit 1 on any foreign import."""
+    from .sbom import build_sbom, sbom_json
+
+    s = build_sbom(args.root, args.pkg_dir)
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as fh:
+            fh.write(sbom_json(s))
+        print(f"sbom: wrote {args.out}")
+    print(f"sbom: {s['module_count']} modules package={s['package']} "
+          f"stdlib_only={s['stdlib_only']} "
+          f"network={','.join(s['network_modules']) or 'none'} "
+          f"bom_sha256={s['bom_sha256']}")
+    return 0 if s["stdlib_only"] else 1
 
 
 def _cmd_trace(args) -> int:
@@ -152,6 +189,18 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--out", default="")
     r.add_argument("--title", default="OpenAgent-X trace")
     r.set_defaults(fn=_cmd_report)
+
+    pk = sub.add_parser("pack", help="deterministic tree manifest (build/check)")
+    pk.add_argument("root", nargs="?", default=".")
+    pk.add_argument("--out", default="", help="write canonical manifest JSON here")
+    pk.add_argument("--check", default="", help="verify ROOT against this manifest")
+    pk.set_defaults(fn=_cmd_pack)
+
+    sb = sub.add_parser("sbom", help="stdlib bill of materials (exit 1 if not pure)")
+    sb.add_argument("root", nargs="?", default=".")
+    sb.add_argument("--pkg-dir", default="", help="package dir (default: <root>/openagentx)")
+    sb.add_argument("--out", default="", help="write canonical BOM JSON here")
+    sb.set_defaults(fn=_cmd_sbom)
 
     rn = sub.add_parser("run", help="run a scripted agent turn-loop offline")
     rn.add_argument("script", help="file of single-line JSON turns")
