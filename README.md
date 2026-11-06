@@ -60,6 +60,7 @@ python examples/policy_demo.py   # watch allow/ask/deny verdicts get enforced
 python examples/budget_demo.py   # watch ceilings stop a runaway agent
 python examples/pack_demo.py     # knowledge packs + memory recall
 python examples/approval_demo.py # human-in-the-loop consent for ask-gated tools
+python -m openagentx.cli replay  # newest run as a timeline (text + one-file HTML)
 python -m openagentx.cli doctor  # environment check (never prints secrets)
 python -m openagentx.cli run "build a responsive landing page"  # packs auto-activate
 ```
@@ -77,7 +78,7 @@ python -m openagentx.cli run "research and summarize the top 3 JS frameworks" --
 
 | Pillar | Module | One-line guarantee |
 |---|---|---|
-| **X-Trace** | `events.py`, `trace.py` | Every state change is a redacted, append-only `EventEnvelope` — replayable, auditable |
+| **X-Trace** | `events.py`, `trace.py`, `replay.py` | Every state change is a redacted, append-only `EventEnvelope` — replayable as a text or one-file HTML timeline |
 | **X-Gateway** | `llm.py` | One protocol; offline EchoLLM, any OpenAI-compatible endpoint, capability-aware routing |
 | **X-Budget** | `budget.py` | Ceilings before action; write-before-compaction context windows |
 | **X-Loop** | `loop.py` | perceive→decide→act→observe with hooks; degeneracy guard kills repetition loops |
@@ -166,7 +167,7 @@ OpenAgent-X/
 
 Built **part-by-part**: every part is committed, verified (`scripts/verify.mjs` + offline example runs), and pushed before the next begins. Next up (see [`docs/ROADMAP.md`](docs/ROADMAP.md)):
 
-- [ ] Trace replay UI (render any run as a timeline)
+- [x] Trace replay UI (render any run as a timeline)
 - [x] Approval flow demo (human-in-the-loop for ASK verdicts)
 - [ ] OpenHands Agent Server adapter (kernel as control plane)
 - [ ] Evaluation harness + golden tasks (per `docs/evaluation/`)

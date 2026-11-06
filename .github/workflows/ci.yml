@@ -38,6 +38,7 @@ jobs:
           python examples/budget_demo.py
           python examples/pack_demo.py
           python examples/approval_demo.py
+          python examples/replay_demo.py
 
   secrets:
     name: Secret scan

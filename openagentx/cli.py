@@ -1,4 +1,4 @@
-"""X-CLI: ``oax`` — doctor, packs, validate, trace, run.
+"""X-CLI: ``oax`` — doctor, packs, validate, trace, replay, run.
 
 stdlib-only. Credentials are never printed; ``doctor`` reports only whether
 environment variables are *set*.
@@ -174,6 +174,27 @@ def cmd_trace(args: argparse.Namespace) -> int:
     return 0
 
 
+# ------------------------------------------------------------------ replay
+
+
+def cmd_replay(args: argparse.Namespace) -> int:
+    path = Path(args.path) if args.path else newest_trace()
+    if not path or not path.exists():
+        print("no trace file found (run `oax run --offline` first)")
+        return 1
+
+    from openagentx.replay import load_timeline, render_text, replay_to_html
+
+    timeline = load_timeline(path)
+    print(render_text(timeline, limit=args.limit))
+
+    if not args.text:
+        out = replay_to_html(path, args.out)
+        size = out.stat().st_size
+        print(f"\nHTML timeline: {out} ({size:,} bytes, self-contained — open it in any browser)")
+    return 0
+
+
 # --------------------------------------------------------------------- run
 
 
@@ -252,6 +273,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_trace.add_argument("--summary", action="store_true", help="counts per event type")
     p_trace.add_argument("--limit", type=int, default=50)
     p_trace.set_defaults(func=cmd_trace)
+
+    p_replay = sub.add_parser("replay", help="render a run as a timeline (text + self-contained HTML)")
+    p_replay.add_argument("path", nargs="?", help="trace .jsonl path (newest by default)")
+    p_replay.add_argument("--out", help="HTML output path (default .openagentx/replays/<run>.html)")
+    p_replay.add_argument("--text", action="store_true", help="print the terminal timeline only")
+    p_replay.add_argument("--limit", type=int, default=40, help="rows shown in the terminal view")
+    p_replay.set_defaults(func=cmd_replay)
 
     p_run = sub.add_parser("run", help="run the agent kernel on a task")
     p_run.add_argument("task", nargs="+", help="task text (quote it)")

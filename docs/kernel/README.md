@@ -5,7 +5,7 @@ blueprint. Every pillar is one small module with one job:
 
 | Pillar | Module | What it guarantees |
 |---|---|---|
-| X-Trace | `openagentx/events.py`, `openagentx/trace.py` | Every state change is a redacted, append-only `EventEnvelope` in JSONL — replayable, auditable |
+| X-Trace | `openagentx/events.py`, `openagentx/trace.py`, `openagentx/replay.py` | Every state change is a redacted, append-only `EventEnvelope` in JSONL — replayable, auditable, renderable as a timeline |
 | X-Gateway | `openagentx/llm.py` | One LLM protocol; EchoLLM (offline), OpenAICompatLLM (any endpoint), RouterLLM (capability routing) |
 | X-Budget | `openagentx/budget.py` | Ceilings checked *before* action; write-before-compaction context windows |
 | X-Loop | `openagentx/loop.py` | perceive→decide→act→observe with hooks, JSON action protocol, degeneracy guard |
@@ -25,6 +25,7 @@ python examples/policy_demo.py     # watch the policy engine decide
 python examples/budget_demo.py     # watch ceilings stop a runaway agent
 python examples/pack_demo.py       # packs + memory in action
 python examples/approval_demo.py   # human-in-the-loop consent for ASK verdicts
+oax replay                          # newest run as a timeline (text + shareable HTML)
 oax doctor && oax run "summarize this repo"   # CLI (after pip install -e .)
 ```
 

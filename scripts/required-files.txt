@@ -101,3 +101,5 @@ packs/research/PACK.md
 packs/writing/PACK.md
 openagentx/approval.py
 examples/approval_demo.py
+openagentx/replay.py
+examples/replay_demo.py
