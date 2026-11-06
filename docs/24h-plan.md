@@ -64,7 +64,10 @@ green.
 - [x] S02-E3 — golden tasks 04 `loop-budget` + 05 `stop-tool` + example 02 (redaction demo) ✅ 5 tasks, 46 checks green
 - [x] S03-E3 — task 06 `redact-nested` + task 07 `audit-self` + example 03 (team handoff) ✅ 7 tasks, 66 checks green
 - [x] S04-E3 — packs (deterministic manifest) + sbom (stdlib BOM) + tasks 08–09 ✅ 9 tasks, 86 checks green; `oax pack`/`oax sbom` live
-- [ ] S05-E3 — task 10 `team` + task 11 `router` golden tasks + README polish
+- [x] S05-E3 — task 10 `team` + task 11 `router` golden tasks + README polish
+  ✅ 11 tasks, 108 checks green; team drill now expect-driven (`brief_marker`,
+  `specialist_reply_matches`, `handoff_count_matches`); README quickstart +
+  runtime-guarantee sections live
 
 ### Phase 1 — Golden matrix expansion (eval 26 → ~120 checks)
 - [ ] S06-E3 — task 12 `memory-lite` (TF-IDF recall over past runs) + task 13 `compaction`

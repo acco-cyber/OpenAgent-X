@@ -43,7 +43,7 @@ if (existsSync(gdir)) {
 } else { console.error('MISSING golden_tasks/'); fail++; }
 
 // 3) eval count only moves forward (honest growth)
-if (nTasks < 9) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 9`); fail++; }
+if (nTasks < 11) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 11`); fail++; }
 
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);
