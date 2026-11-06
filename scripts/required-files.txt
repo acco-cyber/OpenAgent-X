@@ -16,7 +16,10 @@ openagentx/__main__.py
 golden_tasks/01-loop-stop.json
 golden_tasks/02-boundary-redaction.json
 golden_tasks/03-trace-torn-resume.json
+golden_tasks/04-loop-budget.json
+golden_tasks/05-stop-tool.json
 examples/01_hello_loop.py
+examples/02_redaction_demo.py
 scripts/verify.mjs
 scripts/required-files.txt
 docs/00-ai-context.md
