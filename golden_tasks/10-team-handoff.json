@@ -1,0 +1,22 @@
+{
+  "id": "10-team-handoff",
+  "title": "Team handoff: lead briefs on disk, reserved handoff event, specialist answers on one dense journal",
+  "drill": "team",
+  "task_text": "compute 6*7 as a team: the lead writes the brief and delegates, the specialist reads it and answers",
+  "max_steps_per_role": 6,
+  "run_id": "golden-team-10",
+  "lead_script": [
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"brief.txt\", \"text\": \"brief: compute 6*7\"}}, \"thought\": \"write the brief before delegating\"}",
+    "{\"action\": {\"tool\": \"handoff\", \"args\": {\"to\": \"specialist\", \"reason\": \"math delegated to the specialist\"}}, \"thought\": \"reserved control-plane handoff\"}"
+  ],
+  "specialist_script": [
+    "{\"action\": {\"tool\": \"read_file\", \"args\": {\"path\": \"brief.txt\"}}, \"thought\": \"consume the lead's brief\"}",
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"6*7\"}}, \"thought\": \"compute from the brief\"}",
+    "{\"reply\": \"6*7 = 42\"}"
+  ],
+  "expect": {
+    "brief_marker": "brief: compute 6*7",
+    "reply": "6*7 = 42",
+    "handoffs": 1
+  }
+}

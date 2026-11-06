@@ -35,3 +35,4 @@ docs/24h-plan.md
 README.md
 LICENSE
 pyproject.toml
+golden_tasks/10-team-handoff.json
