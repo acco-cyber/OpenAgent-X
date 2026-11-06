@@ -1,0 +1,15 @@
+{
+  "id": "02-boundary-redaction",
+  "title": "B-Redact: secrets redacted at the journal boundary",
+  "drill": "redact",
+  "task_text": "read the vault note and summarize it safely",
+  "max_steps": 6,
+  "script": [
+    "{\"action\": {\"tool\": \"read_file\", \"args\": {\"path\": \"note.txt\"}}, \"thought\": \"reading the note; token budgets are plain prose\"}",
+    "{\"reply\": \"note read; secret protected\"}"
+  ],
+  "plain_note": "token budgets are plain prose",
+  "expect": {
+    "stop_reason": "reply"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "01-loop-stop",
+  "title": "A-Loop: deterministic think→calc→reply on a dense journal",
+  "drill": "loop",
+  "task_text": "think, then compute 6*7, then answer",
+  "max_steps": 6,
+  "script": [
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"need 6*7\"}}, \"thought\": \"planning\"}",
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"6*7\"}}, \"thought\": \"computing\"}",
+    "{\"reply\": \"6*7 = 42\"}"
+  ],
+  "expect": {
+    "stop_reason": "reply",
+    "steps": 3,
+    "tool_calls": 2,
+    "reply": "6*7 = 42"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "03-trace-torn-resume",
+  "title": "C-Trace: torn-tail isolation, replay determinism, resume",
+  "drill": "trace",
+  "task_text": "work briefly, reply, then survive a torn tail",
+  "max_steps": 6,
+  "script": [
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"before the crash\"}}, \"thought\": \"working\"}",
+    "{\"reply\": \"recovered cleanly\"}"
+  ],
+  "expect": {
+    "stop_reason": "reply",
+    "reply": "recovered cleanly"
+  }
+}
