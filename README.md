@@ -7,11 +7,13 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (11 tasks / 108 checks)
+oax eval      # run every golden task drill, all green or exit 1   (13 tasks / 131 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
 oax sbom .    # stdlib bill of materials — purity verdict is computed (exit 1 if not pure)
+oax recall    # TF-IDF memory over past-run journals (read-only, deterministic)
+oax compact   # fold a journal into a denser copy; original never touched
 oax examples  # execute every offline example end-to-end
 ```
 
@@ -21,7 +23,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # four runnable end-to-end demos
+python3 -m openagentx examples # five runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -35,6 +37,12 @@ python3 -m openagentx examples # four runnable end-to-end demos
 - **Model routing** — `FallbackRouter` walks its adapter chain per turn, logs
   every attempt honestly, and a total outage stops `model_unavailable` — never
   a fabricated reply.
+- **Memory over past runs** — `MemoryLite` builds a TF-IDF index from what the
+  redacted journals already say; recall is deterministic, read-only, and can
+  never surface a raw secret or hallucinate a hit for an unknown query.
+- **Honest compaction** — `oax compact` folds adjacent tool pairs into
+  `tool_fold` events and drops loop bookkeeping in a new file; the source
+  journal stays byte-identical and a torn source is refused, never laundered.
 
 ## Why it matters
 

@@ -44,7 +44,7 @@ trace.py       load_trace (safe), replay (pure deterministic fold),
 evaluation.py  golden-task harness: JSON specs → drills of named Checks;
                exceptions fold into failing harness_error; DRILLS registry
                (loop, redact, trace, team, router, budget, stop,
-               redact_nested, audit, pack, sbom)
+               redact_nested, audit, pack, sbom, memory, compact)
 doctor.py      python>=3.10, stdlib purity (AST import scan vs sys.stdlib_module_names),
                offline purity (no net modules), required files, task contracts
 audit.py       secret-scan of the whole tree; must be 0 findings on this repo
@@ -54,7 +54,13 @@ pack.py        deterministic tree manifests: sha256 per file, sorted
 sbom.py        stdlib bill of materials: imports classified stdlib/local/
                foreign per module; stdlib_only is a computed verdict;
                network modules flagged separately; deterministic bom hash
-cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom
+memory.py      MemoryLite: TF-IDF recall over past-run journals — read-only
+               derived view, smoothed idf, deterministic ranking, redaction
+               preserved (indexes only what the journal already says)
+compact.py     journal compaction: tool_call+tool_result pairs fold into
+               tool_fold {tool, ok, redactions}; step bookkeeping dropped;
+               original untouched; torn sources refused; byte-deterministic
+cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact
 ```
 
 ## Invariants (never break)
