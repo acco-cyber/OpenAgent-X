@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openagent-x.dev/schemas/manifest.schema.json",
+  "title": "OpenAgentXManifest",
+  "description": "Machine-readable system manifest at the repository root (openagent-x.manifest.json).",
+  "type": "object",
+  "required": ["name", "version", "principle", "layers", "task_states", "permission_tiers", "references"],
+  "properties": {
+    "name": { "const": "OpenAgent-X" },
+    "version": { "type": "string" },
+    "tagline": { "type": "string" },
+    "principle": { "type": "string" },
+    "status": { "type": "string" },
+    "ai_context_entry": { "type": "array", "items": { "type": "string" } },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "responsibilities", "interfaces"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "responsibilities": { "type": "string" },
+          "interfaces": { "type": "string" }
+        }
+      }
+    },
+    "task_states": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["state", "meaning", "allowed_next"],
+        "properties": {
+          "state": { "type": "string" },
+          "meaning": { "type": "string" },
+          "allowed_next": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "permission_tiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["level", "name", "examples", "control"],
+        "properties": {
+          "level": { "type": "string" },
+          "name": { "type": "string" },
+          "examples": { "type": "string" },
+          "control": { "type": "string" }
+        }
+      }
+    },
+    "routing_profiles": { "type": "array", "items": { "type": "object" } },
+    "agent_roles": { "type": "array", "items": { "type": "object" } },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "url", "license", "use_as", "do_not"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "license": { "type": "string" },
+          "use_as": { "type": "string" },
+          "do_not": { "type": "string" }
+        }
+      }
+    }
+  }
+}

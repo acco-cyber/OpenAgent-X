@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openagent-x.dev/schemas/agent-definition.schema.json",
+  "title": "AgentDefinition",
+  "description": "Versioned registration of a specialist agent profile. Mirrors agents/*.yaml.",
+  "type": "object",
+  "required": ["agent_id", "version", "supported_task_types", "required_capabilities", "accepted_input_schema", "output_schema", "allowed_tools", "default_model_profile", "max_budget", "permission_ceiling", "verification_policy", "runtime_adapter"],
+  "additionalProperties": false,
+  "properties": {
+    "agent_id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "semver" },
+    "supported_task_types": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "required_capabilities": { "type": "array", "items": { "type": "string" } },
+    "accepted_input_schema": { "type": ["object", "string"], "description": "JSON Schema (inline or $ref/URL) the agent accepts" },
+    "output_schema": { "type": ["object", "string"], "description": "JSON Schema the agent's result must validate against" },
+    "allowed_tools": { "type": "array", "items": { "type": "string" }, "description": "Tool allowlist; enforced by the tool gateway at invocation time" },
+    "default_model_profile": { "enum": ["fast", "balanced", "reasoning", "coding", "vision", "local-private"] },
+    "max_budget": {
+      "type": "object",
+      "required": ["tokens", "tool_calls", "wall_time_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "tokens": { "type": "integer", "minimum": 1 },
+        "tool_calls": { "type": "integer", "minimum": 1 },
+        "wall_time_seconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "permission_ceiling": { "type": "array", "items": { "type": "string" }, "description": "Maximum permission scopes this agent may ever request; P3+ scopes require approval gates" },
+    "verification_policy": { "type": "array", "items": { "type": "string" }, "description": "Required verification steps, e.g. tests, diff_review, citation_check" },
+    "runtime_adapter": { "type": "string", "description": "e.g. native, openhands, agent-zero, interpreter-workstation" }
+  }
+}

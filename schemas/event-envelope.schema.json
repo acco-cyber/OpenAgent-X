@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openagent-x.dev/schemas/event-envelope.schema.json",
+  "title": "EventEnvelope",
+  "description": "Append-only workflow event. Every state transition and side effect is persisted as an event before and after execution.",
+  "type": "object",
+  "required": ["event_id", "task_id", "sequence", "event_type", "occurred_at", "actor"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "task_id": { "type": ["string", "null"], "format": "uuid" },
+    "sequence": { "type": "integer", "minimum": 0, "description": "Monotonic per task" },
+    "event_type": {
+      "enum": [
+        "task.created", "task.planned", "task.approval_requested", "task.approved", "task.started",
+        "task.waiting_for_user", "task.blocked", "task.recovered", "task.completed", "task.failed", "task.cancelled",
+        "subtask.dispatched", "subtask.completed", "subtask.failed",
+        "agent.started", "agent.model_selected", "agent.tool_call.started", "agent.tool_call.completed",
+        "execution.workspace_created", "execution.snapshot_created", "execution.terminated",
+        "verification.started", "verification.passed", "verification.failed",
+        "artifact.created", "artifact.downloaded",
+        "memory.candidate_created", "memory.promoted"
+      ]
+    },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "actor": {
+      "type": "object",
+      "required": ["type", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["user", "agent", "system", "runtime", "policy"] },
+        "id": { "type": "string" }
+      }
+    },
+    "correlation_id": { "type": ["string", "null"], "format": "uuid" },
+    "payload": { "type": "object", "description": "Event-specific data; secrets must be redacted before persistence" },
+    "redaction_applied": { "type": "boolean", "default": false }
+  }
+}

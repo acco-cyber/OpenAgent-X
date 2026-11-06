@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openagent-x.dev/schemas/plan.schema.json",
+  "title": "Task Plan",
+  "description": "Planner output for a task: validated decomposition with budgets, permissions and acceptance criteria. The orchestrator validates this document before dispatching anything.",
+  "type": "object",
+  "required": ["task_id", "objective", "risk_level", "subtasks", "final_deliverables"],
+  "additionalProperties": false,
+  "properties": {
+    "task_id": { "type": "string", "format": "uuid" },
+    "objective": { "type": "string", "minLength": 8, "description": "What the task must accomplish" },
+    "assumptions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Explicit assumptions made in place of clarifying questions"
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "deadline": { "type": ["string", "null"], "format": "date-time" },
+        "max_cost_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "risk_level": { "enum": ["low", "medium", "high", "critical"] },
+    "subtasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["subtask_id", "objective", "depends_on", "agent_type", "required_capabilities", "acceptance_criteria", "permission_scope", "budget"],
+        "additionalProperties": false,
+        "properties": {
+          "subtask_id": { "type": "string", "format": "uuid" },
+          "objective": { "type": "string", "minLength": 5 },
+          "depends_on": { "type": "array", "items": { "type": "string", "format": "uuid" }, "description": "subtask_ids that must complete first; must be acyclic" },
+          "agent_type": { "type": "string", "description": "One of the registered agent types (agents/*.yaml)" },
+          "required_capabilities": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "acceptance_criteria": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Checkable criteria; VERIFYING state evaluates these" },
+          "permission_scope": { "type": "array", "items": { "type": "string" }, "description": "Requested permission scopes, e.g. web.read, fs.project.write; enforced default-deny" },
+          "budget": {
+            "type": "object",
+            "required": ["max_tokens", "max_tool_calls"],
+            "additionalProperties": false,
+            "properties": {
+              "max_tokens": { "type": "integer", "minimum": 1 },
+              "max_tool_calls": { "type": "integer", "minimum": 1 },
+              "wall_time_seconds": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "final_deliverables": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+  }
+}

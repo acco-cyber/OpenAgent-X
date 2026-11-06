@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openagent-x.dev/schemas/agent-result.schema.json",
+  "title": "AgentResult",
+  "description": "What an agent returns. status is the agent's own report only — the orchestrator decides task state. Every completion claim needs evidence_refs or tests.",
+  "type": "object",
+  "required": ["task_id", "subtask_id", "status", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "task_id": { "type": "string", "format": "uuid" },
+    "subtask_id": { "type": "string", "format": "uuid" },
+    "status": { "enum": ["completed", "partial", "failed", "blocked"] },
+    "summary": { "type": "string" },
+    "output_artifacts": { "type": "array", "items": { "type": "string" }, "description": "Artifact IDs produced" },
+    "evidence_refs": { "type": "array", "items": { "type": "string" }, "description": "Tool results, citations, screenshots backing the summary" },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "passed"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "passed": { "type": "boolean" },
+          "details": { "type": "string" }
+        }
+      }
+    },
+    "errors": { "type": "array", "items": { "type": "string" } },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "input_tokens": { "type": "integer", "minimum": 0 },
+        "output_tokens": { "type": "integer", "minimum": 0 },
+        "tool_calls": { "type": "integer", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 }
+      }
+    },
+    "actual_model": { "type": ["string", "null"], "description": "Real provider model/version used, not just the alias" },
+    "runtime_id": { "type": ["string", "null"] },
+    "started_at": { "type": ["string", "null"], "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

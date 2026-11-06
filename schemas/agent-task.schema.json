@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openagent-x.dev/schemas/agent-task.schema.json",
+  "title": "AgentTask",
+  "description": "The approved work envelope sent to an agent. Receivers see only necessary context and authorized artifact references.",
+  "type": "object",
+  "required": ["task_id", "subtask_id", "objective", "project_id", "required_capabilities", "permission_scope", "budget", "acceptance_criteria"],
+  "additionalProperties": false,
+  "properties": {
+    "task_id": { "type": "string", "format": "uuid" },
+    "subtask_id": { "type": "string", "format": "uuid" },
+    "objective": { "type": "string", "minLength": 5 },
+    "project_id": { "type": ["string", "null"] },
+    "context_refs": { "type": "array", "items": { "type": "string" }, "description": "References (never inlined copies) to memory/artifacts the agent may read" },
+    "input_artifacts": { "type": "array", "items": { "type": "string" }, "description": "Artifact IDs with ACL already enforced" },
+    "required_capabilities": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "permission_scope": { "type": "array", "items": { "type": "string" } },
+    "budget": {
+      "type": "object",
+      "required": ["max_tokens", "max_tool_calls"],
+      "additionalProperties": false,
+      "properties": {
+        "max_tokens": { "type": "integer", "minimum": 1 },
+        "max_tool_calls": { "type": "integer", "minimum": 1 },
+        "wall_time_seconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "deadline": { "type": ["string", "null"], "format": "date-time" },
+    "acceptance_criteria": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+  }
+}

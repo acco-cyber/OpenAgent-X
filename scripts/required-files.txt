@@ -26,3 +26,13 @@ docs/references/mira.md
 docs/references/openhands.md
 docs/references/agent-zero.md
 docs/references/interpreter-workstation.md
+schemas/README.md
+schemas/plan.schema.json
+schemas/agent-definition.schema.json
+schemas/agent-task.schema.json
+schemas/agent-result.schema.json
+schemas/event-envelope.schema.json
+schemas/memory-record.schema.json
+schemas/approval.schema.json
+schemas/manifest.schema.json
+contracts/types.ts

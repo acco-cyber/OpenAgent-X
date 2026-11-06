@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openagent-x.dev/schemas/approval.schema.json",
+  "title": "Approval",
+  "description": "Persisted human approval, bound to the exact action/plan hash. Approvals are state, not chat promises.",
+  "type": "object",
+  "required": ["approval_id", "task_id", "action_hash", "decision", "created_at", "expires_at"],
+  "additionalProperties": false,
+  "properties": {
+    "approval_id": { "type": "string", "format": "uuid" },
+    "task_id": { "type": "string", "format": "uuid" },
+    "action_hash": { "type": "string", "description": "SHA-256 of the exact action/plan version approved" },
+    "approver_id": { "type": ["string", "null"] },
+    "decision": { "enum": ["approved", "denied"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "scope": { "type": "string", "description": "What exactly was approved: destination, payload summary, permission level" }
+  }
+}
