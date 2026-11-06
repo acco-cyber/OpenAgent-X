@@ -42,3 +42,6 @@ coverage/
 # Temporary agent workspaces
 workspaces/
 tmp/
+
+# OpenAgent-X runtime artifacts
+.openagentx/
