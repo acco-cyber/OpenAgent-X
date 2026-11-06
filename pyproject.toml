@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openagentx"
+version = "0.1.0"
+description = "OpenAgent-X reference kernel — a stdlib-only, model-agnostic agent core aligned with the OpenAgent-X universal contracts."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "OpenAgent-X contributors" }]
+keywords = ["ai", "agents", "agentic", "llm", "orchestration", "kernel", "openai"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+# Hard rule: the kernel core has ZERO required dependencies (stdlib only).
+# Any model/vendor integration must arrive as an optional, thin adapter.
+dependencies = []
+
+[project.scripts]
+oax = "openagentx.cli:main"
+
+[tool.setuptools]
+packages = ["openagentx"]
