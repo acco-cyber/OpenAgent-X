@@ -18,8 +18,11 @@ golden_tasks/02-boundary-redaction.json
 golden_tasks/03-trace-torn-resume.json
 golden_tasks/04-loop-budget.json
 golden_tasks/05-stop-tool.json
+golden_tasks/06-redact-nested.json
+golden_tasks/07-audit-self.json
 examples/01_hello_loop.py
 examples/02_redaction_demo.py
+examples/03_team_handoff.py
 scripts/verify.mjs
 scripts/required-files.txt
 docs/00-ai-context.md
