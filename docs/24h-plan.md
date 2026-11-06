@@ -70,7 +70,10 @@ green.
   runtime-guarantee sections live
 
 ### Phase 1 — Golden matrix expansion (eval 26 → ~120 checks)
-- [ ] S06-E3 — task 12 `memory-lite` (TF-IDF recall over past runs) + task 13 `compaction`
+- [x] S06-E3 — task 12 `memory-lite` (TF-IDF recall over past runs) + task 13 `compaction`
+  ✅ 13 tasks, 131 checks green; `MemoryLite` + `oax recall`, `compact.py` +
+  `oax compact` (tool pairs → `tool_fold`, torn sources refused); example 05
+  live; examples count now five
 - [ ] S07-E3 — task 14 `cache` (prompt-hash response cache) + task 15 `hooks` (deny policy)
 - [ ] S08-E3 — task 16 `parallel-fanout` + task 17 `structured-output` (JSON repair)
 - [ ] S09-E3 — task 18 `retry-backoff` + task 19 `circuit-breaker`
