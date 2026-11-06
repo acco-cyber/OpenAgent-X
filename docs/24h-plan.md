@@ -63,7 +63,7 @@ green.
   doctor + audit + CLI + verify.mjs + example 01 ✅ 3 tasks, 26 checks green
 - [x] S02-E3 — golden tasks 04 `loop-budget` + 05 `stop-tool` + example 02 (redaction demo) ✅ 5 tasks, 46 checks green
 - [x] S03-E3 — task 06 `redact-nested` + task 07 `audit-self` + example 03 (team handoff) ✅ 7 tasks, 66 checks green
-- [ ] S04-E3 — packs (deterministic manifest) + sbom (stdlib BOM) + tasks 08–09
+- [x] S04-E3 — packs (deterministic manifest) + sbom (stdlib BOM) + tasks 08–09 ✅ 9 tasks, 86 checks green; `oax pack`/`oax sbom` live
 - [ ] S05-E3 — task 10 `team` + task 11 `router` golden tasks + README polish
 
 ### Phase 1 — Golden matrix expansion (eval 26 → ~120 checks)
