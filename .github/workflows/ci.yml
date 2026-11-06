@@ -16,3 +16,44 @@ jobs:
           node-version: 20
       - name: Run repository verifier
         run: node scripts/verify.mjs
+
+  kernel:
+    name: Kernel offline smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile package and examples
+        run: python -m compileall -q openagentx examples
+      - name: CLI validate + doctor
+        run: |
+          python -m openagentx.cli validate
+          python -m openagentx.cli doctor
+      - name: Run offline examples (zero API keys)
+        run: |
+          python examples/hello_agent.py
+          python examples/policy_demo.py
+          python examples/budget_demo.py
+          python examples/pack_demo.py
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan worktree for credential patterns
+        run: |
+          if grep -rEn "ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}" . --exclude-dir=.git; then
+            echo "::error::credential-like pattern found in worktree"
+            exit 1
+          fi
+      - name: Scan history for credential patterns
+        run: |
+          if git log --all -p | grep -En "ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}"; then
+            echo "::error::credential-like pattern found in git history"
+            exit 1
+          fi

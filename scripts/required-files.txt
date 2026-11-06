@@ -87,3 +87,15 @@ packs/data-science/pack.json
 packs/devops/pack.json
 packs/research/pack.json
 packs/writing/pack.json
+openagentx/cli.py
+openagentx/team.py
+docs/kernel/README.md
+examples/hello_agent.py
+examples/budget_demo.py
+examples/policy_demo.py
+examples/pack_demo.py
+packs/web-dev/PACK.md
+packs/data-science/PACK.md
+packs/devops/PACK.md
+packs/research/PACK.md
+packs/writing/PACK.md
