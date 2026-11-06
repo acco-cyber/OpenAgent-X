@@ -10,6 +10,7 @@ blueprint. Every pillar is one small module with one job:
 | X-Budget | `openagentx/budget.py` | Ceilings checked *before* action; write-before-compaction context windows |
 | X-Loop | `openagentx/loop.py` | perceive→decide→act→observe with hooks, JSON action protocol, degeneracy guard |
 | X-Guard | `openagentx/policy.py` | Pure tri-state policy seam (allow/ask/deny), P0–P4 tiers, capability-text pruning |
+| X-Consent | `openagentx/approval.py` | ASK verdicts become hash-bound, one-time, expiring approvals — persisted state, not chat promises |
 | X-Tools | `openagentx/tools.py`, `openagentx/builtins.py` | One registry, one dispatch choke point, JIT disclosure, diffs-not-dumps |
 | X-Memory | `openagentx/memory.py` | 3-tier JSONL memory: supersede-with-provenance, rollups, human-editable export |
 | X-Prompt | `openagentx/prompts.py`, `prompts/base/` | Layered prompt files, `{{include original}}` wrapping, budget-aware trimming |
@@ -23,6 +24,7 @@ python examples/hello_agent.py     # full kernel run offline
 python examples/policy_demo.py     # watch the policy engine decide
 python examples/budget_demo.py     # watch ceilings stop a runaway agent
 python examples/pack_demo.py       # packs + memory in action
+python examples/approval_demo.py   # human-in-the-loop consent for ASK verdicts
 oax doctor && oax run "summarize this repo"   # CLI (after pip install -e .)
 ```
 

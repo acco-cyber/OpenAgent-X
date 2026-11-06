@@ -99,3 +99,5 @@ packs/data-science/PACK.md
 packs/devops/PACK.md
 packs/research/PACK.md
 packs/writing/PACK.md
+openagentx/approval.py
+examples/approval_demo.py

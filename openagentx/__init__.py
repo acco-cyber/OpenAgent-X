@@ -14,6 +14,7 @@ X-Gateway (routing)     :mod:`openagentx.llm`
 X-Budget                :mod:`openagentx.budget`
 X-Loop                  :mod:`openagentx.loop`
 X-Guard                 :mod:`openagentx.policy`
+X-Consent               :mod:`openagentx.approval`
 X-Tools                 :mod:`openagentx.tools`, :mod:`openagentx.builtins`
 X-Memory                :mod:`openagentx.memory`
 X-Prompt                :mod:`openagentx.prompts`
@@ -34,12 +35,15 @@ Core rules enforced across the kernel:
 
 from openagentx.events import Actor, EventEnvelope, EventType
 from openagentx.trace import TraceLog
+from openagentx.approval import ApprovalGate, ApprovalRecord, action_hash
 from openagentx.llm import EchoLLM, LLMResponse, OpenAICompatLLM, RouterLLM, Usage
 
 __version__ = "0.1.0"
 
 __all__ = [
     "Actor",
+    "ApprovalGate",
+    "ApprovalRecord",
     "EchoLLM",
     "EventEnvelope",
     "EventType",
@@ -48,5 +52,6 @@ __all__ = [
     "RouterLLM",
     "TraceLog",
     "Usage",
+    "action_hash",
     "__version__",
 ]

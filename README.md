@@ -59,6 +59,7 @@ Then try the rest — each demonstrates one pillar end-to-end:
 python examples/policy_demo.py   # watch allow/ask/deny verdicts get enforced
 python examples/budget_demo.py   # watch ceilings stop a runaway agent
 python examples/pack_demo.py     # knowledge packs + memory recall
+python examples/approval_demo.py # human-in-the-loop consent for ask-gated tools
 python -m openagentx.cli doctor  # environment check (never prints secrets)
 python -m openagentx.cli run "build a responsive landing page"  # packs auto-activate
 ```
@@ -72,7 +73,7 @@ export OPENAGENTX_MODEL="gpt-4o-mini"
 python -m openagentx.cli run "research and summarize the top 3 JS frameworks" --online
 ```
 
-## The ten pillars
+## The eleven pillars
 
 | Pillar | Module | One-line guarantee |
 |---|---|---|
@@ -81,6 +82,7 @@ python -m openagentx.cli run "research and summarize the top 3 JS frameworks" --
 | **X-Budget** | `budget.py` | Ceilings before action; write-before-compaction context windows |
 | **X-Loop** | `loop.py` | perceive→decide→act→observe with hooks; degeneracy guard kills repetition loops |
 | **X-Guard** | `policy.py` | Pure tri-state policy seam (allow/ask/deny), P0–P4 tiers, deny-closed default |
+| **X-Consent** | `approval.py` | ASK verdicts become hash-bound, one-time, expiring human approvals — persisted state, never a chat promise |
 | **X-Tools** | `tools.py`, `builtins.py` | One registry, one dispatch choke point, JIT tool disclosure, diffs-not-dumps |
 | **X-Memory** | `memory.py` | 3-tier file memory: supersede-with-provenance, daily rollups, `MEMORY.md` you can edit |
 | **X-Prompt** | `prompts.py`, `prompts/base/` | Layered prompt files; `{{include original}}` wraps defaults — extend, never fork |
@@ -165,7 +167,7 @@ OpenAgent-X/
 Built **part-by-part**: every part is committed, verified (`scripts/verify.mjs` + offline example runs), and pushed before the next begins. Next up (see [`docs/ROADMAP.md`](docs/ROADMAP.md)):
 
 - [ ] Trace replay UI (render any run as a timeline)
-- [ ] Approval flow demo (human-in-the-loop for ASK verdicts)
+- [x] Approval flow demo (human-in-the-loop for ASK verdicts)
 - [ ] OpenHands Agent Server adapter (kernel as control plane)
 - [ ] Evaluation harness + golden tasks (per `docs/evaluation/`)
 - [ ] More packs: security, mobile, ML-ops, game-dev
