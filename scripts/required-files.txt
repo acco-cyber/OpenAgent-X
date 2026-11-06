@@ -9,3 +9,8 @@ CODE_OF_CONDUCT.md
 scripts/verify.mjs
 scripts/required-files.txt
 .github/workflows/ci.yml
+AGENTS.md
+CLAUDE.md
+openagent-x.manifest.json
+.github/copilot-instructions.md
+docs/00-ai-context.md

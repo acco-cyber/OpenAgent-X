@@ -1,0 +1,100 @@
+{
+  "$schema": "./schemas/manifest.schema.json",
+  "name": "OpenAgent-X",
+  "version": "0.1.0",
+  "tagline": "Open, model-agnostic AI Operating System for verifiable agentic work",
+  "principle": "One interface. Any model. Many specialist agents. Unified memory. Secure tools. Verifiable execution.",
+  "status": "blueprint-and-context-package",
+  "ai_context_entry": [
+    "AGENTS.md",
+    "openagent-x.manifest.json",
+    "docs/00-ai-context.md",
+    "schemas/",
+    "docs/agentic-mode/",
+    "agents/"
+  ],
+  "layers": [
+    { "id": 1, "name": "Experience", "responsibilities": "Web app, desktop shell, CLI, API, voice, notifications, admin screens", "interfaces": "REST/JSON, WebSocket/SSE, OIDC session" },
+    { "id": 2, "name": "Identity & Policy", "responsibilities": "Users, roles, project membership, approvals, secret references, permission decisions", "interfaces": "OIDC, RBAC/ABAC, signed approval tokens" },
+    { "id": 3, "name": "Orchestration Control Plane", "responsibilities": "Task intake, planning, decomposition, dispatch, budgets, retries, deadlines, approvals, state transitions, recovery", "interfaces": "Durable workflow API, event store, agent contracts" },
+    { "id": 4, "name": "Intelligence", "responsibilities": "Model registry, provider gateway, capability checks, routing, context assembly, evaluation, verification", "interfaces": "OpenAI-compatible gateway, routing API" },
+    { "id": 5, "name": "Agent Workforce", "responsibilities": "Research, coding, data, math/science, browser, writing, memory, QA agents", "interfaces": "AgentTask/AgentResult, MCP client, runtime adapters" },
+    { "id": 6, "name": "Tools & Execution", "responsibilities": "Browser, terminal, code runner, file/document tools, APIs, external runtimes, sandbox lifecycle", "interfaces": "MCP, HTTP APIs, container/VM runner APIs" },
+    { "id": 7, "name": "Data & Compute", "responsibilities": "Relational records, vector retrieval, object artifacts, caches, observability, local/cloud inference", "interfaces": "PostgreSQL/pgvector, object store, Redis, telemetry, model endpoints" }
+  ],
+  "task_states": [
+    { "state": "CREATED", "meaning": "Request accepted and assigned a task ID", "allowed_next": ["PLANNED", "CANCELLED", "FAILED"] },
+    { "state": "PLANNED", "meaning": "Plan and subtasks validated; budgets and permissions estimated", "allowed_next": ["APPROVED", "RUNNING", "WAITING_FOR_USER"] },
+    { "state": "APPROVED", "meaning": "Human approval captured and bound to a specific plan/action hash", "allowed_next": ["RUNNING", "CANCELLED"] },
+    { "state": "RUNNING", "meaning": "One or more activities are executing", "allowed_next": ["VERIFYING", "WAITING_FOR_USER", "BLOCKED", "FAILED", "CANCELLED", "RECOVERY"] },
+    { "state": "VERIFYING", "meaning": "Evidence, artifacts, tests and policy compliance are checked", "allowed_next": ["COMPLETED", "RECOVERY", "BLOCKED", "FAILED"] },
+    { "state": "WAITING_FOR_USER", "meaning": "An approval, missing input or user decision is required", "allowed_next": ["APPROVED", "RUNNING", "CANCELLED"] },
+    { "state": "BLOCKED", "meaning": "Cannot proceed due to permission, dependency, environment or policy", "allowed_next": ["RUNNING", "CANCELLED", "FAILED"] },
+    { "state": "RECOVERY", "meaning": "A retry, replan or workspace restore is being performed", "allowed_next": ["RUNNING", "BLOCKED", "FAILED"] },
+    { "state": "COMPLETED", "meaning": "All required acceptance checks passed", "allowed_next": [] },
+    { "state": "FAILED", "meaning": "Task exhausted recovery policy or violated a hard constraint", "allowed_next": [] },
+    { "state": "CANCELLED", "meaning": "User or policy stopped the task", "allowed_next": [] }
+  ],
+  "permission_tiers": [
+    { "level": "P0", "name": "Read-only", "examples": "Search, fetch, inspect files, summarize", "control": "Project ACL, data classification, logging" },
+    { "level": "P1", "name": "Reversible local", "examples": "Draft, copy file, edit sandbox content", "control": "Workspace isolation, diff preview, rollback/snapshot" },
+    { "level": "P2", "name": "Sandboxed execution", "examples": "Run tests, approved installs, isolated browser", "control": "Container/VM boundary, quotas, egress policy, secret scoping" },
+    { "level": "P3", "name": "External side effect", "examples": "Send, publish, create PR, update external DB", "control": "Human approval of exact action/destination/payload; idempotency" },
+    { "level": "P4", "name": "Privileged", "examples": "Production deploy, destructive admin, financial ops", "control": "Disabled unless enabled; re-auth, high-assurance approval" }
+  ],
+  "execution_tiers": ["E0-read-only", "E1-reversible-local", "E2-sandboxed-compute", "E3-external-side-effects", "E4-privileged"],
+  "agent_roles": [
+    { "id": "orchestrator", "responsibilities": "Own task graph and workflow; not a free-form worker", "verification": "Plan schema, policy checks, state invariants" },
+    { "id": "research", "responsibilities": "Find, inspect, compare and synthesize sources", "verification": "Source relevance, dates, claims-to-citations map" },
+    { "id": "coding", "responsibilities": "Modify repository and run scoped checks", "verification": "Diff review, tests, static checks, dependency review" },
+    { "id": "data", "responsibilities": "Profile data, build analysis pipeline, generate artifacts", "verification": "Schema checks, reproducibility, leakage checks" },
+    { "id": "mathematics", "responsibilities": "Formalize problems, derive and test technical claims", "verification": "Independent derivation, numerical checks" },
+    { "id": "browser", "responsibilities": "Operate websites within approved scope", "verification": "Action preconditions, screenshots, final state confirmation" },
+    { "id": "writing", "responsibilities": "Turn verified inputs into structured documents", "verification": "Consistency with evidence, format and completeness checks" },
+    { "id": "memory-curator", "responsibilities": "Extract candidate project facts and decisions", "verification": "Provenance, confidence, scope, user correction path" },
+    { "id": "qa", "responsibilities": "Independently test outputs against acceptance criteria", "verification": "Must not merely echo the producing agent; separate evidence" }
+  ],
+  "routing_profiles": [
+    { "profile": "fast", "use": "Classification, title extraction, simple transformations", "emphasis": "Low latency and cost; strict output validation" },
+    { "profile": "balanced", "use": "Everyday planning, summarization, routine agent work", "emphasis": "Quality/cost balance and availability" },
+    { "profile": "reasoning", "use": "Complex planning, mathematical reasoning, multi-step diagnosis", "emphasis": "Measured task quality, long context, tool control" },
+    { "profile": "coding", "use": "Code understanding, patch generation, test repair", "emphasis": "Repository-level task success, coding tool support" },
+    { "profile": "vision", "use": "Screenshots, charts, diagrams, document images", "emphasis": "Image input, resolution, visual QA" },
+    { "profile": "local-private", "use": "Sensitive or offline-capable work", "emphasis": "Local endpoint, privacy boundary, feasible capability" }
+  ],
+  "tool_families": ["research", "files", "code", "data", "git", "computer", "communication"],
+  "memory_domains": ["task", "project", "user", "knowledge", "execution"],
+  "delegation_limits": { "max_depth": 2, "concurrent_subtasks_per_task": "2-4", "retries_transient": 2, "retries_agent_failure": 1, "retries_auth_denial": 0 },
+  "api_surface": [
+    { "method": "POST", "path": "/api/v1/tasks", "purpose": "Create a task" },
+    { "method": "GET", "path": "/api/v1/tasks/{task_id}", "purpose": "Read task state, plan summary, progress" },
+    { "method": "POST", "path": "/api/v1/tasks/{task_id}/approve", "purpose": "Approve action/plan by approval token" },
+    { "method": "POST", "path": "/api/v1/tasks/{task_id}/cancel", "purpose": "Request cancellation and cleanup" },
+    { "method": "POST", "path": "/api/v1/tasks/{task_id}/resume", "purpose": "Resume after explicit blocker resolved" },
+    { "method": "GET", "path": "/api/v1/tasks/{task_id}/events", "purpose": "Ordered workflow events" },
+    { "method": "GET", "path": "/api/v1/tasks/{task_id}/artifacts", "purpose": "List downloadable artifacts" },
+    { "method": "GET", "path": "/api/v1/projects/{project_id}/memory", "purpose": "Search permitted project memory" },
+    { "method": "POST", "path": "/api/v1/projects/{project_id}/memory", "purpose": "Create memory record" },
+    { "method": "GET", "path": "/api/v1/models/capabilities", "purpose": "List model capability profiles" },
+    { "method": "GET", "path": "/api/v1/agents", "purpose": "List agent definitions" },
+    { "method": "POST", "path": "/api/v1/tools/{tool_id}/invoke", "purpose": "Internal tool-gateway endpoint (not for untrusted clients)" }
+  ],
+  "references": [
+    { "id": "R1", "name": "OpenAgent", "url": "https://github.com/the-open-agent/openagent", "license": "Apache-2.0", "use_as": "Provider coverage, RAG ingestion, tool patterns, MCP management, workflow builder, analytics", "do_not": "Copy its full agent loop / provider registry / workflow engine as a second control plane" },
+    { "id": "R2", "name": "MIRA", "url": "https://github.com/Vexillon-ai/MIRA", "license": "AGPL-3.0", "use_as": "Memory patterns, wiki, briefings, skills, policy ideas (pattern-level only)", "do_not": "Adopt Rust gateway or memory/agent architecture as core dependency; no code reuse without legal review" },
+    { "id": "R3", "name": "OpenHands", "url": "https://github.com/OpenHands/OpenHands", "license": "MIT (SDK; verify per package)", "use_as": "Primary coding runtime adapter via Software Agent SDK / Agent Server", "do_not": "Treat product as one repo with one responsibility" },
+    { "id": "R4", "name": "Agent Zero", "url": "https://github.com/agent0ai/agent-zero", "license": "MIT", "use_as": "Workspace isolation, profiles, plugin/skill patterns, snapshots; optional runtime adapter", "do_not": "Let it become a peer master orchestrator with independent permissions/memory" },
+    { "id": "R5", "name": "Interpreter Workstation", "url": "https://github.com/openinterpreter/interpreter-workstation", "license": "Apache-2.0", "use_as": "Computer-facing workspace, host/browser bridge separation, read-only publishing", "do_not": "Adopt host computer access as default" }
+  ],
+  "docs": {
+    "agents_context": "AGENTS.md",
+    "ai_bootstrap": "docs/00-ai-context.md",
+    "blueprint_index": "docs/blueprint/README.md",
+    "references_index": "docs/references/README.md",
+    "agentic_mode_index": "docs/agentic-mode/README.md",
+    "roadmap": "docs/ROADMAP.md",
+    "adr_index": "docs/adr/README.md",
+    "evaluation": "docs/evaluation/benchmark-plan.md",
+    "runbooks": "docs/operations/runbooks.md"
+  }
+}
