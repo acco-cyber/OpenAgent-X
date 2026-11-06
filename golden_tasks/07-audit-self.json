@@ -1,0 +1,11 @@
+{
+  "id": "07-audit-self",
+  "title": "The repo audits itself: planted leaks found, runtime concatenation invisible",
+  "drill": "audit",
+  "task_text": "scan a scratch tree with a planted literal, then scan the repository itself",
+  "expect": {
+    "planted_kind": "aws_key",
+    "planted_file": "planted.py",
+    "planted_line": 2
+  }
+}

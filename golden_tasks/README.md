@@ -11,8 +11,10 @@ failing `harness_error` check. The matrix only grows.
 | 03 | trace-torn-resume | trace (9) | torn-tail isolation, replay determinism, views agree, resume |
 | 04 | loop-budget | budget (10) | `max_tool_calls` governor: budget event names the rejected call, cap at run_start, capped attempt counts a step |
 | 05 | stop-tool | stop (10) | reserved `stop` tool: reason in run_end, never a tool_call, prior work preserved |
+| 06 | redact-nested | redact_nested (10) | deep redaction: bundle secrets marked at leaves, structure + plain fields intact, views re-redact |
+| 07 | audit-self | audit (10) | scanner finds planted runtime literals (kind/file/line, redacted snippet), repo self-audit 0 |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **5 tasks, 46 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **7 tasks, 66 checks**.
 
 ## Adding a task (rules)
 

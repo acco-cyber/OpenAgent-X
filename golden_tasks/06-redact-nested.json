@@ -1,0 +1,16 @@
+{
+  "id": "06-redact-nested",
+  "title": "Deep redaction: vault_bundle secrets rewritten at leaves, structure intact",
+  "drill": "redact_nested",
+  "task_text": "fetch the credential bundle and confirm safe handling",
+  "max_steps": 6,
+  "script": [
+    "{\"action\": {\"tool\": \"vault_bundle\", \"args\": {}}, \"thought\": \"need the bundle\"}",
+    "{\"reply\": \"bundle handled at the boundary\"}"
+  ],
+  "expect": {
+    "stop_reason": "reply",
+    "steps": 2,
+    "tool_calls": 1
+  }
+}
