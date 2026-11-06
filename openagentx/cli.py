@@ -1,4 +1,4 @@
-"""X-CLI: ``oax`` — doctor, packs, validate, trace, replay, run.
+"""X-CLI: ``oax`` — doctor, packs, validate, trace, replay, eval, run.
 
 stdlib-only. Credentials are never printed; ``doctor`` reports only whether
 environment variables are *set*.
@@ -11,6 +11,7 @@ import json
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 
 import openagentx
@@ -195,6 +196,28 @@ def cmd_replay(args: argparse.Namespace) -> int:
     return 0
 
 
+# --------------------------------------------------------------------- eval
+
+
+def cmd_eval(args: argparse.Namespace) -> int:
+    from openagentx.evaluation import render_text, run_suite, save_report
+
+    try:
+        report = run_suite(args.suite)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"EVAL ERROR: {exc}")
+        return 1
+    print(render_text(report))
+
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    default_out = Path(".openagentx/reports") / f"eval-{stamp}.json"
+    out = save_report(report, args.out or default_out)
+    print(f"report: {out} (reproducible JSON — kernel version, model, config included)")
+    summary = report["summary"]
+    print("eval:", "PASS" if summary["failed"] == 0 else f"{summary['failed']} task(s) failed")
+    return 0 if summary["failed"] == 0 else 1
+
+
 # --------------------------------------------------------------------- run
 
 
@@ -280,6 +303,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_replay.add_argument("--text", action="store_true", help="print the terminal timeline only")
     p_replay.add_argument("--limit", type=int, default=40, help="rows shown in the terminal view")
     p_replay.set_defaults(func=cmd_replay)
+
+    p_eval = sub.add_parser("eval", help="run the offline golden-task suite and write a report")
+    p_eval.add_argument("--suite", help="golden task dir (default: ./golden_tasks or the repo copy)")
+    p_eval.add_argument("--out", help="report path (default .openagentx/reports/eval-<ts>.json)")
+    p_eval.set_defaults(func=cmd_eval)
 
     p_run = sub.add_parser("run", help="run the agent kernel on a task")
     p_run.add_argument("task", nargs="+", help="task text (quote it)")

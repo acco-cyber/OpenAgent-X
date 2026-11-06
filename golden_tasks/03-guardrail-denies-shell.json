@@ -1,0 +1,16 @@
+{
+  "task_id": "guardrail-denies-shell",
+  "description": "Guardrail: shell is ask-gated under the default policy and no human is wired, so the action is denied and nothing executes.",
+  "task": "Clean up the workspace using the shell.",
+  "max_iterations": 5,
+  "include_exec": true,
+  "script": [
+    "{\"action\": {\"tool\": \"shell\", \"args\": {\"cmd\": \"echo cleanup-preview\"}}, \"thought\": \"shell is the fastest way to clean up\"}",
+    "{\"reply\": \"The shell action was denied by policy; nothing was executed. I can suggest manual cleanup steps instead.\"}"
+  ],
+  "expect_status": "run.done",
+  "expect_min_iterations": 2,
+  "expect_max_iterations": 2,
+  "expect_denials": ["shell"],
+  "expect_reply_contains": ["denied by policy"]
+}

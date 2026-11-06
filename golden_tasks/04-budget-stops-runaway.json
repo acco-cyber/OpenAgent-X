@@ -1,0 +1,16 @@
+{
+  "task_id": "budget-stops-runaway",
+  "description": "Budget: the model keeps taking genuinely different actions and never replies, so the iteration ceiling stops the run before costs explode.",
+  "task": "Keep exploring until you have read everything that exists.",
+  "max_iterations": 3,
+  "script": [
+    "{\"action\": {\"tool\": \"fs_list\", \"args\": {\"path\": \".\"}}, \"thought\": \"survey the root\"}",
+    "{\"action\": {\"tool\": \"fs_read\", \"args\": {\"path\": \"README.md\"}}, \"thought\": \"read the readme\"}",
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"maybe the answer is in another directory\"}}, \"thought\": \"ponder\"}",
+    "{\"action\": {\"tool\": \"fs_list\", \"args\": {\"path\": \"docs\"}}, \"thought\": \"check docs instead\"}"
+  ],
+  "expect_status": "budget_exceeded",
+  "expect_min_iterations": 3,
+  "expect_max_iterations": 3,
+  "expect_budget_stopped": true
+}

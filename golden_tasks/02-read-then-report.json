@@ -1,0 +1,15 @@
+{
+  "task_id": "read-then-report",
+  "description": "Tool loop: agent surveys the workspace with fs_list (allowed, P0), then reports.",
+  "task": "List the files here, then report what you found.",
+  "max_iterations": 5,
+  "script": [
+    "{\"action\": {\"tool\": \"fs_list\", \"args\": {\"path\": \".\"}}, \"thought\": \"survey the workspace before answering\"}",
+    "{\"reply\": \"Found the files. The workspace listing is complete and summarized above.\"}"
+  ],
+  "expect_status": "run.done",
+  "expect_min_iterations": 2,
+  "expect_max_iterations": 2,
+  "expect_tools_used": ["fs_list"],
+  "expect_reply_contains": ["found the files"]
+}

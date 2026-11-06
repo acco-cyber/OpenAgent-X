@@ -20,6 +20,7 @@ X-Memory                :mod:`openagentx.memory`
 X-Prompt                :mod:`openagentx.prompts`
 X-Packs                 :mod:`openagentx.packs`
 X-Team                  :mod:`openagentx.team`
+X-Eval                  :mod:`openagentx.evaluation`
 ======================  ==================================================
 
 Core rules enforced across the kernel:

@@ -1,0 +1,10 @@
+{
+  "task_id": "finish-clean",
+  "description": "Baseline: EchoLLM prose gets one protocol nudge, then finishes without touching tools.",
+  "task": "Summarize the files in this workspace and finish.",
+  "max_iterations": 4,
+  "expect_status": "run.done",
+  "expect_min_iterations": 2,
+  "expect_max_iterations": 2,
+  "expect_reply_contains": ["offline run complete"]
+}

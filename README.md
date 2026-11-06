@@ -61,6 +61,7 @@ python examples/budget_demo.py   # watch ceilings stop a runaway agent
 python examples/pack_demo.py     # knowledge packs + memory recall
 python examples/approval_demo.py # human-in-the-loop consent for ask-gated tools
 python -m openagentx.cli replay  # newest run as a timeline (text + one-file HTML)
+python -m openagentx.cli eval    # golden-task suite, graded offline, reproducible report
 python -m openagentx.cli doctor  # environment check (never prints secrets)
 python -m openagentx.cli run "build a responsive landing page"  # packs auto-activate
 ```
@@ -74,7 +75,7 @@ export OPENAGENTX_MODEL="gpt-4o-mini"
 python -m openagentx.cli run "research and summarize the top 3 JS frameworks" --online
 ```
 
-## The eleven pillars
+## The twelve pillars
 
 | Pillar | Module | One-line guarantee |
 |---|---|---|
@@ -89,6 +90,7 @@ python -m openagentx.cli run "research and summarize the top 3 JS frameworks" --
 | **X-Prompt** | `prompts.py`, `prompts/base/` | Layered prompt files; `{{include original}}` wraps defaults — extend, never fork |
 | **X-Packs** | `packs.py`, `packs/` | Keyword-triggered knowledge packs with *declared* permissions |
 | **X-Team** | `team.py` | Planner → budgeted executors → evidence-gated critic; auto-generated delegation catalog |
+| **X-Eval** | `evaluation.py`, `golden_tasks/` | Golden tasks as data — offline, deterministic grading with reproducible JSON reports |
 
 Full map with compose-it snippets: **[`docs/kernel/README.md`](docs/kernel/README.md)**.
 
@@ -170,7 +172,7 @@ Built **part-by-part**: every part is committed, verified (`scripts/verify.mjs` 
 - [x] Trace replay UI (render any run as a timeline)
 - [x] Approval flow demo (human-in-the-loop for ASK verdicts)
 - [ ] OpenHands Agent Server adapter (kernel as control plane)
-- [ ] Evaluation harness + golden tasks (per `docs/evaluation/`)
+- [x] Evaluation harness + golden tasks (per `docs/evaluation/`)
 - [ ] More packs: security, mobile, ML-ops, game-dev
 
 ## For contributors

@@ -16,6 +16,7 @@ blueprint. Every pillar is one small module with one job:
 | X-Prompt | `openagentx/prompts.py`, `prompts/base/` | Layered prompt files, `{{include original}}` wrapping, budget-aware trimming |
 | X-Packs | `openagentx/packs.py`, `packs/` | Keyword-triggered knowledge packs with declared permissions |
 | X-Team | `openagentx/team.py` | Planner/executor/critic with auto-generated delegation catalog |
+| X-Eval | `openagentx/evaluation.py`, `golden_tasks/` | Golden tasks as data; offline deterministic grading; reproducible JSON reports |
 
 ## Try it (no API keys needed)
 
@@ -26,6 +27,7 @@ python examples/budget_demo.py     # watch ceilings stop a runaway agent
 python examples/pack_demo.py       # packs + memory in action
 python examples/approval_demo.py   # human-in-the-loop consent for ASK verdicts
 oax replay                          # newest run as a timeline (text + shareable HTML)
+oax eval                            # golden-task suite, offline, reproducible JSON report
 oax doctor && oax run "summarize this repo"   # CLI (after pip install -e .)
 ```
 

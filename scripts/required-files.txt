@@ -103,3 +103,10 @@ openagentx/approval.py
 examples/approval_demo.py
 openagentx/replay.py
 examples/replay_demo.py
+openagentx/evaluation.py
+examples/eval_demo.py
+golden_tasks/README.md
+golden_tasks/01-finish-clean.json
+golden_tasks/02-read-then-report.json
+golden_tasks/03-guardrail-denies-shell.json
+golden_tasks/04-budget-stops-runaway.json

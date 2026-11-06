@@ -39,6 +39,7 @@ jobs:
           python examples/pack_demo.py
           python examples/approval_demo.py
           python examples/replay_demo.py
+          python examples/eval_demo.py
 
   secrets:
     name: Secret scan
