@@ -192,6 +192,18 @@ def _cmd_diff(args) -> int:
     return 0 if d["same"] else 1
 
 
+def _cmd_stats(args) -> int:
+    """Deterministic run analytics for one journal."""
+    from .stats import render_stats, run_stats
+
+    if not os.path.exists(args.journal):
+        print(f"stats: journal {args.journal} does not exist")
+        return 1
+    s = run_stats(args.journal)
+    print(render_stats(s))
+    return 0
+
+
 def _tools_for(wd: str):
     from .tools import builtin_tools
 
@@ -266,6 +278,10 @@ def build_parser() -> argparse.ArgumentParser:
     df.add_argument("--strict", action="store_true",
                     help="compare every field including ts (default ignores wall-clock)")
     df.set_defaults(fn=_cmd_diff)
+
+    st = sub.add_parser("stats", help="deterministic run analytics for one journal")
+    st.add_argument("journal")
+    st.set_defaults(fn=_cmd_stats)
 
     return p
 
