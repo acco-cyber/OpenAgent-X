@@ -122,3 +122,16 @@ framework's contracts with deterministic adapters: stop reasons, budgets,
 hooks, caches, chains, diffs. Prompt quality and model behavior are out
 of scope by construction; a real adapter is one `complete()`
 implementation away, and everything upstream already honors the contract.
+
+## How does CI test a project with zero dependencies?
+
+Trivially — and that is the payoff of stdlib-only (ADR-0002). The workflow
+(`.github/workflows/ci.yml`) runs checkout, `setup-python`, `setup-node`, and
+the same seven gates you run locally: verify, compileall, doctor, audit,
+eval, examples. Nothing is ever installed; there is nothing to install. The
+matrix runs Python 3.10 **and** 3.12 so the declared floor is tested, not
+assumed. The workflow consumes no secrets (there is nothing to consume) and
+holds least-privilege permissions (`contents: read`). If a "zero-dependency"
+claim ever broke, CI is where it would fail loudly: a sneaky `pip install`
+would contradict the purity gate, which is why the verify gate refuses one in
+the workflow itself.

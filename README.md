@@ -1,5 +1,6 @@
 # OpenAgent-X
 
+[![CI](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml/badge.svg)](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](docs/tutorial.md)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-8A2BE2)](docs/adr/0002-stdlib-only-offline.md)
 [![Eval](https://img.shields.io/badge/eval-35_tasks_399_checks-brightgreen)](golden_tasks)
@@ -331,9 +332,19 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | [`docs/modules.md`](docs/modules.md) | guides to all 39 modules with real entry points and per-module invariants |
 | [`docs/adr/`](docs/adr/) | ten decision records with Status / Context / Decision / Consequences — costs admitted |
 | [`docs/glossary.md`](docs/glossary.md) | thirty terms, each grounded in the module that owns it |
-| [`docs/faq.md`](docs/faq.md) | fourteen real questions answered honestly |
+| [`docs/faq.md`](docs/faq.md) | fifteen real questions answered honestly |
 | [`docs/00-ai-context.md`](docs/00-ai-context.md) | the brief for AI contributors working in this repo |
 | [`docs/24h-plan.md`](docs/24h-plan.md) | the live sprint plan: slot matrix, protocol, evidence |
+
+## CI — the same gates, zero installs
+
+`.github/workflows/ci.yml` runs the seven local gates on every push and PR,
+on Python **3.10 and 3.12** (the declared floor is tested, not assumed), with
+**no install steps at all** — pure stdlib means checkout plus interpreters is
+the whole environment. The workflow consumes no secrets and holds
+least-privilege permissions. `scripts/verify.mjs` enforces the shape: a gate
+command missing from the workflow, a `pip install`, a `secrets.` reference,
+or a dropped 3.10 pin is a failed gate here, not just a red X there.
 
 ## Status & roadmap
 
