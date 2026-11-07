@@ -118,3 +118,4 @@ docs/adr/0009-supply-chain-proofs.md
 docs/adr/0010-docs-that-cannot-drift.md
 docs/glossary.md
 docs/faq.md
+.github/workflows/ci.yml

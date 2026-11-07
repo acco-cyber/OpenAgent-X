@@ -1,0 +1,44 @@
+# OpenAgent-X CI — the same gates every local slot must pass, with zero
+# installs: the repo is pure stdlib, so checkout + interpreters is the
+# whole environment. No secrets are consumed; the workflow runs offline.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: gates (py ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: verify (required files + golden contracts + docs/README/ADR sync)
+        run: node scripts/verify.mjs
+      - name: compileall (every module byte-compiles)
+        run: python -m compileall -q openagentx examples
+      - name: doctor (purity + integrity gate, 6/6 or exit 1)
+        run: python -m openagentx doctor
+      - name: audit (secret scan — 0 findings or exit 1)
+        run: python -m openagentx audit .
+      - name: eval (honest golden matrix — all green or exit 1)
+        run: python -m openagentx eval
+      - name: examples (every offline demo end-to-end)
+        run: python -m openagentx examples
