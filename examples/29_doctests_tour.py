@@ -10,7 +10,7 @@ twice with no wall-clock, a module without examples counted honestly
 instead of faked green, a poisoned docstring failing loudly with its
 Failed example / Expected / Got log, an import bomb folding into a
 failing result carrying the real exception, one failure poisoning the
-aggregate, and the CLI agreeing (exit 0 green / 1 failing) — the same
+aggregate, the CLI agreeing (exit 0 green / 1 failing), and floor flags failing loudly when the example set shrinks — the same
 honest contract golden task 40 enforces.
 """
 
@@ -97,6 +97,16 @@ def main() -> int:
         rc1 = cli_main(["doctest", wd])
     assert rc0 == 0 and rc1 == 1, f"CLI contract broken: {rc0}/{rc1}"
     print("[7] CLI agrees: exit 0 over the real tree, 1 over the poison dir")
+
+    # 8) floors are enforceable from the CLI too
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        rc2 = cli_main(["doctest", "--min-examples", "9999"])
+    assert rc2 == 1, f"floor flag not enforced: {rc2}"
+    out8 = buf.getvalue()
+    assert "floor violated" in out8 and "9999" in out8
+    print("[8] floor flags enforced from the CLI: an impossible floor "
+          "fails loudly naming the floor")
 
     print("OK 29_doctests_tour")
     return 0

@@ -176,7 +176,9 @@ the result); an import failure folds into a failing result carrying
 the real exception; one failure poisons the aggregate `ok`; the render
 is byte-deterministic with no wall-clock; probes are graded by the
 same code that grades the real tree, so a poisoned docstring fails
-exactly like a drill fails.
+exactly like a drill fails; floor flags (`--min-modules`,
+`--min-examples`) let any operator demand the same bar the matrix
+pins — a shrunk example set is a loud named failure.
 
 ## Reliability
 
