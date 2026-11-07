@@ -454,3 +454,19 @@ pad with empty commits.
   prose coverage in one deterministic render (sorted rows, honest
   no-prose marks, exit 1 while any task lacks prose), graded by two new
   explain-drill checks and demonstrated by example 28
+  ✅ the slot opened with a plan-truth repair (S33-E3's checkbox read
+  [ ] at HEAD while its final commit recorded [x], evidence duplicated —
+  flipped and deduped, claims re-verified against the live tree before
+  the edit); explain_all() + render_explain_index: 40 rows in matrix
+  order, [NO-PROSE] ghosts and unreadable-spec error rows loud, ok
+  False while any prose missing, render byte-deterministic with no
+  wall-clock; CLI --all (exit 0 covered / 1 prose missing, task arg now
+  optional); explain drill grows to 14 checks (index_covers_matrix,
+  index_deterministic_cli_ghost with the CLI capture under
+  CLI_STDOUT_LOCK), matrix 40 tasks / 462 checks; README
+  badge/inline/quickstart/CLI-row, explainers intro + task-39 prose
+  (14) with the index contract, golden row 39 (14), tutorial capstone
+  line, example 28 step 8, modules.md invariant, CHANGELOG round-two
+  bullet; the 462 cascade split across two commits after a line-wrapped
+  anchor missed — recorded in the completion commit; audit 0, doctor
+  6/6
