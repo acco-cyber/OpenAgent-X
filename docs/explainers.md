@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (40 tasks, 459 checks) is the repo's contract with
+The golden matrix (40 tasks, 460 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -442,7 +442,7 @@ without its prose, or an explain render that drifted between calls.
 **The run:** no agent runs here either; the drill grades the package's
 own docstring examples through the stdlib doctest engine — the same
 loaders that grade the real tree also grade the probe files this drill
-writes. **The checks grade (12):** the real tree is green (53 examples
+writes. **The checks grade (13):** the real tree is green (53 examples
 across 17 modules, floor pinned so the set cannot quietly shrink), every
 package module is reported in sorted order with none skipped, modules
 without examples are counted honestly and never faked green, a poisoned
@@ -452,7 +452,7 @@ into a failing result carrying the real `RuntimeError`, the redaction
 example is really graded (fixture assembled at runtime, marker in,
 raw token never printed), the render is byte-deterministic with no
 wall-clock, one failure poisons the aggregate, and the CLI agrees
-(exit 0 green / 1 failing). **Loud failure:** a docstring example that
+(exit 0 green / 1 failing), and the floor flags work from the CLI too (`--min-examples 9999` fails loudly naming the floor). **Loud failure:** a docstring example that
 rots — the first run of this very drill caught two examples referencing
 a name their module never imported — or a probe that somehow passes.
 

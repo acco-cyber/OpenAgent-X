@@ -119,6 +119,24 @@ def run_doctests(loaded: list) -> dict:
     }
 
 
+def floor_violations(report: dict, min_modules: int = 0,
+                     min_examples: int = 0) -> list:
+    """Floors the CLI can demand — a shrunk example set is a loud failure.
+
+    Returns human-readable violation messages (empty list = floors met).
+    The drill pins the same floors server-side; the flag exists so any
+    operator, script or CI can demand the bar without reading the matrix.
+    """
+    out = []
+    if report["modules_with_examples"] < min_modules:
+        out.append(f"modules with examples "
+                   f"{report['modules_with_examples']} < {min_modules}")
+    if report["total_examples"] < min_examples:
+        out.append(f"total examples "
+                   f"{report['total_examples']} < {min_examples}")
+    return out
+
+
 def render_doctests(report: dict) -> str:
     """Byte-deterministic render: header counts, then one line per module
     with examples, then every failure's log. No wall-clock anywhere."""

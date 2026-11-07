@@ -50,7 +50,12 @@ def _cmd_doctest(args) -> int:
               else _dt.load_package_modules())
     report = _dt.run_doctests(loaded)
     print(_dt.render_doctests(report), end="")
-    return 0 if report["ok"] else 1
+    rc = 0 if report["ok"] else 1
+    for msg in _dt.floor_violations(report, args.min_modules,
+                                    args.min_examples):
+        print(f"floor violated: {msg}")
+        rc = 1
+    return rc
 
 
 def _cmd_doctor(args) -> int:
@@ -409,6 +414,10 @@ def build_parser() -> argparse.ArgumentParser:
     dc.add_argument("dir", nargs="?", default="",
                     help="grade plain .py files in this directory instead "
                          "of the openagentx package")
+    dc.add_argument("--min-modules", type=int, default=0,
+                    help="fail unless at least N modules carry examples")
+    dc.add_argument("--min-examples", type=int, default=0,
+                    help="fail unless at least N docstring examples exist")
     dc.set_defaults(fn=_cmd_doctest)
 
     a = sub.add_parser("audit", help="secret-scan a tree")

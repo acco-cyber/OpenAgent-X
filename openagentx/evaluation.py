@@ -3759,6 +3759,15 @@ def _doctest_drill(task: dict) -> list:
         "cli_exit_contract",
         rc0 == 0 and rc1 == 1,
         f"exit {rc0} green / {rc1} failing"))
+    # 13) floors are enforceable from the CLI too (operator-grade bar)
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        rc2 = cli_main(["doctest", "--min-examples", "9999"])
+    so2 = buf.getvalue()
+    checks.append(Check(
+        "cli_floor_enforced",
+        rc2 == 1 and "floor violated" in so2 and "9999" in so2,
+        f"exit {rc2}, floor named in output"))
     return checks
 
 
