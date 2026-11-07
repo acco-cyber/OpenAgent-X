@@ -222,7 +222,19 @@ green.
   README + ai-context cross-link both; `verify.mjs` gains a docs-sync gate
   (every module guided, tutorial names only real subcommands and existing
   examples); required-files manifest carries both docs
-- [ ] S21-E3 — docs: ADR pack (10 records) + glossary + FAQ
+- [x] S21-E3 — docs: ADR pack (10 records) + glossary + FAQ
+  ✅ 35 tasks, 399 checks green; `docs/adr/` holds ten records
+  (journal-is-the-truth, stdlib-only-offline, redaction defense in depth,
+  scripted adapters, honest golden drills, four stop reasons +
+  control-plane, views-from-replay determinism, opt-in hash chains,
+  supply-chain proofs in three layers, docs-that-cannot-drift), each with
+  Status/Context/Decision and honest costs, indexed by the adr README;
+  `docs/glossary.md` defines thirty terms grounded in their owning
+  modules; `docs/faq.md` answers fourteen real questions (budget stops,
+  invisible retries, strict vs semantic diff, True-is-not-an-integer,
+  torn tails vs middle tears, what is not graded against a real model);
+  verify.mjs gains the ADR gate (>=10 records, all four sections, all
+  indexed) and the manifest names every ADR, the glossary, and the FAQ
 - [ ] S22-E3 — README overhaul (SOTA presentation, badges, demo traces)
 - [ ] S23-E3 — CI: GitHub Actions (verify/compileall/eval/audit) + community files
 - [ ] S24-E3 — eval parallelism + perf pass + CHANGELOG + 1.0.0-rc1
