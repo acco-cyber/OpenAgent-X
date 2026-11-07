@@ -136,6 +136,7 @@ examples/24_grep_journal.py
 openagentx/replay.py
 golden_tasks/38-replay-from.json
 examples/25_replay_from.py
+examples/26_author_your_own_drill.py
 docs/assets/banner.png
 docs/assets/demo.gif
 docs/assets/demo.mp4

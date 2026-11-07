@@ -363,3 +363,8 @@ pad with empty commits.
   restored green); README doc-map row + tutorial Step-10 link;
   manifest 140 → 141; eval 38 tasks / 435 checks unchanged (docs-only
   slot, count cannot regress), audit 0, doctor 6/6
+
+- [ ] S30-E3 — more examples: the gallery grows the two demos the
+  stretch list still owes — grade-your-own-drill (the hero capstone as
+  runnable code) and the flight-recorder tour (one run through every
+  view)
