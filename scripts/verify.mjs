@@ -19,10 +19,12 @@ const drills = new Set(['loop', 'redact', 'trace', 'team', 'router', 'budget', '
                         'cache', 'hooks', 'fanout', 'structured', 'retry', 'breaker',
                         'planner', 'snapshot', 'prompt', 'jit', 'chaos', 'chain',
                         'diff', 'stats', 'bench', 'fuzz', 'property', 'pack2',
-                        'graph', 'dashboard', 'mermaid', 'sweep', 'grep']);
+                        'graph', 'dashboard', 'mermaid', 'sweep', 'grep',
+                        'replay_from']);
 const runnerDrills = new Set(['loop', 'redact', 'trace', 'budget', 'stop', 'redact_nested',
                               'cache', 'retry', 'breaker', 'jit', 'chaos', 'chain',
-                              'diff', 'stats', 'sweep', 'grep']); // need script[]
+                              'diff', 'stats', 'sweep', 'grep',
+                              'replay_from']); // need script[]
 const teamDrills = new Set(['team']);    // need lead_script[] + specialist_script[]
 const routerDrills = new Set(['router']); // need fallback_script[]
 const memoryDrills = new Set(['memory']); // need runs[] (each with script[]) + queries[]
@@ -88,7 +90,7 @@ if (existsSync(gdir)) {
 } else { console.error('MISSING golden_tasks/'); fail++; }
 
 // 3) eval count only moves forward (honest growth)
-if (nTasks < 37) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 37`); fail++; }
+if (nTasks < 38) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 38`); fail++; }
 
 // 4) docs stay in sync with the package (module guides + tutorial)
 if (existsSync(join(root, 'docs/modules.md')) && existsSync(join(root, 'docs/tutorial.md'))) {

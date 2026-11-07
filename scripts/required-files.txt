@@ -133,3 +133,4 @@ openagentx/grep.py
 golden_tasks/37-grep-journal.json
 examples/24_grep_journal.py
 openagentx/replay.py
+golden_tasks/38-replay-from.json

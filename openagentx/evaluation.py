@@ -3363,6 +3363,173 @@ def _grep_drill(task: dict) -> list:
     ]
 
 
+def _replay_from_drill(task: dict) -> list:
+    """Replay from any point: the journal folds from the middle, honestly.
+
+    Honest contract: ``replay_from`` folds the suffix ``seq >= N`` from
+    zero at that point; bounds are honest (0..max seq, an empty journal
+    exposes only 0, out-of-bounds raises ValueError — never silent
+    clamping); a gapped journal is an integrity failure, not a state to
+    fold; every monotone counter of the suffix fold equals whole minus
+    prefix, and the fold never claims additivity where it is false
+    (``runs_open`` is clamped, ``last_reply``/``final_stop`` describe
+    only their own window); a torn tail is invisible to the fold and
+    reported; the state is the view and the view renders through the
+    redaction engine — a raw token on disk never leaves it, even inside
+    ``last_reply``; the CLI exits 0 folded / 1 missing / 2 bad bounds.
+    """
+    from .cli import main as cli_main
+    from .replay import replay_from, render_replay
+
+    wd = _fresh_wd("replay_from")
+    events, result = _run_offline(task, wd)
+    exp = _expect(task)
+    jp = os.path.join(wd, "journal.jsonl")
+
+    whole = replay(events)
+    r0 = replay_from(jp, 0)
+
+    mid = 5  # the second action's step_start: a real middle-of-run window
+    r_mid = replay_from(jp, mid)
+    prefix = replay([ev for ev in events if ev.seq < mid])
+    mono = ["runs_closed", "replies", "steps", "thoughts", "tool_calls",
+            "tool_results", "tool_fails", "redactions", "errors",
+            "budgets", "runs_opened"]
+    adds = all(r_mid["state"][k] == whole[k] - prefix[k] for k in mono)
+
+    mid_reply = [ev for ev in events
+                 if ev.type == "reply" and ev.seq >= mid]
+    mid_end = [ev for ev in events
+               if ev.type == "run_end" and ev.seq >= mid]
+    suffix_direct = {
+        "runs_open": 0 if mid_end else max(
+            0, whole["runs_open"] - prefix["runs_open"]),
+        "last_reply": str((mid_reply[-1].payload or {}).get("text", ""))
+        if mid_reply else "",
+        "final_stop": str((mid_end[-1].payload or {}).get("stop_reason", ""))
+        if mid_end else "",
+    }
+
+    r_max = replay_from(jp, events[-1].seq)
+
+    bounds_high = bounds_neg = None
+    try:
+        replay_from(jp, events[-1].seq + 1)
+        bounds_high = False
+    except ValueError:
+        bounds_high = True
+    try:
+        replay_from(jp, -1)
+        bounds_neg = False
+    except ValueError:
+        bounds_neg = True
+
+    empty_path = os.path.join(wd, "empty.jsonl")
+    open(empty_path, "wb").close()
+    empty_ok = replay_from(empty_path, 0)
+    empty_bad = None
+    try:
+        replay_from(empty_path, 1)
+        empty_bad = False
+    except ValueError:
+        empty_bad = True
+
+    gap_path = os.path.join(wd, "gap.jsonl")
+    ev0 = events[0]
+    gap_obj = json.loads(ev0.to_json())
+    with open(gap_path, "w", encoding="utf-8") as fh:
+        fh.write(ev0.to_json() + "\n")
+        gap_obj["seq"] = ev0.seq + 2
+        fh.write(json.dumps(gap_obj) + "\n")
+    gap = None
+    try:
+        replay_from(gap_path, 0)
+        gap = False
+    except ValueError:
+        gap = True
+
+    torn_path = os.path.join(wd, "torn.jsonl")
+    with open(torn_path, "wb") as fh:
+        fh.write(open(jp, "rb").read() + b'{"seq": 99, "tu')
+    torn = replay_from(torn_path, mid)
+    clean = replay_from(jp, mid)
+
+    render = render_replay(r_mid)
+    render_again = render_replay(replay_from(jp, mid))
+
+    raw = "ghp_" + "A1b2C3d4E5" * 3 + "F9ab12"
+    leak = os.path.join(wd, "leak.jsonl")
+    lj = Journal(leak)
+    lj.start_run("replay-leak")
+    lj.append("reply", {"text": "answer carries " + raw})
+    leak_r = replay_from(leak, 0)
+
+    import io as _io
+    from contextlib import redirect_stdout as _rso
+    with _rso(_io.StringIO()):
+        c_ok = cli_main(["replay", jp, "--from", str(mid)])
+        c_missing = cli_main(["replay", os.path.join(wd, "gone.jsonl")])
+        c_bounds = cli_main(["replay", jp, "--from",
+                             str(events[-1].seq + 1)])
+    with _rso(_io.StringIO()) as _buf:
+        cli_main(["replay", leak])
+        cli_out = _buf.getvalue()
+
+    return [
+        Check("run_stops_as_planned",
+              result.stop_reason == exp.get("stop_reason", "reply")
+              and result.reply == str(exp.get("reply", "")),
+              f"stop={result.stop_reason}"),
+        Check("from_zero_is_the_whole_run",
+              r0["state"] == whole and r0["folded"] == r0["total"]
+              == len(events) and r0["from_seq"] == 0,
+              f"{r0['folded']} events folded from 0 == full replay"),
+        Check("monotone_counters_add",
+              adds and r_mid["folded"] == len(events) - mid,
+              f"{len(mono)} counters: suffix == whole - prefix"),
+        Check("non_additive_reported_honestly",
+              r_mid["state"]["runs_open"] == suffix_direct["runs_open"]
+              and r_mid["state"]["last_reply"] == suffix_direct["last_reply"]
+              and r_mid["state"]["final_stop"] == suffix_direct["final_stop"]
+              and r_mid["state"]["last_reply"] == str(exp.get("reply", "")),
+              "clamped/open + window text describe only their own window"),
+        Check("from_max_folds_exactly_one",
+              r_max["folded"] == 1 and r_max["state"]["runs_closed"] == 1
+              and r_max["state"]["final_stop"] == "reply",
+              "the last event alone closes the run"),
+        Check("bounds_are_honest_never_clamped",
+              bounds_high and bounds_neg and empty_bad
+              and empty_ok["folded"] == 0 and empty_ok["total"] == 0,
+              "max+1 and -1 and empty>=1 raise; empty@0 folds zero"),
+        Check("gap_is_integrity_failure",
+              gap is True,
+              "a gapped journal raises, never folds"),
+        Check("torn_tail_invisible_and_reported",
+              torn["torn_tail"] is True and clean["torn_tail"] is False
+              and torn["state"] == clean["state"]
+              and torn["folded"] == clean["folded"],
+              "tear reported, suffix folds identically"),
+        Check("window_named_in_render",
+              f"from {mid}" in render
+              and f"of {len(events)}" in render,
+              render.splitlines()[0]),
+        Check("deterministic_no_wallclock",
+              render == render_again
+              and not re.search(r"\d{10,}", render),
+              "same journal, same window, same bytes"),
+        Check("raw_token_redacted_in_state_view",
+              leak_r["view_redactions"] >= 1
+              and raw not in render_replay(leak_r)
+              and "[REDACTED:github_token]" in leak_r["state"]["last_reply"],
+              "disk truth stays on disk, even inside last_reply"),
+        Check("cli_contract",
+              c_ok == 0 and c_missing == 1 and c_bounds == 2
+              and raw not in cli_out
+              and "[REDACTED:github_token]" in cli_out,
+              "0 folded / 1 missing / 2 bad bounds; stdout redacted"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -3400,6 +3567,7 @@ DRILLS = {
     "mermaid": _mermaid_drill,
     "sweep": _sweep_drill,
     "grep": _grep_drill,
+    "replay_from": _replay_from_drill,
 }
 
 

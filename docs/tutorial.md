@@ -259,6 +259,7 @@ The verification stack, all offline and deterministic:
 python3 -m openagentx diff a.jsonl b.jsonl      # semantic diff, exit 0 same / 1 different
 python3 -m openagentx stats a.jsonl             # the numeric fingerprint
 python3 -m openagentx grep a.jsonl --tool write_file   # search the journal, matches redacted
+python3 -m openagentx replay a.jsonl --from 5   # fold the suffix from seq 5, bounds honest (exit 2 = bad bounds)
 python3 -m openagentx property --seed 7         # journal invariants after every step
 python3 -m openagentx fuzz --seed 7             # seeded attacks on the journal contract
 python3 -m openagentx bench                     # throughput, wall-clock, never graded
@@ -309,7 +310,7 @@ never trusts its harness: exceptions fold into failing checks, and the
 check count only moves forward.
 
 ```sh
-python3 -m openagentx eval          # 37 tasks, all green or exit 1
+python3 -m openagentx eval          # 38 tasks, all green or exit 1
 python3 -m openagentx examples      # every offline demo, all OK
 ```
 

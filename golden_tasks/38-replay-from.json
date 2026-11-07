@@ -1,0 +1,19 @@
+{
+  "id": "38-replay-from",
+  "title": "Replay from any point: the journal folds from the middle, honestly — replay_from folds the suffix seq >= N from zero at that point; bounds are honest (0..max seq, empty journal exposes only 0, out-of-bounds raises ValueError, never silent clamping); density is required (a gapped journal is an integrity failure, not a state to fold); every monotone counter of the suffix fold equals the whole-run counter minus the prefix counter, and the module never claims additivity where it is false (runs_open is clamped, last_reply/final_stop describe only their own window); a torn tail is invisible to the fold and reported, never folded; from 0 is the whole run and from max seq folds exactly one event; the state is the view and the view renders through the redaction engine — a raw token on disk never leaves it even inside last_reply; the render names its window, is byte-deterministic with no wall-clock; the CLI exits 0 folded / 1 missing journal / 2 bad bounds with redacted stdout",
+  "drill": "replay_from",
+  "task_text": "produce a journal worth replaying from the middle",
+  "max_steps": 8,
+  "script": [
+    "{\"action\": {\"tool\": \"vault_read\", \"args\": {\"key\": \"github\"}}, \"thought\": \"read the secret\"}",
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"fold me from seq 5\"}}, \"thought\": \"plan the fold\"}",
+    "{\"action\": {\"tool\": \"read_file\", \"args\": {\"path\": \"gone.txt\"}}, \"thought\": \"this one fails\"}",
+    "{\"reply\": \"replayed from the middle\"}"
+  ],
+  "expect": {
+    "reply": "replayed from the middle",
+    "tool_calls": 3,
+    "thoughts": 3,
+    "tool_fails": 1
+  }
+}
