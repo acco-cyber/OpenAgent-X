@@ -28,7 +28,9 @@ def main() -> int:
     t2 = time.perf_counter()
 
     assert ok_serial and ok_parallel, "both modes must be all green"
-    assert len(serial) == len(parallel) == 35, "same task count either way"
+    n = len(serial)
+    assert len(parallel) == n, "same task count either way"
+    assert n >= 36, f"the matrix only grows: {n} < 36"
 
     # the identity contract: verdicts are identical, per task, in order
     for s, p in zip(serial, parallel):
@@ -48,9 +50,9 @@ def main() -> int:
 
     total = sum(len(r.checks) for r in serial)
     green = sum(r.passed for r in serial)
-    print(f"serial   : 35 tasks, {green}/{total} checks green "
+    print(f"serial   : {n} tasks, {green}/{total} checks green "
           f"in {t1 - t0:.3f}s")
-    print(f"parallel : 35 tasks, {green}/{total} checks green "
+    print(f"parallel : {n} tasks, {green}/{total} checks green "
           f"(workers=4) in {t2 - t1:.3f}s")
     print("verdicts identical, task order identical, "
           f"wall-clock delta {abs((t2 - t1) - (t1 - t0)):.3f}s — "
