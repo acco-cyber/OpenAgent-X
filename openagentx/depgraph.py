@@ -31,17 +31,15 @@ import hashlib
 import json
 import os
 
-from .sbom import build_sbom
+from .sbom import _build_sbom_core
 
 
-def _imports_by_kind(path: str) -> tuple:
-    """``(eager, lazy)`` (name, level) pairs of one source file.
+def _imports_by_kind(tree) -> tuple:
+    """``(eager, lazy)`` (name, level) pairs of one parsed module tree.
 
     Only crossing into a function body demotes an import to lazy — class
     bodies and module-level ``if``/``try`` blocks still run at load time.
     """
-    with open(path, encoding="utf-8") as fh:
-        tree = ast.parse(fh.read(), filename=path)
     eager: list = []
     lazy: list = []
 
@@ -108,16 +106,19 @@ def _sccs(nodes: list, succ: dict) -> list:
     return out
 
 
-def _resolve_edges(root: str, sbom: dict) -> tuple:
-    """Resolve local imports to in-package edges; returns (edges, unresolved)."""
+def _resolve_edges(root: str, sbom: dict, trees: dict) -> tuple:
+    """Resolve local imports to in-package edges; returns (edges, unresolved).
+
+    ``trees`` maps module name to its already-parsed AST — one parse per
+    module serves both the BOM classification and this graph.
+    """
     pkg = sbom["package"]
     mod_set = {m["module"] for m in sbom["modules"]}
     edges: list = []
     unresolved: list = []
     seen: set = set()
     for m in sbom["modules"]:
-        src_path = os.path.join(root, m["path"])
-        eager, lazy = _imports_by_kind(src_path)
+        eager, lazy = _imports_by_kind(trees[m["module"]])
         for name, level, kind in [(n, lv, "eager") for n, lv in eager] + \
                                  [(n, lv, "lazy") for n, lv in lazy]:
             if level > 0:  # relative: "." -> the package itself, ".mod" -> pkg.mod
@@ -142,10 +143,13 @@ def _resolve_edges(root: str, sbom: dict) -> tuple:
 def build_depgraph(root: str = ".", pkg_dir: str = "") -> dict:
     """Derive the import graph of the package from its own source files."""
     root = os.fspath(root)
-    sbom = build_sbom(root, pkg_dir)
+    pdir = pkg_dir or os.path.join(root, "openagentx")
+    pkg_name = os.path.basename(os.path.abspath(pdir))
+    # one read + one parse per module feeds both the BOM and the graph
+    sbom, trees = _build_sbom_core(root, pdir, pkg_name, keep_trees=True)
     pkg = sbom["package"]
     modules = [m["module"] for m in sbom["modules"]]
-    edges, unresolved = _resolve_edges(root, sbom)
+    edges, unresolved = _resolve_edges(root, sbom, trees)
     eager = [e for e in edges if e["kind"] == "eager"]
 
     fan_out = {n: 0 for n in modules}
