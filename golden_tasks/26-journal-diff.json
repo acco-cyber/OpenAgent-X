@@ -1,0 +1,15 @@
+{
+  "id": "26-journal-diff",
+  "title": "Event-level journal diff: two independent runs of one script are semantically SAME (wall-clock ts ignored), a self-diff is the zero diff, strict mode treats every stored byte as data and diverges at seq 0, an edited reply localizes at the reply's seq with both tails carried verbatim, deletion lands on the removed side and an appended event on the added side, torn tails isolate per side without corrupting the comparison, type counts match the raw stream, renders are byte-deterministic, and the CLI exit contract (0 = same, 1 = different) holds",
+  "drill": "diff",
+  "task_text": "produce a journal worth diffing",
+  "max_steps": 6,
+  "script": [
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"compare me\"}}, \"thought\": \"plan the run\"}",
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"40+2\"}}, \"thought\": \"compute\"}",
+    "{\"reply\": \"same both times\"}"
+  ],
+  "expect": {
+    "reply": "same both times"
+  }
+}

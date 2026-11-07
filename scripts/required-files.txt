@@ -75,3 +75,7 @@ openagentx/chain.py
 golden_tasks/24-chaos.json
 golden_tasks/25-hash-chain.json
 examples/12_chaos_chain.py
+openagentx/jdiff.py
+openagentx/stats.py
+golden_tasks/26-journal-diff.json
+golden_tasks/27-run-stats.json

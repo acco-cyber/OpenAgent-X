@@ -2207,6 +2207,215 @@ def _chain_drill(task: dict) -> list:
     ]
 
 
+def _diff_drill(task: dict) -> list:
+    """Journal diff: the same script twice is semantically SAME, every
+    mutation localizes.
+
+    Honest contract: two independent runs of one script differ only in
+    wall-clock ts (semantic diff says SAME, strict mode says DIFFERENT at
+    seq 0), a self-diff is the zero diff, an edited reply localizes at the
+    reply's seq with both tails carried verbatim, deletion and addition are
+    reported on the right side, torn tails isolate per side, type counts
+    match the raw stream, renders are byte-deterministic, and the CLI exit
+    contract (0 = same, 1 = different) holds.
+    """
+    from .cli import main as cli_main
+    from .jdiff import diff_journals, render_diff
+
+    wd = _fresh_wd("diff")
+    events, result = _run_offline(task, wd, "a.jsonl")
+    wd2 = _fresh_wd("diff")
+    _run_offline(task, wd2, "b.jsonl")
+    jp_a = os.path.join(wd, "a.jsonl")
+    jp_b = os.path.join(wd2, "b.jsonl")
+    exp = _expect(task)
+
+    def copy_with(name, mutate):
+        dst = os.path.join(wd, name)
+        lines = open(jp_a, encoding="utf-8").read().splitlines()
+        mutate(lines)
+        with open(dst, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(lines) + "\n")
+        return dst
+
+    def edit_reply(lines):
+        for i, ln in enumerate(lines):
+            obj = json.loads(ln)
+            if obj.get("type") == "reply":
+                obj["payload"]["text"] = "TAMPERED"
+                lines[i] = json.dumps(obj, sort_keys=True, ensure_ascii=False)
+                return
+
+    def drop_last(lines):
+        del lines[-1]
+
+    def append_note(lines):
+        obj = json.loads(lines[-1])
+        obj["seq"] = len(lines)
+        obj["type"] = "note"
+        obj["payload"] = {"text": "extra"}
+        obj["ts"] = obj["ts"] + 1.0
+        lines.append(json.dumps(obj, sort_keys=True, ensure_ascii=False))
+
+    jp_edit = copy_with("edited.jsonl", edit_reply)
+    jp_drop = copy_with("dropped.jsonl", drop_last)
+    jp_plus = copy_with("plus.jsonl", append_note)
+    jp_torn_b = os.path.join(wd2, "torn-b.jsonl")
+    with open(jp_torn_b, "wb") as fh:
+        fh.write(open(jp_b, "rb").read() + b'{"seq": 99, "tu')
+
+    r_same = diff_journals(jp_a, jp_b)
+    r_self = diff_journals(jp_a, jp_a)
+    r_edit = diff_journals(jp_a, jp_edit)
+    r_drop = diff_journals(jp_a, jp_drop)
+    r_plus = diff_journals(jp_a, jp_plus)
+    r_strict = diff_journals(jp_a, jp_b, strict=True)
+    r_torn = diff_journals(jp_a, jp_torn_b)
+    rendered = render_diff(r_edit)
+    render_twice = render_diff(diff_journals(jp_a, jp_edit))
+
+    reply_seq = next(e.seq for e in events if e.type == "reply")
+    counts: dict = {}
+    for e in events:
+        counts[e.type] = counts.get(e.type, 0) + 1
+    reply_text = str(exp.get("reply", ""))
+
+    return [
+        Check("both_runs_stop_reply",
+              result.stop_reason == "reply" and result.reply == reply_text,
+              f"stop={result.stop_reason}"),
+        Check("same_script_is_semantically_same",
+              r_same["same"] and r_same["diverged_at"] == -1
+              and r_same["removed_count"] == 0 and r_same["added_count"] == 0,
+              f"common={r_same['common']}/{r_same['events_a']}"),
+        Check("self_diff_is_zero",
+              r_self["same"] and r_self["diverged_at"] == -1,
+              "a journal against itself is the zero diff"),
+        Check("edited_reply_localizes",
+              not r_edit["same"] and r_edit["diverged_at"] == reply_seq
+              and r_edit["removed"][0]["payload"]["text"] == reply_text
+              and r_edit["added"][0]["payload"]["text"] == "TAMPERED",
+              f"diverged_at={r_edit['diverged_at']} (reply seq {reply_seq})"),
+        Check("deletion_reported_as_removed",
+              not r_drop["same"] and r_drop["removed_count"] == 1
+              and r_drop["added_count"] == 0,
+              "missing run_end lands on the removed side"),
+        Check("addition_reported_as_added",
+              not r_plus["same"] and r_plus["added_count"] == 1
+              and r_plus["removed_count"] == 0
+              and r_plus["added"][0]["type"] == "note",
+              "the extra event lands on the added side"),
+        Check("strict_mode_sees_ts_noise",
+              not r_strict["same"] and r_strict["diverged_at"] == 0,
+              "wall-clock is data under --strict"),
+        Check("torn_tail_isolated_per_side",
+              r_torn["same"] and r_torn["torn_b"] and not r_torn["torn_a"],
+              "garbage tail never corrupts the comparison"),
+        Check("type_counts_match_stream",
+              r_same["type_counts_a"] == counts
+              and sum(counts.values()) == len(events),
+              str(counts)[:70]),
+        Check("render_deterministic_and_informative",
+              rendered == render_twice and "DIFFERENT" in rendered
+              and "- seq=" in rendered and "+ seq=" in rendered,
+              "byte-identical renders with +/- lines"),
+        Check("cli_exit_contract",
+              cli_main(["diff", jp_a, jp_b]) == 0
+              and cli_main(["diff", jp_a, jp_edit]) == 1,
+              "0 = same, 1 = different"),
+        Check("journals_dense_reopen",
+              sequence_dense(events) and sequence_dense(_reopen(jp_a)),
+              f"{len(events)} events, dense"),
+    ]
+
+
+def _stats_drill(task: dict) -> list:
+    """Run analytics: the numeric fingerprint agrees with every other view.
+
+    Honest contract: counters are taken from replay() itself so stats and
+    replay can never disagree, type counts match the raw stream, per-tool
+    pairing sums to the call count with the planned failure visible, think
+    is graded as the tool it is, the empty journal reports the zero state,
+    a torn tail is reported honestly with the prefix counted, renders are
+    byte-deterministic, and the CLI contract holds.
+    """
+    from .cli import main as cli_main
+    from .stats import render_stats, run_stats
+    from .trace import replay
+
+    wd = _fresh_wd("stats")
+    events, result = _run_offline(task, wd)
+    jp = os.path.join(wd, "journal.jsonl")
+    exp = _expect(task)
+    s = run_stats(jp)
+    st = replay(events)
+    counts: dict = {}
+    for e in events:
+        counts[e.type] = counts.get(e.type, 0) + 1
+
+    empty_path = os.path.join(wd, "empty.jsonl")
+    open(empty_path, "w", encoding="utf-8").close()
+    s_empty = run_stats(empty_path)
+
+    torn_path = os.path.join(wd, "torn.jsonl")
+    with open(torn_path, "wb") as fh:
+        fh.write(open(jp, "rb").read() + b'{"seq": 99, "tu')
+    s_torn = run_stats(torn_path)
+
+    exp_calls = int(exp.get("tool_calls", s["tool_calls"]))
+    exp_fails = int(exp.get("tool_fails", s["tool_fails"]))
+    return [
+        Check("run_stops_as_planned",
+              result.stop_reason == exp.get("stop_reason", "reply")
+              and result.reply == str(exp.get("reply", "")),
+              f"stop={result.stop_reason}"),
+        Check("event_count_honest",
+              s["events"] == len(events) and s["dense"] and not s["torn_tail"],
+              f"{s['events']} events, dense={s['dense']}"),
+        Check("replay_agreement",
+              s["thoughts"] == st["thoughts"] and s["steps"] == st["steps"]
+              and s["tool_calls"] == st["tool_calls"]
+              and s["tool_results"] == st["tool_results"]
+              and s["replies"] == st["replies"] and s["errors"] == st["errors"]
+              and s["redactions"] == st["redactions"]
+              and s["runs_opened"] == st["runs_opened"]
+              and s["runs_closed"] == st["runs_closed"],
+              "stats are replay's numbers — one source of truth"),
+        Check("type_counts_match_stream",
+              s["type_counts"] == counts and sum(counts.values()) == s["events"],
+              str(counts)[:70]),
+        Check("tool_profile_as_planned",
+              s["tool_calls"] == exp_calls and s["tool_fails"] == exp_fails,
+              f"calls={s['tool_calls']} fails={s['tool_fails']}"),
+        Check("per_tool_pairing_sums",
+              all(t["calls"] == t["ok"] + t["failed"]
+                  for t in s["tools"].values())
+              and any(t["failed"] for t in s["tools"].values()),
+              str(s["tools"])[:70]),
+        Check("think_is_a_tool", "think" in s["tools"],
+              "the think turn is counted where it belongs"),
+        Check("duration_reported_not_graded",
+              isinstance(s["duration"], float) and s["duration"] >= 0.0,
+              f"{s['duration']}s"),
+        Check("render_deterministic_and_labeled",
+              render_stats(run_stats(jp)) == render_stats(s)
+              and "wall-clock" in render_stats(s),
+              "byte-identical re-render"),
+        Check("empty_journal_zero_state",
+              s_empty["events"] == 0 and s_empty["dense"] and not s_empty["torn_tail"]
+              and s_empty["type_counts"] == {} and s_empty["tools"] == {}
+              and s_empty["duration"] == 0.0,
+              "the zero state is reported, not faked"),
+        Check("torn_tail_reported_with_prefix",
+              s_torn["torn_tail"] and s_torn["events"] == s["events"],
+              "garbage tail isolated, prefix counted"),
+        Check("cli_contract",
+              cli_main(["stats", jp]) == 0
+              and cli_main(["stats", os.path.join(wd, "gone.jsonl")]) == 1,
+              "0 = report, 1 = missing file"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -2233,6 +2442,8 @@ DRILLS = {
     "jit": _jit_drill,
     "chaos": _chaos_drill,
     "chain": _chain_drill,
+    "diff": _diff_drill,
+    "stats": _stats_drill,
 }
 
 

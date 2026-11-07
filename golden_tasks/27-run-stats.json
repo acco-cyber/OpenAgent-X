@@ -1,0 +1,19 @@
+{
+  "id": "27-run-stats",
+  "title": "Run analytics: the stats fingerprint is replay's own counters (one source of truth, never a second opinion), type counts match the raw stream and sum to the event total, the planned tool profile (4 calls, 1 planned failure) is visible, per-tool pairing sums to the call count with the failed read_file named, think is counted as the tool it is, the wall-clock span is reported but never graded, re-renders are byte-identical, the empty journal reports the zero state, a torn tail is reported honestly with the prefix still counted, and the CLI contract (0 = report, 1 = missing file) holds",
+  "drill": "stats",
+  "task_text": "produce a journal worth measuring",
+  "max_steps": 8,
+  "script": [
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"measure me\"}}, \"thought\": \"plan the run\"}",
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"6*7\"}}, \"thought\": \"compute\"}",
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"note.txt\", \"text\": \"measured\"}}, \"thought\": \"persist\"}",
+    "{\"action\": {\"tool\": \"read_file\", \"args\": {\"path\": \"missing.txt\"}}, \"thought\": \"planned failure\"}",
+    "{\"reply\": \"measured and reported\"}"
+  ],
+  "expect": {
+    "reply": "measured and reported",
+    "tool_calls": 4,
+    "tool_fails": 1
+  }
+}
