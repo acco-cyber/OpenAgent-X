@@ -136,7 +136,16 @@ green.
   per-tool call/ok/fail pairing, torn/density flags and the wall-clock
   span reported but never graded); example 13 live; examples count now
   thirteen
-- [ ] S15-E3 — `oax bench` (journal throughput microbench) + fuzz harness (seeded)
+- [x] S15-E3 — `oax bench` (journal throughput microbench) + fuzz harness (seeded)
+  ✅ 29 tasks, 330 checks green; `bench.py` (deterministic synthetic
+  workload through a real Journal, three timed phases reported as honest
+  single-run wall-clock that is never graded, zero-event bench at 0.0
+  rates) + `fuzz.py` (seeded attack schedule: torn-tail garbage every 7th
+  op isolates + truncates to a dense resume, middle-tear splice every 11th
+  op raises and restores byte-identically, unicode payloads round-trip,
+  two reads fold to one replay state, no timings so the same seed always
+  yields the same verdict); `oax bench` / `oax fuzz` exit-code contracts
+  live; example 14 live; examples count now fourteen
 - [ ] S16-E3 — property suite (torn-tail/replay/density under random traces)
 - [ ] S17-E3 — pack v2 (signed manifest) + sbom v2 (dependency graph)
 - [ ] S18-E3 — report v2 (dashboard HTML) + mermaid trace export
