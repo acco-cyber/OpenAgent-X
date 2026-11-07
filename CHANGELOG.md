@@ -6,6 +6,23 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — presentation
+
+- README professional overhaul: a programmatic banner (rendered art, no
+  AI-generated text), a navigation table, a **Watch it run** section with a
+  35-second demo recorded from a real session against a clean clone —
+  clone → `oax doctor` (6/6) → `oax eval` (38 tasks, 435/435 green) →
+  `oax run --timeline` (live redaction at the boundary) → `oax stats` →
+  `oax grep` — every visible line is the tool's actual stdout, shipped as
+  `docs/assets/demo.gif` (plays inline everywhere) plus `docs/assets/
+  demo.mp4` (crisp H.264); a **Why developers use it** section naming six
+  concrete ways the repo helps working engineers (reference patterns,
+  stealable eval harness, flight recorder, security defaults, zero-install
+  friction, honesty as discipline); a Contributing section stating the
+  repo's enforced rules; the full clone URL replacing the placeholder; and
+  the stale "35 golden drills" claim in the comparison table trued up to
+  38. Assets are manifest-tracked (140 required files).
+
 ### Added — views
 
 - `oax replay --from N`: the journal folds from the middle, honestly.

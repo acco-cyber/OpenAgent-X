@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/banner.png" alt="OpenAgent-X — pure-stdlib agent framework. Every action journaled. Replayable. Redacted by default." width="100%">
+</p>
+
 # OpenAgent-X
 
 [![CI](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml/badge.svg)](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml)
@@ -20,10 +24,43 @@ journal boundary and every view re-applies the mask), and **honest grading**
 (38 golden drills, 435 checks, harness errors fold into failing checks — never
 silent passes). Ten ADRs in `docs/adr/` record why, with the costs admitted.
 
+| Navigate | | | |
+|---|---|---|---|
+| [Watch it run](#watch-it-run) | [Quickstart](#quickstart--60-seconds-zero-api-keys) | [Why developers use it](#why-developers-use-it) | [A real run, event by event](#a-real-run-event-by-event) |
+| [CLI at a glance](#the-cli-at-a-glance) | [Runtime guarantees](#what-the-agent-runtime-guarantees) | [Architecture](#architecture-one-journal-many-views) | [Comparison](#how-openagent-x-compares) |
+| [Examples gallery](#examples-gallery--one-deep-dive-per-guarantee) | [Why it matters](#why-it-matters) | [Docs map](#documentation-map) | [Contributing](#contributing) |
+
+## Watch it run
+
+A real session, recorded from actual commands against a clean clone of this
+repository — clone, purity gate, the full 38-drill eval matrix, a scripted
+agent run with its timeline, the numeric fingerprint of the journal, and a
+search that proves the redaction boundary holds. Nothing staged, nothing
+mocked: every line you see is the tool's real stdout.
+
+<p align="center">
+  <a href="docs/assets/demo.mp4"><img src="docs/assets/demo.gif" alt="Demo: oax doctor, oax eval (38 tasks, 435/435 green), oax run --timeline with live redaction, oax stats, oax grep — every line is real output" width="100%"></a>
+  <br>
+  <sub>35-second demo — <a href="docs/assets/demo.mp4">watch the crisp MP4</a> · the GIF above plays everywhere, no player needed</sub>
+</p>
+
+What to look for in the video:
+
+- **`doctor`** — six gates pass before anything else runs: pure stdlib, no
+  network modules, manifest present, golden tasks valid.
+- **`eval`** — 38 drills, 435/435 checks green, offline, in under two seconds.
+- **`run --timeline`** — a real agent turn loop. Watch event `[004]`: the tool
+  executed on the fixture secret, but the journal stored only
+  `[REDACTED:github_token]` — the mask is applied at the boundary, and even
+  the redaction count is itself journaled.
+- **`stats` / `grep`** — two views over the same journal bytes: the counters
+  match the timeline you just watched, and the search finds the redacted
+  event without ever being able to print the secret.
+
 ## Quickstart — 60 seconds, zero API keys
 
 ```
-git clone <this repo> && cd OpenAgent-X
+git clone https://github.com/acco-cyber/OpenAgent-X.git && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
 python3 -m openagentx examples # twenty-five runnable end-to-end demos
@@ -32,6 +69,45 @@ python3 -m openagentx examples # twenty-five runnable end-to-end demos
 No model keys, no SDKs, no services. The default adapter is `ScriptedLLM`:
 deterministic turns you write yourself, so the whole matrix runs anywhere
 Python runs — CI, air-gapped, your laptop.
+
+## Why developers use it
+
+**1. A working reference for patterns you keep reinventing.** Agent loop,
+event sourcing, budget governors, deny-policy hooks, retry with backoff,
+circuit breakers, chaos injection, hash-chained tamper evidence — each one is
+a small, readable module (~40 modules total) with its invariants written down
+in [docs/modules.md](docs/modules.md) and its design rationale in one of ten
+[ADRs](docs/adr/). Copy the ideas or copy the code — MIT.
+
+**2. An eval harness you can steal.** The golden-task pattern — JSON drill
+specs, offline scripted adapters, exceptions folding into failing
+`harness_error` checks, a check count that only ever moves forward — is a
+complete, working answer to "how do I grade an LLM agent without lying to
+myself?" See [golden_tasks/README.md](golden_tasks/README.md).
+
+**3. A black-box flight recorder for real agent runs.** Swap `ScriptedLLM`
+for your model adapter and you keep the same journal, the same redaction
+boundary, and the same tooling: `stats` for the numeric fingerprint, `grep`
+for searchable (redacted) truth, `diff` for two-run comparison, `replay
+--from` to re-derive state from any point, `dashboard`/`mermaid` for views
+you can hand to a reviewer who doesn't read code.
+
+**4. Security defaults worth copying.** Secrets die at the journal boundary;
+every view re-applies the mask; the repo audits *itself* for token-shaped
+literals (`oax audit .`, 0 findings or exit 1); hash chains localize tampering
+to the exact event. The FAQ explains the threat model in plain language
+([docs/faq.md](docs/faq.md)).
+
+**5. Zero-install means zero friction.** Pure stdlib: clone it on a machine
+with no network and no pip, and everything still runs — including CI (the
+workflow installs nothing, consumes no secrets, and tests the 3.10 floor).
+That also makes it a safe dependency for teaching, demos, and regulated
+environments.
+
+**6. Honesty as an engineering discipline.** Timings are reported, never
+graded. Wall-clock is noise or data, never silently either. Empty results say
+so instead of fabricating. If you've ever wanted a codebase that models "how
+we'd build it if we had to audit it later" — this is that codebase.
 
 ## A real run, event by event
 
@@ -296,7 +372,7 @@ not a strawman of any specific project:
 |---|---|---|
 | Source of truth | in-memory agent state; logs are best-effort | append-only JSONL journal; replay is a pure fold of it |
 | Secrets | flow into logs and prompts verbatim | redacted at the journal boundary, re-masked by every view; `oax audit .` scans the tree itself |
-| Grading | mocked calls or "it should pass" scripts | 35 golden drills execute real behavior; exceptions fold into a failing `harness_error` check |
+| Grading | mocked calls or "it should pass" scripts | 38 golden drills execute real behavior; exceptions fold into a failing `harness_error` check |
 | Dependencies | SDK + runtime + keys before hello-world | pure stdlib; the full matrix runs offline, zero keys |
 | Determinism | wall-clock and network inside the loop | same events → same replay state; semantic diff ignores the clock, `--strict` doesn't |
 | Tamper evidence | usually none | opt-in hash chains; edits localize to the exact seq |
@@ -343,6 +419,24 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | [`docs/retrospective.md`](docs/retrospective.md) | the 24-hour sprint reviewed honestly: three epochs, what was built, what the deliberate costs bought, what surprised us |
 | [`docs/24h-plan.md`](docs/24h-plan.md) | the live sprint plan: slot matrix, protocol, evidence |
 
+## Contributing
+
+Issues and PRs welcome — the fastest way to fit in is to read the rules the
+repo enforces on itself:
+
+1. **Pure stdlib, offline** — `oax doctor` must stay 6/6; no third-party
+   imports, no network modules, no exceptions.
+2. **Every feature ships with proof** — a golden task (JSON drill), an
+   example in the gallery, and docs; the eval check count only moves forward.
+3. **Honest grading** — drills observe real behavior from a real run; harness
+   errors fold into failing checks; timings are reported, never graded.
+4. **No token-shaped literals** — fixture secrets are assembled at runtime by
+   concatenation; `oax audit .` must stay at 0 findings.
+5. **Verify before you push** — `node scripts/verify.mjs` plus the six other
+   gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) are the
+   same gates a PR meets. The [AI contributors' brief](docs/00-ai-context.md)
+   and the [ADRs](docs/adr/) explain the *why* behind each rule.
+
 ## CI — the same gates, zero installs
 
 `.github/workflows/ci.yml` runs the seven local gates on every push and PR,
@@ -368,8 +462,8 @@ or a dropped 3.10 pin is a failed gate here, not just a red X there.
 openagentx/     the library (events, runner, tools, trace, evaluation, ...)
 golden_tasks/   offline drill specs (JSON) — the grading matrix
 examples/       runnable offline examples (zero API keys)
+docs/           AI context, sprint plan, module guides, tutorial, ADRs, glossary, FAQ + demo assets
 scripts/        verify.mjs, required-files.txt
-docs/           AI context, sprint plan, module guides, tutorial, ADRs, glossary, FAQ
 ```
 
 MIT licensed. Built to be audited.

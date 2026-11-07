@@ -322,8 +322,19 @@ pad with empty commits.
 - [x] S27-E3 — `oax replay --from`: the journal folds from the middle,
   honestly
 
-- [ ] S28-E3 — presentation pass: the README grows a real banner, a
+- [x] S28-E3 — presentation pass: the README grows a real banner, a
   real-session demo video, and a developer-value map
+  ✅ assets recorded from a real session against a clean clone: banner
+  rendered programmatically (no AI text), demo.gif 1.1 MB + demo.mp4
+  787 KB — clone → doctor 6/6 → eval 38 tasks 435/435 green → run
+  --timeline with live redaction at the boundary → stats → grep, every
+  visible line is the tool's real stdout; README gains a navigation
+  table, the Watch-it-run section, Why-developers-use-it (six concrete
+  ways the repo helps working engineers), a Contributing section with
+  the enforced rules, and the full clone URL (placeholder removed); the
+  stale 35-golden-drills claim in the comparison table trued up to 38;
+  binary assets manifest-tracked (140 required files), audit 0 findings
+  (binaries scanned clean), doctor 6/6, verify OK, eval 38/435 green
   ✅ 38 tasks, 435 checks green; `replay.py` folds every event with
   `seq >= N` from zero at that point — bounds honest (0..max seq, an
   empty journal exposes only the zero state at 0, out-of-bounds raises
