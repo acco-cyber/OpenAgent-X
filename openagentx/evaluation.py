@@ -3653,6 +3653,37 @@ def _explain_drill(task: dict) -> list:
         rc0 == 0 and rc1 == 1 and "explain 01-loop-stop" in so
         and "no task 'no-such-task'" in so,
         f"exit {rc0} found / {rc1} missing"))
+    # 13) the matrix index covers every task, honestly
+    from .explain import explain_all, render_explain_index
+    idx = explain_all()
+    ids = [r["id"] for r in idx["rows"]]
+    checks.append(Check(
+        "index_covers_matrix",
+        (idx["tasks"] == len(real) and idx["ok"] is True
+         and ids == sorted(ids)),
+        f"{idx['tasks']} tasks, {idx['with_prose']} with prose, sorted"))
+    # 14) the index render is deterministic and the CLI agrees; a ghost
+    #     spec without prose is a loud NO-PROSE row, never coverage
+    iout = render_explain_index(idx)
+    import io as _io
+    from contextlib import redirect_stdout as _rso
+    buf = _io.StringIO()
+    with CLI_STDOUT_LOCK, _rso(buf):
+        rc_all = cli_main(["explain", "--all"])
+    ghost_wd = _fresh_wd("explain")
+    with open(os.path.join(ghost_wd, "99-ghost.json"), "w",
+              encoding="utf-8") as fh:
+        json.dump({"id": "99-ghost", "title": "no prose", "drill": "loop"},
+                  fh)
+    g = explain_all(ghost_wd)
+    gout = render_explain_index(g)
+    checks.append(Check(
+        "index_deterministic_cli_ghost",
+        (iout == render_explain_index(idx) and rc_all == 0
+         and "explain --all" in buf.getvalue()
+         and g["ok"] is False and g["with_prose"] == 0
+         and "[NO-PROSE] no prose" in gout),
+        f"cli exit {rc_all}, ghost ok={g['ok']}"))
     return checks
 
 
