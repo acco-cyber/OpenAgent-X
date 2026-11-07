@@ -18,7 +18,7 @@ const drills = new Set(['loop', 'redact', 'trace', 'team', 'router', 'budget', '
                         'redact_nested', 'audit', 'pack', 'sbom', 'memory', 'compact',
                         'cache', 'hooks', 'fanout', 'structured', 'retry', 'breaker',
                         'planner', 'snapshot', 'prompt', 'jit', 'chaos', 'chain',
-                        'diff', 'stats']);
+                        'diff', 'stats', 'bench', 'fuzz']);
 const runnerDrills = new Set(['loop', 'redact', 'trace', 'budget', 'stop', 'redact_nested',
                               'cache', 'retry', 'breaker', 'jit', 'chaos', 'chain',
                               'diff', 'stats']); // need script[]

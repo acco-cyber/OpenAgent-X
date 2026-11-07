@@ -17,7 +17,7 @@ import re
 from dataclasses import dataclass
 
 from .audit import run_audit
-from .events import Journal, sequence_dense
+from .events import Journal, read_events_safe, sequence_dense
 from .llm import ScriptedLLM
 from .redact import REDACTED_PREFIX
 from .runner import AgentRunner, RESERVED_TOOLS
@@ -2416,6 +2416,153 @@ def _stats_drill(task: dict) -> list:
     ]
 
 
+def _bench_drill(task: dict) -> list:
+    """Journal microbench: structure is graded, wall-clock never is.
+
+    Honest contract: every planned event lands dense with rates reported,
+    bytes are re-statted from disk, the read-back returns exactly the
+    planned count, doubling the workload doubles the journal, the
+    zero-event bench exposes the empty journal with 0.0 rates instead of
+    dividing by zero, the render labels timings as never-graded, and the
+    CLI contract holds. No check ever asserts a timing value.
+    """
+    from .bench import render_bench, run_bench
+    from .cli import main as cli_main
+
+    wd = _fresh_wd("bench")
+    exp = _expect(task)
+    n = int(exp.get("events", 300))
+    b1 = run_bench(events=n, workdir=os.path.join(wd, "b1"))
+    b2 = run_bench(events=n, workdir=os.path.join(wd, "b2"))
+    b0 = run_bench(events=0, workdir=os.path.join(wd, "b0"))
+    b2x = run_bench(events=2 * n, workdir=os.path.join(wd, "b2x"))
+    back, torn = read_events_safe(b1["journal"])
+    rendered = render_bench(b1)
+
+    timing_keys = ("append_s", "read_s", "replay_s")
+    return [
+        Check("bench_lands_all_events",
+              b1["events"] == n == b1["planned_events"] and b1["dense"]
+              and not b1["torn_tail"],
+              f"{b1['events']}/{n} dense={b1['dense']}"),
+        Check("rates_reported_positive",
+              b1["append_eps"] > 0 and b1["read_eps"] > 0
+              and b1["replay_eps"] > 0,
+              f"append={b1['append_eps']} read={b1['read_eps']} "
+              f"replay={b1['replay_eps']} ev/s"),
+        Check("timings_are_floats_never_asserted",
+              all(isinstance(b1[k], float) and b1[k] >= 0 for k in timing_keys),
+              "structure only — the clock is nobody's grade"),
+        Check("bytes_re_statted_from_disk",
+              b1["journal_bytes"] == os.path.getsize(b1["journal"]) > 0,
+              f"{b1['journal_bytes']} bytes"),
+        Check("readback_equals_planned",
+              len(back) == n and not torn,
+              f"read back {len(back)}"),
+        Check("render_labeled_and_sectioned",
+              all(w in rendered for w in
+                  ("append", "read", "replay", "events/sec", "never graded")),
+              "the honesty label is part of the report"),
+        Check("structure_stable_across_runs",
+              sorted(b1.keys()) == sorted(b2.keys()),
+              f"{len(b1.keys())} report keys"),
+        Check("scale_doubles_the_journal",
+              b2x["events"] == 2 * n and b2x["journal_bytes"] > b1["journal_bytes"],
+              f"{n}->{2 * n} events, bytes {b1['journal_bytes']}->"
+              f"{b2x['journal_bytes']}"),
+        Check("zero_events_honest",
+              b0["events"] == 0 and b0["dense"] and b0["append_eps"] == 0.0
+              and b0["read_eps"] == 0.0 and b0["journal_bytes"] == 0,
+              "0.0 rates instead of a division by zero"),
+        Check("report_names_its_journal",
+              b1["journal"].endswith(".jsonl") and os.path.exists(b1["journal"]),
+              str(b1["journal"])[:60]),
+        Check("cli_contract", cli_main(["bench", "--events", "60"]) == 0,
+              "exit 0 = planned events landed dense"),
+        Check("workload_is_deterministic",
+              b1["journal_bytes"] > 0 and b2["journal_bytes"] > 0
+              and abs(b1["journal_bytes"] - b2["journal_bytes"])
+              <= max(64, b1["journal_bytes"] // 100),
+              "same workload, near-identical bytes (ts digits drift only)"),
+    ]
+
+
+def _fuzz_drill(task: dict) -> list:
+    """Seeded fuzz: the journal contract holds under randomized attack.
+
+    Honest contract: the fixed schedule (torn tail every 7th op, middle
+    tear every 11th op) fires exactly as computed, torn tails isolate and
+    truncate cleanly, middle tears raise and restore byte-identically,
+    every payload round-trips including unicode, two reads fold to the
+    same replay state, reports carry no timings so the same seed always
+    yields the same verdict, and the CLI contract holds.
+    """
+    from .cli import main as cli_main
+    from .fuzz import render_fuzz, run_fuzz, run_fuzz_suite
+
+    wd = _fresh_wd("fuzz")
+    exp = _expect(task)
+    ops = int(exp.get("ops", 90))
+    seeds = [int(s) for s in exp.get("seeds", [0, 1, 2])]
+    suite = run_fuzz_suite(seeds=seeds, n_ops=ops, workdir=wd)
+    exp_torn = len([i for i in range(ops) if i % 7 == 3])
+    exp_mid = len([i for i in range(ops) if i % 11 == 5])
+
+    r_a = run_fuzz(seed=11, n_ops=45, workdir=wd)
+    r_b = run_fuzz(seed=11, n_ops=45, workdir=wd)
+    r_c = run_fuzz(seed=12, n_ops=45, workdir=os.path.join(wd, "twelve"))
+    r0 = run_fuzz(seed=13, n_ops=0, workdir=os.path.join(wd, "zero"))
+    a_ev = _reopen(r_a["journal"])
+    c_ev = _reopen(r_c["journal"])
+    rendered = render_fuzz(suite[0])
+
+    return [
+        Check("suite_clean_on_all_seeds",
+              len(suite) == len(seeds) and all(r["ok"] and not r["violations"]
+                                               for r in suite),
+              f"{len(suite)} seeds x {ops} ops, 0 violations"),
+        Check("torn_schedule_fired_exactly",
+              all(r["torn_injected"] == exp_torn for r in suite),
+              f"{exp_torn} torn-tail injections per seed"),
+        Check("middle_tears_raised_and_restored",
+              all(r["middle_tears"] == exp_mid for r in suite),
+              f"{exp_mid} splices per seed, each must raise then restore"),
+        Check("roundtrip_including_unicode",
+              all(r["roundtrip"] for r in suite),
+              "every (seq,type,payload) came back equal from disk"),
+        Check("checks_exceed_ops",
+              all(r["checks_run"] >= r["n_ops"] for r in suite),
+              f"min checks {min(r['checks_run'] for r in suite)}"),
+        Check("report_is_fully_deterministic",
+              r_a == r_b,
+              "no timings: same seed -> identical report dict"),
+        Check("seed_changes_the_trace",
+              [(e.type, json.dumps(e.payload, sort_keys=True)) for e in a_ev[:8]]
+              != [(e.type, json.dumps(e.payload, sort_keys=True)) for e in c_ev[:8]]
+              and r_a["ok"] and r_c["ok"],
+              "different seeds drive different random payloads"),
+        Check("dense_final_journals",
+              all(r["dense"] for r in suite) and r_a["dense"] and r_c["dense"],
+              "dense sequences survive the whole attack schedule"),
+        Check("ok_flag_matches_violations",
+              all(r["ok"] == (not r["violations"]) for r in suite),
+              "the verdict flag is never independent of the evidence"),
+        Check("zero_ops_honest",
+              r0["events_written"] == 0 and r0["ok"] and r0["dense"]
+              and r0["torn_injected"] == 0 and r0["checks_run"] >= 3,
+              "the zero state still verifies and reports"),
+        Check("render_deterministic_one_line",
+              rendered == render_fuzz(run_fuzz(seed=suite[0]["seed"],
+                                               n_ops=ops,
+                                               workdir=wd))
+              and " OK" in rendered,
+              "same seed -> byte-identical verdict line"),
+        Check("cli_contract",
+              cli_main(["fuzz", "--seeds", "21,22", "--ops", "35"]) == 0,
+              "exit 0 = zero violations across seeds"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -2444,6 +2591,8 @@ DRILLS = {
     "chain": _chain_drill,
     "diff": _diff_drill,
     "stats": _stats_drill,
+    "bench": _bench_drill,
+    "fuzz": _fuzz_drill,
 }
 
 

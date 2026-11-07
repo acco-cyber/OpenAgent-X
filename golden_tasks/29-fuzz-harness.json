@@ -1,0 +1,10 @@
+{
+  "id": "29-fuzz-harness",
+  "title": "Seeded fuzz over the journal contract: the fixed attack schedule (torn-tail garbage every 7th op, middle-tear splice every 11th op) fires exactly as computed on every seed, torn tails isolate with the prefix intact and truncate cleanly to a dense resume, middle tears raise and restore byte-identically, every generated (seq,type,payload) round-trips from disk including unicode and nesting, two independent reads fold to identical replay state, reports carry no timings so the same seed always yields the same verdict while different seeds drive different traces, the zero-op run still verifies, and the CLI contract holds",
+  "drill": "fuzz",
+  "task_text": "attack the journal contract with a seeded schedule",
+  "expect": {
+    "ops": 90,
+    "seeds": [0, 1, 2]
+  }
+}

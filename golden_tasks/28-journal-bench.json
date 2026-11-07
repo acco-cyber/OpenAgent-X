@@ -1,0 +1,9 @@
+{
+  "id": "28-journal-bench",
+  "title": "Journal throughput microbench: a deterministic synthetic workload lands every planned event dense through a real Journal on a real filesystem, the three timed phases (append, read-back, replay fold) report honest single-run wall-clock with positive rates, bytes are re-statted from disk and the read-back returns exactly the planned count, doubling the workload doubles the journal, the zero-event bench exposes the empty journal with 0.0 rates instead of dividing by zero, the render labels timings as never graded, report structure is stable across runs, and no check ever asserts a timing value",
+  "drill": "bench",
+  "task_text": "measure the journal honestly",
+  "expect": {
+    "events": 300
+  }
+}

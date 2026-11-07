@@ -79,3 +79,7 @@ openagentx/jdiff.py
 openagentx/stats.py
 golden_tasks/26-journal-diff.json
 golden_tasks/27-run-stats.json
+openagentx/bench.py
+openagentx/fuzz.py
+golden_tasks/28-journal-bench.json
+golden_tasks/29-fuzz-harness.json
