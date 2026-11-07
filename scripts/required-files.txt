@@ -140,6 +140,7 @@ examples/25_replay_from.py
 examples/26_author_your_own_drill.py
 examples/27_views_tour.py
 examples/28_explain.py
+examples/29_doctests_tour.py
 docs/assets/banner.png
 docs/assets/demo.gif
 docs/assets/demo.mp4

@@ -312,10 +312,13 @@ what the checks grade, how it fails loudly — lives in
 `docs/explainers.md`; read any task's spec + prose from the CLI with
 `oax explain <NN-slug>`; a runnable version of this capstone — author a
 spec, grade a real run, watch the honest failures — lives at
-`examples/26_author_your_own_drill.py`.
+`examples/26_author_your_own_drill.py`. The docstrings grade themselves too: every `>>>` example in
+the package runs under `oax doctest`, so prose that drifts from
+the code fails exactly like a drill.
 
 ```sh
 python3 -m openagentx eval          # 40 tasks, all green or exit 1
+python3 -m openagentx doctest       # every docstring example, graded
 python3 -m openagentx examples      # every offline demo, all OK
 ```
 

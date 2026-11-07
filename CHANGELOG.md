@@ -6,6 +6,24 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — self-checks (doctest)
+
+- `oax doctest [dir]`: the docstring examples are graded, not decorative —
+  a stdlib-doctest runner walks every package module (and any plain `.py`
+  directory, so probes are graded by the same loaders that grade the real
+  tree); every module is reported (with or without examples — never faked
+  green), a failing example rides its doctest log (Failed example /
+  Expected / Got), an import failure folds with the real exception, one
+  failure poisons the aggregate, the render is byte-deterministic with no
+  wall-clock, the CLI exits 0 green / 1 failing; graded by golden task 40
+  (12 checks, eval floor 39 → 40, matrix 40 tasks / 459 checks) and
+  demonstrated by example 29; nine core modules gained curated `>>>`
+  examples (redaction with the runtime-assembled fixture, events, jdiff,
+  memory, cache, breaker, compact, mermaid, structured — 27 examples,
+  floor pinned); the first run of the new drill caught two examples
+  referencing a name their module never imported — fixed at the root;
+  modules.md, the CLI table, the tutorial and the explainer page synced;
+  manifest 145 files
 ### Added — views (explain)
 
 - `oax explain <NN-slug|path>`: the matrix explains itself from the CLI —
