@@ -7,8 +7,11 @@ it lives on the durable volume (`/home/z/my-project/OpenAgent-X`, symlinked
 from `/home/z/OpenAgent-X`) because two earlier epochs were lost to sandbox
 recycling. `docs/24h-plan.md` is the operating contract for every slot. For humans
 (and agents onboarding): `docs/modules.md` guides every module in
-`openagentx/`, and `docs/tutorial.md` is the zero-to-hero walkthrough whose
-snippets are executed, not decorative.
+`openagentx/`, `docs/tutorial.md` is the zero-to-hero walkthrough whose
+snippets are executed, not decorative, `docs/adr/` holds the ten
+architecture decision records with their honest costs, and
+`docs/glossary.md` + `docs/faq.md` define the vocabulary and answer the
+recurring questions.
 
 ## Architecture map
 
