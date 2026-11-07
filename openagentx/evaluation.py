@@ -951,6 +951,190 @@ def _hooks_drill(task: dict) -> list:
     ]
 
 
+def _fanout_drill(task: dict) -> list:
+    """Parallel fan-out: real branch runs, honest failure data, ordered fan-in.
+
+    Honest contract: every branch is a real AgentRunner run with its own
+    dense journal; the parent references children by name and run_id; a
+    failing branch is recorded (``script_error`` + empty reply) instead of
+    poisoning the run; dispatch order follows spec order; the coordinator
+    answers only from the fanin; a re-run with fixed run_ids is structurally
+    identical (same seq/run_id/type/payload stream, wall-clock excluded).
+    """
+    from .fanout import FanoutRunner, fanout_fingerprint
+
+    wd = _fresh_wd("fanout")
+    exp = _expect(task)
+    branches_spec = dict(task.get("branches", {}))
+    coord_script = [str(s) for s in task.get("coordinator_script", [])]
+    parent = os.path.join(wd, "journal.jsonl")
+    runner = FanoutRunner(
+        ScriptedLLM(coord_script, name="coordinator"),
+        {n: ScriptedLLM([str(s) for s in b.get("script", [])], name=str(n))
+         for n, b in branches_spec.items()},
+        builtin_tools(wd), parent,
+        workdir=wd, run_id="fanout-drill",
+        max_steps_per_branch=int(task.get("max_steps_per_branch", 6)),
+        branch_tasks={n: str(b.get("task_text", "")) for n, b in branches_spec.items()},
+    )
+    result = runner.run(str(task.get("task_text", "fanout drill")))
+    events, torn = load_trace(parent)
+    branch_starts = [e for e in events if e.type == "branch_start"]
+    branch_ends = {str(e.payload.get("branch")): e
+                   for e in events if e.type == "branch_end"}
+    fanins = [e for e in events if e.type == "fanin"]
+    failed = str(exp.get("failed_branch", ""))
+    replies_map = {b.name: b.reply for b in result.branches}
+    stop_map = {b.name: b.stop_reason for b in result.branches}
+    tools_count = {b.name: sum(1 for e in _reopen(b.journal_path) if e.type == "tool_call")
+                   for b in result.branches}
+    # determinism: same fixed run_ids in a fresh directory
+    rerun_wd = os.path.join(wd, "rerun")
+    os.makedirs(rerun_wd, exist_ok=True)
+    FanoutRunner(
+        ScriptedLLM(coord_script, name="coordinator"),
+        {n: ScriptedLLM([str(s) for s in b.get("script", [])])
+         for n, b in branches_spec.items()},
+        builtin_tools(rerun_wd), os.path.join(rerun_wd, "journal.jsonl"),
+        workdir=rerun_wd, run_id="fanout-drill",
+        max_steps_per_branch=int(task.get("max_steps_per_branch", 6)),
+        branch_tasks={n: str(b.get("task_text", "")) for n, b in branches_spec.items()},
+    ).run(str(task.get("task_text", "fanout drill")))
+    rerun_events, _t2 = load_trace(os.path.join(rerun_wd, "journal.jsonl"))
+    same_parent = fanout_fingerprint(events) == fanout_fingerprint(rerun_events)
+    same_branches = all(
+        fanout_fingerprint(_reopen(b.journal_path))
+        == fanout_fingerprint(_reopen(os.path.join(
+            rerun_wd, os.path.basename(b.journal_path))))
+        for b in result.branches)
+    refs_ok = all(
+        branch_ends[b.name].payload.get("run_id") == b.run_id
+        and _reopen(b.journal_path)[0].run_id == b.run_id
+        for b in result.branches)
+    outcomes_ok = (
+        all(b.stop_reason == "reply" for b in result.branches)
+        if not failed
+        else failed in stop_map and stop_map[failed] == "script_error")
+    replies_ok = all(
+        next((b.reply for b in result.branches if b.name == n), None) == want
+        for n, want in dict(exp.get("branch_replies", {})).items())
+    coord_replies = [e for e in events if e.type == "reply"]
+    return [
+        Check("run_bounds_present",
+              bool(events) and events[0].type == "run_start"
+              and events[-1].type == "run_end"
+              and events[-1].payload.get("stop_reason")
+              == exp.get("stop_reason", "reply"),
+              f"last={events[-1].type if events else 'none'}"),
+        Check("journal_dense", not torn and sequence_dense(events),
+              f"{len(events)} events, torn={torn}"),
+        Check("branch_count_matches", len(result.branches) == len(branches_spec),
+              f"{len(result.branches)}/{len(branches_spec)}"),
+        Check("dispatch_order_matches",
+              [b.name for b in result.branches] == list(branches_spec.keys())
+              and [str(e.payload.get("branch")) for e in branch_starts]
+              == list(branches_spec.keys()),
+              str([b.name for b in result.branches])),
+        Check("branch_replies_match", replies_ok, str(replies_map)[:70]),
+        Check("branch_tools_executed",
+              all(tools_count[b.name] == int(dict(exp.get("branch_tools", {})).get(b.name, 0))
+                  for b in result.branches),
+              str(tools_count)),
+        Check("branch_outcomes_match_spec", outcomes_ok, str(stop_map)),
+        Check("failed_branch_reply_empty",
+              (not failed) or (replies_map.get(failed) == ""
+                               and stop_map.get(failed) == "script_error"),
+              f"failed={failed!r} reply={replies_map.get(failed)!r}"),
+        Check("branch_journals_dense",
+              all(sequence_dense(_reopen(b.journal_path)) for b in result.branches)),
+        Check("branch_journals_reopen_dense",
+              all(sequence_dense(_reopen(os.path.join(
+                  rerun_wd, os.path.basename(b.journal_path))))
+                  for b in result.branches)),
+        Check("parent_references_children", refs_ok,
+              str({b.name: b.run_id for b in result.branches})[:70]),
+        Check("fanin_event_present",
+              len(fanins) == 1
+              and fanins[0].payload.get("branches") == len(branches_spec)
+              and fanins[0].payload.get("replies") == replies_map
+              and fanins[0].payload.get("stop_reasons") == stop_map,
+              str(fanins[0].payload)[:70] if fanins else "missing fanin"),
+        Check("coordinator_reply_matches",
+              result.stop_reason == "reply" and result.reply == exp.get("reply", "")
+              and bool(coord_replies)
+              and (coord_replies[-1].payload or {}).get("role") == "coordinator",
+              f"reply={result.reply!r}"),
+        Check("structural_determinism", same_parent and same_branches,
+              f"parent={same_parent} branches={same_branches}"),
+    ]
+
+
+def _structured_drill(task: dict) -> list:
+    """Structured output: messy JSON repaired with honest notes, validated.
+
+    Honest contract: the runner's real reply is repaired with an exact note
+    list, every spec case parses to exactly its expected value (and notes),
+    hopeless input raises ``ValueError`` loudly instead of inventing a value,
+    parsing is deterministic, and the lite schema catches missing required
+    keys, wrong types and ``True`` masquerading as an integer.
+    """
+    from .structured import parse_json_loose, validate_schema
+
+    wd = _fresh_wd("structured")
+    exp = _expect(task)
+    events, result = _run_offline(task, wd)
+    replies = [e for e in events if e.type == "reply"]
+    reply_text = str(replies[-1].payload.get("text", "")) if replies else ""
+    schema = task.get("schema", {})
+    cases = list(task.get("cases", []))
+    value, notes = parse_json_loose(reply_text)
+    checks = [
+        Check("runner_reply_parses",
+              result.stop_reason == "reply"
+              and value == exp.get("value")
+              and notes == list(exp.get("notes", [])),
+              f"value={value} notes={notes}"),
+        Check("schema_validates_value", validate_schema(value, schema) == [],
+              str(validate_schema(value, schema))[:70]),
+    ]
+    for i, case in enumerate(cases, 1):
+        text = str(case.get("text", ""))
+        if case.get("error"):
+            try:
+                parse_json_loose(text)
+                checks.append(Check(f"case_{i}", False, "no raise on hopeless input"))
+            except ValueError as e:
+                checks.append(Check(f"case_{i}",
+                                    str(e).startswith(str(case.get("error", "unparseable JSON"))),
+                                    str(e)[:60]))
+        else:
+            try:
+                v, n = parse_json_loose(text)
+                ok = v == case.get("want") and ("notes" not in case or n == list(case["notes"]))
+            except ValueError:
+                ok = False
+            checks.append(Check(f"case_{i}", ok, f"case {i}: {text[:40]!r}"))
+    first = str(cases[0].get("text", "")) if cases else ""
+    checks.extend([
+        Check("parse_deterministic",
+              bool(first) and parse_json_loose(first) == parse_json_loose(first),
+              "same input, same value and notes"),
+        Check("schema_missing_required_detected",
+              any("missing required" in err
+                  for err in validate_schema(exp.get("missing_required", {}), schema)),
+              str(validate_schema(exp.get("missing_required", {}), schema))[:70]),
+        Check("schema_type_mismatch_detected",
+              any("want" in err
+                  for err in validate_schema(exp.get("type_mismatch", {}), schema)),
+              str(validate_schema(exp.get("type_mismatch", {}), schema))[:70]),
+        Check("schema_bool_not_integer",
+              any("got bool" in err
+                  for err in validate_schema(exp.get("bool_not_integer", {}), schema)),
+              "True must never satisfy integer"),
+    ])
+    return checks
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -967,6 +1151,8 @@ DRILLS = {
     "compact": _compact_drill,
     "cache": _cache_drill,
     "hooks": _hooks_drill,
+    "fanout": _fanout_drill,
+    "structured": _structured_drill,
 }
 
 

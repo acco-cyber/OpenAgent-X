@@ -16,13 +16,15 @@ for (const f of req) {
 // 2) golden tasks are valid JSON with id + known drill
 const drills = new Set(['loop', 'redact', 'trace', 'team', 'router', 'budget', 'stop',
                         'redact_nested', 'audit', 'pack', 'sbom', 'memory', 'compact',
-                        'cache', 'hooks']);
+                        'cache', 'hooks', 'fanout', 'structured']);
 const runnerDrills = new Set(['loop', 'redact', 'trace', 'budget', 'stop', 'redact_nested',
                               'cache']); // need script[]
 const teamDrills = new Set(['team']);    // need lead_script[] + specialist_script[]
 const routerDrills = new Set(['router']); // need fallback_script[]
 const memoryDrills = new Set(['memory']); // need runs[] (each with script[]) + queries[]
 const hooksDrills = new Set(['hooks']);   // need script[] + hooks.rules[]
+const fanoutDrills = new Set(['fanout']); // need branches{}.script[] + coordinator_script[]
+const structuredDrills = new Set(['structured']); // need script[] + cases[] + schema{}
 const gdir = join(root, 'golden_tasks');
 let nTasks = 0;
 if (existsSync(gdir)) {
@@ -51,12 +53,22 @@ if (existsSync(gdir)) {
                                             || !t.hooks || !Array.isArray(t.hooks.rules) || !t.hooks.rules.length)) {
         console.error('EMPTY SCRIPT', f, '(hooks needs script[] + hooks.rules[])'); fail++;
       }
+      else if (fanoutDrills.has(t.drill) && (!t.branches || !Object.keys(t.branches).length
+                                             || !Object.values(t.branches).every(b => Array.isArray(b.script) && b.script.length)
+                                             || !Array.isArray(t.coordinator_script) || !t.coordinator_script.length)) {
+        console.error('EMPTY SCRIPT', f, '(fanout needs branches{}.script[] + coordinator_script[])'); fail++;
+      }
+      else if (structuredDrills.has(t.drill) && (!Array.isArray(t.script) || !t.script.length
+                                                 || !Array.isArray(t.cases) || !t.cases.length
+                                                 || !t.schema || typeof t.schema !== 'object')) {
+        console.error('EMPTY SCRIPT', f, '(structured needs script[] + cases[] + schema{})'); fail++;
+      }
     } catch (e) { console.error('INVALID JSON', f, e.message); fail++; }
   }
 } else { console.error('MISSING golden_tasks/'); fail++; }
 
 // 3) eval count only moves forward (honest growth)
-if (nTasks < 15) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 15`); fail++; }
+if (nTasks < 17) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 17`); fail++; }
 
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);

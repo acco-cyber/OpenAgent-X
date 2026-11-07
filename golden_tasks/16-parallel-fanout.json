@@ -1,0 +1,37 @@
+{
+  "id": "16-parallel-fanout",
+  "title": "Parallel fan-out: N real branch runs feed one fanin; a failing branch is recorded honestly and never poisons the answer",
+  "drill": "fanout",
+  "task_text": "survey deploy and database status, then summarize",
+  "max_steps_per_branch": 6,
+  "branches": {
+    "deploy": {
+      "task_text": "check the deploy status",
+      "script": [
+        "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"1+2\"}}, \"thought\": \"count services\"}",
+        "{\"reply\": \"deploy ok: 3 services\"}"
+      ]
+    },
+    "audit": {
+      "task_text": "audit the fleet",
+      "script": [
+        "{\"action\": {\"tool\": \"echo\", \"args\": {\"text\": \"probe\"}}, \"thought\": \"probe then die\"}"
+      ]
+    },
+    "db": {
+      "task_text": "check the database",
+      "script": [
+        "{\"reply\": \"db ok: migrations clean\"}"
+      ]
+    }
+  },
+  "coordinator_script": [
+    "{\"reply\": \"deploy: 3 services up; db: migrations clean\"}"
+  ],
+  "expect": {
+    "reply": "deploy: 3 services up; db: migrations clean",
+    "branch_replies": {"deploy": "deploy ok: 3 services", "db": "db ok: migrations clean"},
+    "branch_tools": {"deploy": 1, "audit": 1, "db": 0},
+    "failed_branch": "audit"
+  }
+}

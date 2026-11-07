@@ -1,0 +1,30 @@
+{
+  "id": "17-structured-output",
+  "title": "Structured output: messy fenced JSON replies are repaired with honest notes, validated against a lite schema, hopeless input raises",
+  "drill": "structured",
+  "task_text": "compute the answer and report it as JSON",
+  "max_steps": 4,
+  "script": [
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"6*7\"}}, \"thought\": \"compute the sum\"}",
+    "{\"reply\": \"```json\\n{\\\"sum\\\": 42, \\\"unit\\\": \\\"answers\\\",}\\n```\"}"
+  ],
+  "schema": {
+    "type": "object",
+    "required": ["sum"],
+    "properties": {"sum": {"type": "integer"}}
+  },
+  "cases": [
+    {"text": "{\"ok\": true}", "want": {"ok": true}, "notes": []},
+    {"text": "```json\n{\"sum\": 42,}\n```", "want": {"sum": 42}, "notes": ["fences", "trailing_comma"]},
+    {"text": "The answer is {\"sum\": 42, \"ok\": True} thanks", "want": {"sum": 42, "ok": true}, "notes": ["python_literals", "extract_balanced"]},
+    {"text": "{\"name\": “bot”, }", "want": {"name": "bot"}, "notes": ["smart_quotes", "trailing_comma"]},
+    {"text": "no json here at all", "error": "unparseable JSON"}
+  ],
+  "expect": {
+    "value": {"sum": 42, "unit": "answers"},
+    "notes": ["fences", "trailing_comma"],
+    "missing_required": {"unit": "answers"},
+    "type_mismatch": {"sum": "42"},
+    "bool_not_integer": {"sum": true}
+  }
+}
