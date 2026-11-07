@@ -40,7 +40,10 @@ import sys
 import urllib.error
 import urllib.request
 
-BRANCH = os.environ.get("PUSH_BRANCH", "main")
+BRANCH = os.environ.get("PUSH_BRANCH", "")
+FROM_BRANCH = os.environ.get("PUSH_FROM_BRANCH", "main")
+if not BRANCH:
+    BRANCH = FROM_BRANCH
 TOKEN_KEYS = ("GITHUB_TOKEN", "GH_TOKEN", "GITHUB_PAT")
 
 
@@ -54,6 +57,16 @@ def run_git(toplevel: str, *args: str) -> str:
     if proc.returncode != 0:
         raise RuntimeError(f"git {args[0]} failed: {proc.stderr.strip()[:200]}")
     return proc.stdout.strip()
+
+
+def run_git_raw(toplevel: str, *args: str) -> str:
+    """Like run_git but keeps the exact bytes (commit messages need their
+    trailing newline to reproduce the original commit sha byte-for-byte)."""
+    proc = subprocess.run(["git", "-C", toplevel, *args],
+                          capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        raise RuntimeError(f"git {args[0]} failed: {proc.stderr.strip()[:200]}")
+    return proc.stdout
 
 
 def blob_bytes(toplevel: str, blob_sha: str) -> bytes:
@@ -263,7 +276,7 @@ def main() -> int:
             info(f"push skipped: cannot read remote branch: {err}")
             return 0
 
-        local_tip = run_git(toplevel, "rev-parse", BRANCH)
+        local_tip = run_git(toplevel, "rev-parse", FROM_BRANCH)
         if tip == local_tip:
             info("push: already up to date")
             return 0
@@ -279,7 +292,7 @@ def main() -> int:
             # and we refuse loudly instead of force-pushing.
             remote_tree = api.get_commit_tree(tip)
             twin = None
-            for c in run_git(toplevel, "rev-list", BRANCH).splitlines():
+            for c in run_git(toplevel, "rev-list", FROM_BRANCH).splitlines():
                 if run_git(toplevel, "show", "-s", "--format=%T", c) == remote_tree:
                     twin = c
                     break
@@ -292,8 +305,8 @@ def main() -> int:
         else:
             base_sha = None
 
-        unpushed = (run_git(toplevel, "rev-list", "--reverse", f"{base_sha}..{BRANCH}")
-                    if base_sha else run_git(toplevel, "rev-list", "--reverse", BRANCH))
+        unpushed = (run_git(toplevel, "rev-list", "--reverse", f"{base_sha}..{FROM_BRANCH}")
+                    if base_sha else run_git(toplevel, "rev-list", "--reverse", FROM_BRANCH))
         shas = unpushed.split()
         if not shas:
             info("push: already up to date")
@@ -324,7 +337,7 @@ def main() -> int:
                         "date": run_git(toplevel, "show", "-s", f"--format=%{fmt}I", sha),
                     }
 
-                message = run_git(toplevel, "show", "-s", "--format=%B", sha)
+                message = run_git_raw(toplevel, "show", "-s", "--format=%B", sha)
                 remote_sha = api.create_commit(sha, tree_remote, remote_parents,
                                                who("a"), who("c"), message)
                 sha_map[sha] = remote_sha
