@@ -348,6 +348,8 @@ or a dropped 3.10 pin is a failed gate here, not just a red X there.
 
 ## Status & roadmap
 
+- **1.0.0-rc1** (2026-11-07) — see `CHANGELOG.md`; the release candidate of
+  the Epoch 3 rebuild, gated by the same checks it ships with.
 - **Epoch 3 (recovery rebuild)** — see `docs/24h-plan.md`. Two prior epochs were
   lost to sandbox recycling; this one lives on the durable volume.
 - Golden tasks grow with every feature slot; eval count only ever moves forward.
