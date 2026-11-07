@@ -4,6 +4,23 @@ All notable changes to OpenAgent-X. Dates are ISO-8601; claims are gated —
 the checks named here are the same ones `oax eval` and `scripts/verify.mjs`
 run on every commit (and in CI).
 
+## [Unreleased]
+
+### Added — views
+
+- `oax grep`: the journal is searchable truth, not just replayable truth.
+  `grep_journal` filters one journal's events with plain deterministic
+  matchers all AND-ed together (case-sensitive substring over the
+  type+payload JSON projection, exact event type, exact payload tool name,
+  a `since_seq` floor, a `limit` cap kept in seq order); every match
+  renders through the redaction engine, so raw secrets that live on disk
+  can never leak through the search view — searching for the raw token
+  itself matches (the disk is the truth) and still prints only
+  `[REDACTED:github_token]`. Torn tails are isolated, never searched, only
+  reported; the empty result is honest; output is byte-deterministic; CLI
+  exits 0 matched / 1 no matches or missing journal. Graded by golden task
+  37 (12 checks).
+
 ## [1.0.0] — 2026-11-07
 
 Final release of the Epoch 3 rebuild (parts 1–25). Pure stdlib, Python

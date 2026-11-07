@@ -3151,7 +3151,8 @@ def _sweep_drill(task: dict) -> list:
     repo_findings = run_audit(repo_root)
     doctor_checks = run_doctor(repo_root)
 
-    # release metadata: the top CHANGELOG entry is the version
+    # release metadata: the top *version* entry is the version
+    # ([Unreleased] sections are not versions — skip them)
     changelog_head = ""
     cl_path = os.path.join(repo_root, "CHANGELOG.md")
     if os.path.exists(cl_path):
@@ -3159,8 +3160,10 @@ def _sweep_drill(task: dict) -> list:
             for line in fh:
                 s = line.strip()
                 if s.startswith("## [") and "]" in s:
-                    changelog_head = s[4:s.index("]")]
-                    break
+                    candidate = s[4:s.index("]")]
+                    if candidate and candidate[0].isdigit():
+                        changelog_head = candidate
+                        break
 
     cli_same = False
     import io as _io

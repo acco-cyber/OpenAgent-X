@@ -258,6 +258,7 @@ The verification stack, all offline and deterministic:
 ```sh
 python3 -m openagentx diff a.jsonl b.jsonl      # semantic diff, exit 0 same / 1 different
 python3 -m openagentx stats a.jsonl             # the numeric fingerprint
+python3 -m openagentx grep a.jsonl --tool write_file   # search the journal, matches redacted
 python3 -m openagentx property --seed 7         # journal invariants after every step
 python3 -m openagentx fuzz --seed 7             # seeded attacks on the journal contract
 python3 -m openagentx bench                     # throughput, wall-clock, never graded

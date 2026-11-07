@@ -135,3 +135,19 @@ holds least-privilege permissions (`contents: read`). If a "zero-dependency"
 claim ever broke, CI is where it would fail loudly: a sneaky `pip install`
 would contradict the purity gate, which is why the verify gate refuses one in
 the workflow itself.
+
+## How do I search a journal without leaking secrets?
+
+`oax grep` — and the design point is worth understanding. Raw secrets live
+on disk (the redaction boundary masks tool results, not free-form
+thoughts), so a search view that printed matches verbatim would be a leak
+channel. Grep is therefore a view like every other view: it matches on the
+raw disk truth (case-sensitive substring over the type+payload JSON,
+plus exact event type, exact tool name, a seq floor, a result cap — all
+AND-ed), then renders every match through the redaction engine before it
+prints. Searching for the raw token itself matches — the disk is the
+truth — and still prints only `[REDACTED:github_token]`. Torn tails are
+isolated, never searched, only reported; the empty result is honest
+(`matched: 0` with the scanned total named); and the output carries no
+timestamps, so the same journal and matchers always print the same bytes.
+Exit 0 = matches, 1 = no matches or missing journal.
