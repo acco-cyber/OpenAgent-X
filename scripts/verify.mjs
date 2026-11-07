@@ -136,5 +136,41 @@ if (existsSync(adrDir)) {
   }
 } else { console.error('MISSING docs/adr/'); fail++; }
 
+// 6) the README cannot drift from the package it presents
+const readmePath = join(root, 'README.md');
+if (existsSync(readmePath)) {
+  const rd = readFileSync(readmePath, 'utf8');
+  const cliSrc = readFileSync(join(root, 'openagentx/cli.py'), 'utf8');
+  // every `oax <sub>` in the README must be a real subcommand
+  for (const m of rd.matchAll(/oax ([a-z0-9_]+)/g)) {
+    if (!cliSrc.includes(`add_parser("${m[1]}"`)) {
+      console.error('README names unknown subcommand oax', m[1]); fail++;
+    }
+  }
+  // every example file the README references must exist
+  for (const m of rd.matchAll(/examples\/[0-9A-Za-z_]+\.py/g)) {
+    if (!existsSync(join(root, m[0]))) {
+      console.error('README names missing example', m[0]); fail++;
+    }
+  }
+  // every doc file the README references must exist
+  for (const m of rd.matchAll(/docs\/[0-9A-Za-z_\-/]+\.md/g)) {
+    if (!existsSync(join(root, m[0]))) {
+      console.error('README names missing doc', m[0]); fail++;
+    }
+  }
+  // eval-scale claims (badge + inline) must match the golden matrix
+  for (const m of rd.matchAll(/eval-(\d+)_tasks/g)) {
+    if (Number(m[1]) !== nTasks) {
+      console.error(`README eval badge claims ${m[1]} tasks, golden matrix has ${nTasks}`); fail++;
+    }
+  }
+  for (const m of rd.matchAll(/(\d+) tasks \/ \d+ checks/g)) {
+    if (Number(m[1]) !== nTasks) {
+      console.error(`README claims ${m[1]} tasks, golden matrix has ${nTasks}`); fail++;
+    }
+  }
+} else { console.error('MISSING README.md'); fail++; }
+
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);
