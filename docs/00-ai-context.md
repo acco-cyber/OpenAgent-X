@@ -161,7 +161,20 @@ depgraph.py    import dependency graph: every local import resolves to
                sorted, timestamp-free, graph_sha256 over the edge list;
                oax graph exits 0 iff eager-acyclic with nothing
                unresolved
-cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact|diff|stats|bench|fuzz|property|pack2|graph
+dashboard.py   report v2: deterministic self-contained HTML dashboard
+               over one journal; counters taken from run_stats (which
+               takes replay's) so dashboard/stats/replay never
+               disagree; integrity strip, summary cards, per-type bars
+               (integer-count-derived), per-tool table, redacted+
+               escaped timeline; inline CSS, zero external assets, no
+               timestamps; same file in -> byte-identical HTML/JSON out
+mermaid.py     mermaid trace export: one node per event (zero-padded
+               seq id, quote-escaped newline-stripped truncated label,
+               re-redacted), one spine edge per consecutive pair,
+               deterministic call/fail/err/say classing, extension
+               event types through the generic path, honest empty
+               state; same events in -> byte-identical .mmd out
+cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact|diff|stats|bench|fuzz|property|pack2|graph|dashboard|mermaid
 ```
 
 ## Invariants (never break)

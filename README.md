@@ -7,7 +7,7 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (32 tasks / 366 checks)
+oax eval      # run every golden task drill, all green or exit 1   (34 tasks / 389 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
@@ -21,6 +21,8 @@ oax stats     # deterministic run analytics — replay's own counters, plus tool
 oax bench     # journal throughput microbench — honest wall-clock, never graded
 oax fuzz      # seeded fuzz over the journal contract (torn tails, middle tears)
 oax property  # property suite — invariants re-checked after every random trace step
+oax dashboard # report v2 — self-contained HTML dashboard over one journal (zero assets)
+oax mermaid   # export a journal as a deterministic, escaped Mermaid flowchart
 oax examples  # execute every offline example end-to-end
 ```
 
@@ -30,7 +32,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # sixteen runnable end-to-end demos
+python3 -m openagentx examples # seventeen runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -139,6 +141,13 @@ python3 -m openagentx examples # sixteen runnable end-to-end demos
   layers and Tarjan cycle detection, lazy edges (function bodies) are
   reported as the data they are — the CLI's deferred-import ring is
   real and this graph says so out loud instead of hiding it.
+- **Views that agree, views that export** — the dashboard is report v2:
+  its counters ARE replay's numbers (one source of truth), its bars and
+  tables are derived from integer counts only, and the HTML is
+  byte-deterministic with inline CSS and zero external assets; `oax
+  mermaid` exports the causal spine as a deterministic flowchart whose
+  labels are quote-escaped and re-redacted — even a pre-redaction
+  journal cannot leak a secret through a diagram.
 
 ## Why it matters
 
