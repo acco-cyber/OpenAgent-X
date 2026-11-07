@@ -235,7 +235,20 @@ green.
   torn tails vs middle tears, what is not graded against a real model);
   verify.mjs gains the ADR gate (>=10 records, all four sections, all
   indexed) and the manifest names every ADR, the glossary, and the FAQ
-- [ ] S22-E3 — README overhaul (SOTA presentation, badges, demo traces)
+- [x] S22-E3 — README overhaul (SOTA presentation, badges, demo traces)
+  ✅ 35 tasks, 399 checks green; README rebuilt as a SOTA front door: honest
+  badges (python 3.10+, zero dependencies, eval 35 tasks / 399 checks, secret
+  audit 0 findings, offline-first, MIT) each linked to its proof; a demo
+  traces section showing one real run three ways — the `oax run` console
+  session, the 12-event journal pasted verbatim from disk (the fixture token
+  visible only as `[REDACTED:github_token]` with the redaction count
+  recorded), and the deterministic `oax mermaid` diagram; an architecture
+  mermaid (adapter → runner → layered guards → registry → redaction boundary
+  → journal → replay → views, refusals journaled as data); an honest generic
+  comparison table; a documentation map; gallery rows carry real `examples/`
+  paths; quickstart promoted to the top; `verify.mjs` gains the README-sync
+  gate (subcommands/examples/docs references must resolve; eval-scale claims
+  must equal the golden-task count)
 - [ ] S23-E3 — CI: GitHub Actions (verify/compileall/eval/audit) + community files
 - [ ] S24-E3 — eval parallelism + perf pass + CHANGELOG + 1.0.0-rc1
 
