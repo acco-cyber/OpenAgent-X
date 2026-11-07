@@ -1,8 +1,8 @@
 """oax — the OpenAgent-X command line.
 
 Subcommands: eval | doctor | audit | examples | trace | report | run | pack |
-sbom | recall | compact. Every subcommand is offline and stdlib-only; exit
-codes are contracts (0 = green, 1 = anything else).
+sbom | recall | compact | diff | stats. Every subcommand is offline and
+stdlib-only; exit codes are contracts (0 = green, 1 = anything else).
 """
 
 from __future__ import annotations
@@ -179,6 +179,19 @@ def _cmd_compact(args) -> int:
     return 0
 
 
+def _cmd_diff(args) -> int:
+    """Event-level journal diff; exit 0 = semantically same, 1 = different."""
+    from .jdiff import diff_journals, render_diff
+
+    try:
+        d = diff_journals(args.a, args.b, strict=args.strict)
+    except FileNotFoundError as e:
+        print(f"diff: {e}")
+        return 1
+    print(render_diff(d))
+    return 0 if d["same"] else 1
+
+
 def _tools_for(wd: str):
     from .tools import builtin_tools
 
@@ -246,6 +259,13 @@ def build_parser() -> argparse.ArgumentParser:
     cp.add_argument("journal")
     cp.add_argument("--out", default="", help="destination (default <stem>.compact.jsonl)")
     cp.set_defaults(fn=_cmd_compact)
+
+    df = sub.add_parser("diff", help="event-level diff of two journals (exit 1 = different)")
+    df.add_argument("a", help="first journal (.jsonl)")
+    df.add_argument("b", help="second journal (.jsonl)")
+    df.add_argument("--strict", action="store_true",
+                    help="compare every field including ts (default ignores wall-clock)")
+    df.set_defaults(fn=_cmd_diff)
 
     return p
 
