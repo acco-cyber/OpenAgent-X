@@ -2649,6 +2649,212 @@ def _property_drill(task: dict) -> list:
     ]
 
 
+def _pack2_drill(task: dict) -> list:
+    """Signed manifests v2: authenticity (HMAC) on top of integrity (v1).
+
+    Honest contract: the signature covers the canonical sig-stripped
+    bytes, signings are deterministic, key_id names without revealing,
+    wrong keys and edited entries fail the signature while tampered
+    files fail the content layer (both layers always reported), the
+    unsigned form is refused, v1 still accepts the core, and the CLI
+    contract holds in both directions.
+    """
+    from .cli import main as cli_main
+    from .pack import verify_manifest
+    from .pack2 import (derive_key_id, sign_manifest, signed_json,
+                        verify_signature, verify_signed, write_signed)
+
+    wd = _fresh_wd("pack2")
+    with open(os.path.join(wd, "a.txt"), "w", encoding="utf-8") as fh:
+        fh.write("alpha payload\n")
+    os.makedirs(os.path.join(wd, "sub"))
+    with open(os.path.join(wd, "sub", "b.json"), "w", encoding="utf-8") as fh:
+        fh.write('{"n": 1}\n')
+    with open(os.path.join(wd, "notes.md"), "w", encoding="utf-8") as fh:
+        fh.write("# notes\n")
+    exp = _expect(task)
+    want_files = int(exp.get("files", 3))
+    key = "oax-" + "sign" + "-key-v2"  # runtime concatenation, never a literal
+
+    m1 = sign_manifest(wd, key)
+    m2 = sign_manifest(wd, key)
+    signed_path = os.path.join(wd, "pack.signed.json")
+    write_signed(wd, key, signed_path)
+    with open(signed_path, encoding="utf-8") as fh:
+        loaded = json.load(fh)
+    ok, probs = verify_signed(wd, loaded, key)
+
+    bad_entry = json.loads(json.dumps(loaded))
+    bad_entry["files"][0]["sha256"] = "0" * 64
+    edit_ok, edit_probs = verify_signed(wd, bad_entry, key)
+
+    with open(os.path.join(wd, "a.txt"), "a", encoding="utf-8") as fh:
+        fh.write("tampered\n")
+    tamper_ok, tamper_probs = verify_signed(wd, loaded, key)
+    with open(os.path.join(wd, "a.txt"), "w", encoding="utf-8") as fh:
+        fh.write("alpha payload\n")
+    restore_ok, restore_probs = verify_signed(wd, loaded, key)
+
+    wrong_ok, wrong_probs = verify_signed(wd, loaded, "another-key-entirely")
+    unsigned = {k: v for k, v in loaded.items() if k != "sig"}
+    unsigned_ok, unsigned_probs = verify_signed(wd, unsigned, key)
+    other = sign_manifest(wd, "key-" + "number-two")
+
+    cli_out = os.path.join(wd, "pack.signed.json")  # the flavor the hasher skips
+    cli_sign = cli_main(["pack2", wd, "--key", key, "--out", cli_out]) == 0
+    cli_check = cli_main(["pack2", wd, "--key", key, "--check", cli_out]) == 0
+    cli_bad = cli_main(["pack2", wd, "--key", key + "x", "--check", cli_out])
+
+    return [
+        Check("manifest_shape_and_files",
+              m1["file_count"] == want_files and m1.get("v") == 2
+              and [e["path"] for e in m1["files"]]
+              == ["a.txt", "notes.md", "sub/b.json"],
+              f"{m1['file_count']} files hashed, v2 envelope"),
+        Check("signature_roundtrip",
+              ok and not probs and m1["sig"]["algo"] == "hmac-sha256",
+              "sign -> write -> load -> verify green"),
+        Check("deterministic_signed_bytes",
+              signed_json(m1) == signed_json(m2),
+              "same tree + key -> byte-identical signed manifest"),
+        Check("key_id_names_never_reveals",
+              m1["sig"]["key_id"] == derive_key_id(key)
+              and len(m1["sig"]["key_id"]) == 12
+              and key not in signed_json(m1),
+              f"key_id={m1['sig']['key_id']}, key absent from bytes"),
+        Check("wrong_key_fails",
+              not wrong_ok and any("bad signature" in p for p in wrong_probs),
+              "a different key never opens the manifest"),
+        Check("edited_entry_fails_signature",
+              not edit_ok and any("bad signature" in p for p in edit_probs),
+              "flipping one hash byte breaks the HMAC"),
+        Check("tampered_file_detected_on_content_layer",
+              not tamper_ok and any("modified: a.txt" in p for p in tamper_probs)
+              and verify_signature(loaded, key),
+              "signature green, content red — both layers reported"),
+        Check("unsigned_form_refused",
+              not unsigned_ok
+              and any("unsigned" in p for p in unsigned_probs),
+              "the sig-stripped manifest is not a v2 manifest"),
+        Check("v1_verifier_accepts_the_core",
+              verify_manifest(wd, unsigned)[0],
+              "the v1 integrity layer reads the core unchanged"),
+        Check("different_key_different_signature",
+              other["sig"]["digest"] != m1["sig"]["digest"]
+              and other["sig"]["key_id"] != m1["sig"]["key_id"],
+              "keys never collide on id or digest"),
+        Check("restore_goes_green",
+              restore_ok and not restore_probs,
+              "restoring the tree verifies again"),
+        Check("cli_contract",
+              cli_sign and cli_check and cli_bad == 1,
+              "sign 0 / check 0 / wrong-key check 1"),
+    ]
+
+
+def _graph_drill(task: dict) -> list:
+    """Dependency graph: structure derived from source, cycles are data.
+
+    Honest contract: the eager graph is acyclic with nothing unresolved,
+    edges resolve to real modules (sorted, deduplicated), fan sums equal
+    the eager edge count, the base layer and CLI surface are real,
+    lazy imports are recorded as lazy edges and the package's real
+    deferred-import cycle is reported as data without contaminating the
+    eager layers, synthetic eager cycles kill the layering while
+    lazy-only cycles keep it, rebuilds are byte-identical, and the CLI
+    contract holds (0 acyclic / 1 cyclic).
+    """
+    from .cli import main as cli_main
+    from .depgraph import build_depgraph, depgraph_json
+
+    exp = _expect(task)
+    min_edges = int(exp.get("min_eager_edges", 30))
+    min_depth = int(exp.get("min_depth", 4))
+    g = build_depgraph(".")
+    g2 = build_depgraph(".")
+    eager = [e for e in g["edges"] if e["kind"] == "eager"]
+
+    # synthetic packages: an eager two-module cycle vs a lazy-only cycle
+    wd = _fresh_wd("graph")
+    cyc = os.path.join(wd, "cycpkg")
+    os.makedirs(cyc)
+    with open(os.path.join(cyc, "__init__.py"), "w", encoding="utf-8") as fh:
+        fh.write("")
+    with open(os.path.join(cyc, "a.py"), "w", encoding="utf-8") as fh:
+        fh.write("from .b import x\n")
+    with open(os.path.join(cyc, "b.py"), "w", encoding="utf-8") as fh:
+        fh.write("from .a import x\n")
+    gc = build_depgraph(wd, cyc)
+
+    laz = os.path.join(wd, "lazy")
+    os.makedirs(laz)
+    with open(os.path.join(laz, "__init__.py"), "w", encoding="utf-8") as fh:
+        fh.write("")
+    with open(os.path.join(laz, "m.py"), "w", encoding="utf-8") as fh:
+        fh.write("def f():\n    from .n import g\n    return g\n")
+    with open(os.path.join(laz, "n.py"), "w", encoding="utf-8") as fh:
+        fh.write("def g():\n    from .m import f\n    return f\n")
+    gl = build_depgraph(laz, laz)
+
+    cli_out = os.path.join(wd, "graph.json")
+    cli_ok = cli_main(["graph", "--out", cli_out]) == 0
+    with open(cli_out, encoding="utf-8") as fh:
+        cli_loaded = json.load(fh)
+    cli_cyclic = cli_main(["graph", "--pkg-dir", cyc])
+
+    return [
+        Check("eager_graph_acyclic",
+              g["acyclic"] and not g["cycles"] and not g["unresolved"],
+              f"{g['eager_count']} eager edges, 0 cycles, 0 unresolved"),
+        Check("edges_resolved_sorted_deduped",
+              eager == sorted(eager, key=lambda e: (e["from"], e["to"]))
+              and len({(e["from"], e["to"]) for e in eager}) == len(eager)
+              and all(e["from"].startswith("openagentx.")
+                      and e["to"].startswith("openagentx.") for e in eager),
+              "every edge is a real package-qualified pair"),
+        Check("fan_sums_match_edges",
+              sum(g["fan_in"].values()) == sum(g["fan_out"].values())
+              == len(eager) == g["eager_count"] >= min_edges,
+              f"{g['eager_count']} eager edges, sums agree"),
+        Check("base_layer_is_real",
+              g["layers"]["openagentx.events"] == 0
+              and g["layers"]["openagentx.redact"] == 0
+              and "openagentx.events" in g["leaves"],
+              "stdlib-only modules sit at layer 0 as leaves"),
+        Check("cli_surface_reached",
+              "openagentx.__main__" in g["entries"] and g["depth"] >= min_depth,
+              f"depth {g['depth']}, __main__ imports nothing"),
+        Check("lazy_edges_recorded",
+              g["lazy_count"] > 0
+              and any(e["kind"] == "lazy" for e in g["edges"]),
+              f"{g['lazy_count']} deferred imports as data"),
+        Check("real_lazy_cycle_reported",
+              any("openagentx.cli" in c for c in g["lazy_cycles"])
+              and not any("openagentx.cli" in c for c in g["cycles"]),
+              "the cli/doctor/evaluation/sbom deferral ring, out loud"),
+        Check("deterministic_graph",
+              depgraph_json(g) == depgraph_json(g2)
+              and g["graph_sha256"] == g2["graph_sha256"],
+              "same package -> byte-identical graph"),
+        Check("sbom_agreement",
+              g["module_count"] == g["node_count"] >= 30
+              and g["stdlib_only"] is True and not g["network_modules"],
+              "one package, one module count, computed purity"),
+        Check("eager_cycle_kills_layers",
+              gc["cycles"] and gc["layers"] is None and gc["depth"] is None
+              and not gc["acyclic"],
+              "a real cycle is reported, never papered over"),
+        Check("lazy_only_cycle_keeps_layers",
+              not gl["cycles"] and gl["lazy_cycles"]
+              and gl["layers"] is not None,
+              "deferred imports do not taint the eager layering"),
+        Check("cli_contract",
+              cli_ok and cli_loaded["edge_count"] == g["edge_count"]
+              and cli_cyclic == 1,
+              "graph 0 acyclic / 1 cyclic, JSON round-trips"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -2680,6 +2886,8 @@ DRILLS = {
     "bench": _bench_drill,
     "fuzz": _fuzz_drill,
     "property": _property_drill,
+    "pack2": _pack2_drill,
+    "graph": _graph_drill,
 }
 
 

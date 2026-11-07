@@ -1,0 +1,10 @@
+{
+  "id": "32-depgraph",
+  "title": "Import dependency graph over the real package: the eager graph (module-level imports only) is acyclic with zero unresolved local imports, every edge endpoint is a real module and edges are sorted and deduplicated, fan-in and fan-out sums both equal the eager edge count, the base layer is real (events and redact sit at layer 0 as leaves), __main__ is an entry (nothing imports it) and the depth reaches the CLI surface, lazy imports inside function bodies are recorded as lazy edges and the package's real deferred-import cycle among cli/doctor/evaluation/sbom is reported as data (lazy_cycles) without ever contaminating the eager layers, layering is None and depth None when an eager cycle exists (proven on a synthetic two-module cycle) while a lazy-only cycle keeps layers computed, two builds are byte-identical with a stable graph_sha256, the graph agrees with the SBOM on module count and the stdlib_only verdict, and the CLI contract holds (exit 0 acyclic / 1 cyclic) with the canonical JSON round-tripping",
+  "drill": "graph",
+  "task_text": "derive the real import structure and report cycles as data",
+  "expect": {
+    "min_eager_edges": 30,
+    "min_depth": 4
+  }
+}

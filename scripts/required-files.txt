@@ -88,3 +88,7 @@ examples/14_bench_fuzz.py
 openagentx/property.py
 golden_tasks/30-property-suite.json
 examples/15_property.py
+openagentx/pack2.py
+openagentx/depgraph.py
+golden_tasks/31-pack-signed.json
+golden_tasks/32-depgraph.json

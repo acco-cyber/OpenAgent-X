@@ -18,7 +18,8 @@ const drills = new Set(['loop', 'redact', 'trace', 'team', 'router', 'budget', '
                         'redact_nested', 'audit', 'pack', 'sbom', 'memory', 'compact',
                         'cache', 'hooks', 'fanout', 'structured', 'retry', 'breaker',
                         'planner', 'snapshot', 'prompt', 'jit', 'chaos', 'chain',
-                        'diff', 'stats', 'bench', 'fuzz', 'property']);
+                        'diff', 'stats', 'bench', 'fuzz', 'property', 'pack2',
+                        'graph']);
 const runnerDrills = new Set(['loop', 'redact', 'trace', 'budget', 'stop', 'redact_nested',
                               'cache', 'retry', 'breaker', 'jit', 'chaos', 'chain',
                               'diff', 'stats']); // need script[]
@@ -87,7 +88,7 @@ if (existsSync(gdir)) {
 } else { console.error('MISSING golden_tasks/'); fail++; }
 
 // 3) eval count only moves forward (honest growth)
-if (nTasks < 30) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 30`); fail++; }
+if (nTasks < 32) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 32`); fail++; }
 
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);

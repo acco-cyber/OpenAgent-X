@@ -1,0 +1,9 @@
+{
+  "id": "31-pack-signed",
+  "title": "Signed pack manifest v2: the HMAC-SHA256 signature covers the canonical manifest bytes (the sig field is stripped before signing so the verifier recomputes exactly what the signer signed), two signings of the same tree with the same key are byte-identical, key_id is the first 12 hex of sha256(key) and names the key without ever leaking it into the manifest, the wrong key fails with a named bad-signature problem, an edited manifest entry fails the signature while the content check still runs, a tampered file is reported modified while the signature still verifies, the unsigned (sig-stripped) manifest is refused, the v1 verifier still accepts the sig-stripped core, a different key yields a different digest and key_id, the tree restoring goes green again, and the CLI contract holds both ways (sign exit 0, check exit 0 green / 1 any problem)",
+  "drill": "pack2",
+  "task_text": "sign the manifest and verify both layers",
+  "expect": {
+    "files": 3
+  }
+}
