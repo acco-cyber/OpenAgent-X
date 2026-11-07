@@ -1,9 +1,9 @@
 """oax — the OpenAgent-X command line.
 
 Subcommands: eval | doctor | audit | examples | trace | report | run | pack |
-sbom | recall | compact | diff | stats | bench | fuzz. Every subcommand is
-offline and stdlib-only; exit codes are contracts (0 = green, 1 = anything
-else).
+sbom | recall | compact | diff | stats | bench | fuzz | property. Every
+subcommand is offline and stdlib-only; exit codes are contracts (0 = green,
+1 = anything else).
 """
 
 from __future__ import annotations
@@ -230,6 +230,22 @@ def _cmd_fuzz(args) -> int:
     return 0 if not bad else 1
 
 
+def _cmd_property(args) -> int:
+    """Property suite: invariants after every step; exit 0 iff zero violations."""
+    from .property import render_property, run_property_suite
+
+    seeds = [int(s) for s in str(args.seeds).split(",") if s.strip()]
+    reports = run_property_suite(seeds=seeds, n_ops=args.ops)
+    for r in reports:
+        print(render_property(r))
+        for v in r["violations"]:
+            print(f"   VIOLATION {v}")
+    bad = sum(len(r["violations"]) for r in reports)
+    print(f"property: {'OK' if not bad else 'FAILING'} "
+          f"({len(reports)} seed(s), {bad} violation(s))")
+    return 0 if not bad else 1
+
+
 def _tools_for(wd: str):
     from .tools import builtin_tools
 
@@ -319,6 +335,13 @@ def build_parser() -> argparse.ArgumentParser:
     fz.add_argument("--ops", type=int, default=200,
                     help="events per seed (default 200)")
     fz.set_defaults(fn=_cmd_fuzz)
+
+    pp = sub.add_parser("property",
+                        help="property suite: invariants under random traces")
+    pp.add_argument("--seeds", default="0,1,2", help="comma-separated seeds")
+    pp.add_argument("--ops", type=int, default=120,
+                    help="trace steps per seed (default 120)")
+    pp.set_defaults(fn=_cmd_property)
 
     return p
 
