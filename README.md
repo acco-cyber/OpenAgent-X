@@ -200,6 +200,7 @@ same events, never from separate bookkeeping.
 
 ```
 oax eval      # run every golden task drill, all green or exit 1   (39 tasks / 447 checks)
+oax explain   # one golden task's spec + its prose explainer (exit 1 = missing)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
