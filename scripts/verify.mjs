@@ -204,5 +204,27 @@ if (existsSync(ciPath)) {
   }
 } else { console.error('MISSING .github/workflows/ci.yml'); fail++; }
 
+// 8) per-drill explainers cannot drift from the golden matrix
+const exPath = join(root, 'docs/explainers.md');
+if (existsSync(exPath)) {
+  const ex = readFileSync(exPath, 'utf8');
+  const stems = new Set();
+  if (existsSync(gdir)) {
+    for (const f of readdirSync(gdir).filter(f => f.endsWith('.json')).sort()) {
+      stems.add(f.slice(0, -5));
+    }
+  }
+  for (const s of stems) {
+    if (!new RegExp(`^### ${s}\\b`, 'm').test(ex)) {
+      console.error('EXPLAINERS MISSING', s); fail++;
+    }
+  }
+  for (const m of ex.matchAll(/^### (\d{2}-[a-z0-9-]+)/gm)) {
+    if (!stems.has(m[1])) {
+      console.error('EXPLAINERS names unknown task', m[1]); fail++;
+    }
+  }
+} else { console.error('MISSING docs/explainers.md'); fail++; }
+
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);

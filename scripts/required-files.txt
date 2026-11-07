@@ -104,6 +104,7 @@ examples/20_hooks_deny.py
 examples/21_replay_diff.py
 golden_tasks/35-budget-gallery.json
 docs/modules.md
+docs/explainers.md
 docs/tutorial.md
 docs/adr/README.md
 docs/adr/0001-journal-is-the-truth.md
