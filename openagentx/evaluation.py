@@ -1402,6 +1402,256 @@ def _breaker_drill(task: dict) -> list:
     ]
 
 
+def _planner_drill(task: dict) -> list:
+    """Planner-executor: one plan turn, N real executor runs, one journal.
+
+    Honest contract: the fenced plan is repaired with exact notes and
+    schema-validated before anything executes, plan bugs (unparseable,
+    schema-invalid, over-cap) journal an error and stop ``script_error``
+    instead of being laundered into empty plans, every step is a real
+    sub-agent run on its own dense journal whose ``run_id`` the parent
+    records, a failing step is data (``script_error`` + empty reply) that
+    never aborts the plan, and a re-run with fixed run_ids is structurally
+    identical.
+    """
+    from .fanout import fanout_fingerprint
+    from .planner import PLAN_SCHEMA, PlannerExecutor
+    from .structured import validate_schema
+
+    wd = _fresh_wd("planner")
+    exp = _expect(task)
+    planner_script = [str(s) for s in task.get("planner_script", [])]
+    step_scripts = [[str(t) for t in ss] for ss in task.get("step_scripts", [])]
+    jp = os.path.join(wd, "journal.jsonl")
+
+    r = PlannerExecutor(
+        ScriptedLLM(planner_script),
+        [ScriptedLLM(ss) for ss in step_scripts],
+        builtin_tools(wd), jp, workdir=wd, run_id="planner-drill",
+        max_steps_per_step=int(task.get("max_steps_per_step", 6)),
+    ).run(str(task.get("task_text", "planner drill")))
+    events, torn = load_trace(jp)
+    types = [e.type for e in events]
+    plan_events = [e for e in events if e.type == "plan"]
+    step_starts = [e for e in events if e.type == "step_start"]
+    step_ends = [e for e in events if e.type == "step_end"]
+    plan_done = [e for e in events if e.type == "plan_done"]
+
+    # step journals: dense, parent-referenced, honest tool counts
+    journal_of = {e.payload.get("index"): e.payload.get("journal", "")
+                  for e in step_starts}
+    child_infos = []
+    for se in step_ends:
+        sjp = os.path.join(wd, str(journal_of.get(se.payload.get("index"), "")))
+        ce, ct = load_trace(sjp) if sjp and os.path.exists(sjp) else ([], False)
+        child_infos.append((se, ce, ct))
+
+    def child_tools(i):
+        if i >= len(child_infos):
+            return -1
+        return sum(1 for e in child_infos[i][1] if e.type == "tool_call")
+
+    # plan bugs: schema-invalid and over-cap plans are rejected loudly
+    bug_wd = _fresh_wd("planner-bug")
+    bad = PlannerExecutor(
+        ScriptedLLM(['{"reply": "{\\"steps\\": \\"not-a-list\\"}"}']),
+        [], builtin_tools(bug_wd), os.path.join(bug_wd, "j.jsonl"),
+        workdir=bug_wd, run_id="bug-schema").run("t")
+    big = {"steps": [f"s{i}" for i in range(9)]}
+    cap_wd = _fresh_wd("planner-cap")
+    capped = PlannerExecutor(
+        ScriptedLLM(['{"reply": ' + json.dumps(json.dumps(big)) + '}']),
+        [], builtin_tools(cap_wd), os.path.join(cap_wd, "j.jsonl"),
+        workdir=cap_wd, run_id="bug-cap", max_plan_steps=8).run("t")
+
+    # structural determinism: fresh dir, fixed run_id, identical stream
+    wd2 = os.path.join(wd, "rerun")
+    os.makedirs(wd2, exist_ok=True)
+    r2 = PlannerExecutor(
+        ScriptedLLM(list(planner_script)),
+        [ScriptedLLM(list(ss)) for ss in step_scripts],
+        builtin_tools(wd2), os.path.join(wd2, "journal.jsonl"),
+        workdir=wd2, run_id="planner-drill",
+        max_steps_per_step=int(task.get("max_steps_per_step", 6)),
+    ).run(str(task.get("task_text", "planner drill")))
+    ev2, _t2 = load_trace(os.path.join(wd2, "journal.jsonl"))
+
+    failed = exp.get("failed_step")
+    failed_end = (step_ends[failed].payload
+                  if isinstance(failed, int) and failed < len(step_ends) else {})
+    want_replies = exp.get("step_replies", {})
+    want_tools = exp.get("step_tools", {})
+    return [
+        Check("run_bounds_present",
+              types[0] == "run_start"
+              and events[0].payload.get("mode") == "planner"
+              and types[-1] == "run_end"
+              and r.stop_reason == "reply",
+              f"{types[0]}..{types[-1]} stop={r.stop_reason}"),
+        Check("journal_dense", not torn and sequence_dense(events),
+              f"{len(events)} events, torn={torn}"),
+        Check("plan_event_matches",
+              len(plan_events) == 1
+              and plan_events[0].payload.get("steps") == exp.get("plan")
+              and plan_events[0].payload.get("notes") == exp.get("plan_notes"),
+              f"steps={plan_events[0].payload.get('steps') if plan_events else None} "
+              f"notes={plan_events[0].payload.get('notes') if plan_events else None}"),
+        Check("plan_schema_enforced_here",
+              validate_schema({"steps": ["a", 1]}, PLAN_SCHEMA) != []
+              and validate_schema({"steps": ["a"]}, PLAN_SCHEMA) == [],
+              "lite schema rejects non-string items, accepts strings"),
+        Check("plan_bugs_rejected",
+              bad.stop_reason == "script_error" and bad.plan == []
+              and capped.stop_reason == "script_error" and capped.plan == [],
+              f"schema-bug stop={bad.stop_reason}, over-cap stop={capped.stop_reason}"),
+        Check("step_count_matches",
+              len(step_starts) == len(exp.get("plan", []))
+              and len(step_ends) == len(exp.get("plan", [])),
+              f"{len(step_starts)} starts / {len(step_ends)} ends"),
+        Check("step_replies_match",
+              all(str(se.payload.get("reply", "")) == want_replies[str(se.payload.get("index"))]
+                  for se in step_ends if str(se.payload.get("index")) in want_replies),
+              str([(se.payload.get("index"), se.payload.get("reply")) for se in step_ends])),
+        Check("failed_step_reply_empty",
+              failed_end.get("stop_reason") == "script_error"
+              and failed_end.get("reply") == "",
+              f"step {failed}: {failed_end.get('stop_reason')} reply={failed_end.get('reply')!r}"),
+        Check("step_journals_dense",
+              all(not ct and sequence_dense(ce) for _se, ce, ct in child_infos),
+              f"{len(child_infos)} child journals"),
+        Check("parent_references_children",
+              all(ce and ce[0].type == "run_start"
+                  and se.payload.get("run_id") == ce[0].run_id
+                  for se, ce, _ct in child_infos),
+              "parent step_end run_id equals the child journal's own run_id"),
+        Check("step_tools_executed",
+              all(child_tools(int(k)) == v for k, v in want_tools.items()),
+              str([(i, child_tools(i)) for i in range(len(child_infos))])),
+        Check("plan_done_event_present",
+              len(plan_done) == 1
+              and plan_done[0].payload.get("steps") == len(exp.get("plan", []))
+              and plan_done[0].payload.get("stop_reasons")
+              == [se.payload.get("stop_reason") for se in step_ends],
+              str(plan_done[0].payload if plan_done else None)),
+        Check("final_reply_matches",
+              r.stop_reason == "reply" and r.reply == exp.get("reply", ""),
+              f"{r.stop_reason} {r.reply!r}"),
+        Check("structural_determinism",
+              r2.stop_reason == "reply" and r2.reply == r.reply
+              and fanout_fingerprint(events) == fanout_fingerprint(ev2),
+              "re-run in a fresh dir: same seq/type/payload stream"),
+    ]
+
+
+def _snapshot_drill(task: dict) -> list:
+    """Snapshot travel: checkpoints are pure prefix folds of the journal.
+
+    Honest contract: the final checkpoint equals the full replay, earlier
+    checkpoints are untouched by later events (a longer run that shares the
+    prefix folds identically) and by a torn tail, travel is deterministic
+    and monotone, bounds/order/density violations raise loudly instead of
+    clamping, the empty journal exposes exactly the zero state, and a
+    reopened journal travels identically.
+    """
+    from .snapshot import ZERO_STATE, monotone, snapshot_at, travel
+
+    wd = _fresh_wd("snapshot")
+    exp = _expect(task)
+    jp = os.path.join(wd, "journal.jsonl")
+    result = AgentRunner(
+        ScriptedLLM(_script(task)), builtin_tools(wd), jp,
+        max_steps=int(task.get("max_steps", 8)),
+        workdir=wd, run_id="snapshot-drill").run(str(task.get("task_text", "snapshot drill")))
+    events, torn = load_trace(jp)
+    end = events[-1].seq if events else 0
+    checkpoints = [int(c) for c in exp.get("checkpoints", [])]
+    states = travel(events, checkpoints)
+    again = travel(events, checkpoints)
+
+    # longer run sharing the prefix: appending real events cannot rewrite
+    # an earlier checkpoint
+    wd_b = _fresh_wd("snapshot-long")
+    AgentRunner(
+        ScriptedLLM(_script(task)[:-1]
+                    + ['{"action": {"tool": "think", "args": {"note": "addendum"}}, "thought": "later"}',
+                       _script(task)[-1]]),
+        builtin_tools(wd_b), os.path.join(wd_b, "journal.jsonl"),
+        max_steps=int(task.get("max_steps", 8)), workdir=wd_b,
+        run_id="snapshot-drill").run(str(task.get("task_text", "snapshot drill")))
+    ev_long, _t = load_trace(os.path.join(wd_b, "journal.jsonl"))
+
+    # torn tail: copy the journal, cut mid-line, recover, travel again
+    torn_path = os.path.join(wd, "torn.jsonl")
+    raw = open(jp, "rb").read()
+    with open(torn_path, "wb") as fh:
+        fh.write(raw + b'{"seq": 999, "torn')
+    ev_torn, torn_flag = load_trace(torn_path)
+
+    # gapped journal: drop one middle event from a copy of the list
+    gapped = [e for e in events if e.seq != max(1, end // 2)]
+    empty_err = gap_err = desc_err = beyond_err = ""
+    try:
+        snapshot_at([], 3)
+    except ValueError as e:
+        empty_err = str(e)
+    try:
+        travel(gapped, [len(gapped)])
+    except ValueError as e:
+        gap_err = str(e)
+    try:
+        travel(events, [checkpoints[-1], checkpoints[0]])
+    except ValueError as e:
+        desc_err = str(e)
+    try:
+        snapshot_at(events, end + 50)
+    except ValueError as e:
+        beyond_err = str(e)
+
+    tc_at = exp.get("tool_calls_at", {})
+    rep_at = exp.get("replies_at", {})
+    return [
+        Check("run_completes_with_reply",
+              result.stop_reason == "reply" and result.reply == exp.get("reply", ""),
+              f"{result.stop_reason} {result.reply!r}"),
+        Check("final_checkpoint_equals_replay",
+              states[-1]["state"] == replay(events)
+              and states[-1]["state"]["last_reply"] == exp.get("reply", ""),
+              "travel ends exactly where the full fold lands"),
+        Check("checkpoint_counters_match",
+              all(s["state"]["tool_calls"] == tc_at[str(s["seq"])]
+                  and s["state"]["replies"] == rep_at.get(str(s["seq"]),
+                                                          s["state"]["replies"])
+                  for s in states if str(s["seq"]) in tc_at),
+              str([(s["seq"], s["state"]["tool_calls"], s["state"]["replies"])
+                   for s in states])),
+        Check("prefix_isolation",
+              travel(events, checkpoints[:-1]) == travel(ev_long, checkpoints[:-1]),
+              "shared prefix folds identically despite later events"),
+        Check("torn_tail_isolated",
+              torn_flag and [e.seq for e in ev_torn] == [e.seq for e in events]
+              and travel(ev_torn, checkpoints) == states,
+              "torn trailing line invisible to every checkpoint"),
+        Check("travel_deterministic", again == states,
+              "two travels, one result"),
+        Check("counters_monotone", monotone(states),
+              "folded counters never decrease"),
+        Check("empty_journal_zero_state",
+              snapshot_at([], 0)["state"] == ZERO_STATE
+              and empty_err.startswith("checkpoint 3 beyond"),
+              "checkpoint 0 is the zero state; beyond is loud"),
+        Check("gap_rejected", gap_err.startswith("journal prefix is not dense"),
+              gap_err[:60]),
+        Check("descending_rejected", desc_err.startswith("checkpoints must be strictly ascending"),
+              desc_err[:60]),
+        Check("beyond_end_rejected", beyond_err.startswith(f"checkpoint {end + 50} beyond"),
+              beyond_err[:60]),
+        Check("reopen_stable",
+              travel(_reopen(jp), checkpoints) == states
+              and not torn and sequence_dense(events),
+              "reloaded journal travels identically"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -1422,6 +1672,8 @@ DRILLS = {
     "structured": _structured_drill,
     "retry": _retry_drill,
     "breaker": _breaker_drill,
+    "planner": _planner_drill,
+    "snapshot": _snapshot_drill,
 }
 
 

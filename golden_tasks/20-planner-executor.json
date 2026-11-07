@@ -1,0 +1,31 @@
+{
+  "id": "20-planner-executor",
+  "title": "Planner-executor: one planning turn fans out into real executor runs on their own journals; a failing step is recorded as data and the planner still closes with a summary",
+  "drill": "planner",
+  "task_text": "plan then execute the release prep",
+  "max_steps_per_step": 6,
+  "planner_script": [
+    "{\"reply\": \"```json\\n{\\\"steps\\\": [\\\"write the file\\\", \\\"probe the fleet\\\", \\\"read it back\\\"],}\\n```\"}",
+    "{\"reply\": \"release prep: 2 of 3 steps ok\"}"
+  ],
+  "step_scripts": [
+    [
+      "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"rel.txt\", \"text\": \"launching 2027\"}}, \"thought\": \"persist the note\"}",
+      "{\"reply\": \"file written\"}"
+    ],
+    [
+      "{\"action\": {\"tool\": \"echo\", \"args\": {\"text\": \"probe\"}}, \"thought\": \"probe then die\"}"
+    ],
+    [
+      "{\"reply\": \"content verified\"}"
+    ]
+  ],
+  "expect": {
+    "reply": "release prep: 2 of 3 steps ok",
+    "plan": ["write the file", "probe the fleet", "read it back"],
+    "plan_notes": ["fences", "trailing_comma"],
+    "step_replies": {"0": "file written", "2": "content verified"},
+    "step_tools": {"0": 1, "1": 1, "2": 0},
+    "failed_step": 1
+  }
+}
