@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (40 tasks, 462 checks) is the repo's contract with
+The golden matrix (41 tasks, 474 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -460,6 +460,32 @@ wall-clock, one failure poisons the aggregate, and the CLI agrees
 (exit 0 green / 1 failing), and the floor flags work from the CLI too (`--min-examples 9999` fails loudly naming the floor). **Loud failure:** a docstring example that
 rots — the first run of this very drill caught two examples referencing
 a name their module never imported — or a probe that somehow passes.
+
+### 41-attest — the release attestation: one command, one artifact, every gate
+**The run:** no agent runs here either; the drill drives
+`openagentx/attest.py` in a fresh child interpreter (the doctest gate
+runs the doctest engine, whose stdout swapping must not race the eval
+pool — the doctest drill's discipline, inherited): the real tree and
+four synthetic probe trees are collected, rendered and serialized
+through the exact same five-gate path an operator's `oax attest` runs.
+**The checks grade (12):** the real tree attests green with the five
+gates in fixed order (doctor, audit, doctests, manifest, matrix); the
+doctest gate's counts are floor-pinned (17 modules / 53 examples) so
+the example set cannot quietly shrink; the matrix gate covers every
+task with prose and every expect key; the manifest gate's tree hash
+matches an independent build; a synthetic probe tree attests green
+(the gates are root-parametric, one grading path for real trees and
+probes); an import bomb folds the doctest gate red carrying the real
+`RuntimeError` in the gate detail; a runtime-assembled planted secret
+turns the verdict red with the file named and the secret never echoed;
+a gate that crashes (a required-files path that is a directory) folds
+red carrying the real `IsADirectoryError`; renders are
+byte-deterministic twice with no wall-clock; the machine artifact is
+byte-identical twice, sort_keys-sorted, and carries the 64-hex tree
+hash; the CLI exits 0 green / 1 red with the render on stdout.
+**Loud failure:** a planted credential on disk — attest names the file
+and the finding kind without ever echoing the secret, and the verdict
+goes red the moment one gate is red.
 
 ## Adding a task
 

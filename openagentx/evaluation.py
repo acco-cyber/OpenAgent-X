@@ -3831,6 +3831,210 @@ def _doctest_drill(task: dict) -> list:
         f"exit {r2.returncode}, floor named in output"))
     return checks
 
+
+_ATTEST_CHILD = r'''
+import json, sys
+from openagentx.attest import artifact_json, collect_gates, render
+out = {}
+for spec in sys.argv[1:]:
+    label, root = spec.split("=", 1)
+    att = collect_gates(root)
+    out[label] = {"att": att, "render": render(att), "render2": render(att),
+                  "art1": artifact_json(att), "art2": artifact_json(att)}
+print(json.dumps(out))
+'''
+
+
+def _attest_in_child(*specs: str) -> dict:
+    """Run collect_gates for each ``label=root`` in a fresh child interpreter.
+
+    The doctest gate runs the doctest engine, whose process-global stdout
+    swapping must not race the eval pool — the same discipline the doctest
+    drill established. The child prints one JSON map:
+    ``{label: {att, render, render2, art1, art2}}``.
+    """
+    import json
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable, "-c", _ATTEST_CHILD, *specs],
+                       capture_output=True, text=True)
+    return json.loads(r.stdout)
+
+
+def _attest_drill(task: dict) -> list:
+    """The release attestation: one command, one artifact, every gate.
+
+    Honest contract: the real tree attests green with the five gates in
+    fixed order; the doctest gate's counts are floor-pinned so the
+    example set cannot quietly shrink; the matrix gate covers every task
+    with prose and every expect key; the manifest gate's tree hash
+    matches an independent build; the gates are root-parametric (a
+    synthetic probe tree attests green, an import bomb folds the doctest
+    gate red with the real exception); a runtime-assembled planted
+    secret turns the verdict red with the file named and the secret
+    never echoed; a gate that crashes folds red carrying the real
+    exception; the render is byte-deterministic with no wall-clock; the
+    artifact is byte-identical twice, sorted, and carries the 64-hex
+    tree hash; the CLI exits 0 green / 1 red.
+    """
+    from .attest import GATES
+    from .pack import build_manifest
+
+    checks: list = []
+    token = "ghp_" + "A1b2C3d4E5" * 3 + "F9ab12"
+
+    def _mini_tree(with_bomb: bool = False, with_poison: bool = False,
+                   crash_gate: bool = False) -> str:
+        wd = _fresh_wd("attest")
+        os.makedirs(os.path.join(wd, "openagentx"))
+        os.makedirs(os.path.join(wd, "golden_tasks"))
+        os.makedirs(os.path.join(wd, "docs"))
+        os.makedirs(os.path.join(wd, "scripts"))
+        with open(os.path.join(wd, "openagentx", "mini.py"), "w",
+                  encoding="utf-8") as fh:
+            fh.write('def add(a, b):\n'
+                     '    """\n'
+                     '    >>> add(2, 3)\n'
+                     '    5\n'
+                     '    """\n'
+                     '    return a + b\n')
+        if with_bomb:
+            with open(os.path.join(wd, "openagentx", "bomb.py"), "w",
+                      encoding="utf-8") as fh:
+                fh.write('raise RuntimeError("bomb went off")\n')
+        with open(os.path.join(wd, "golden_tasks", "01-mini.json"), "w",
+                  encoding="utf-8") as fh:
+            json.dump({"id": "01-mini", "title": "mini", "drill": "loop",
+                       "task_text": "attest the mini tree", "max_steps": 3,
+                       "expect": {"reply_text_matches": "mini"}}, fh)
+        with open(os.path.join(wd, "docs", "explainers.md"), "w",
+                  encoding="utf-8") as fh:
+            fh.write("# explainers\n\n### 01-mini\nprose body\n")
+        with open(os.path.join(wd, "scripts", "required-files.txt"), "w",
+                  encoding="utf-8") as fh:
+            fh.write("openagentx/mini.py\n")
+        if with_poison:
+            with open(os.path.join(wd, "notes.txt"), "w",
+                      encoding="utf-8") as fh:
+                fh.write("leak: " + token + "\n")
+        if crash_gate:
+            os.remove(os.path.join(wd, "scripts", "required-files.txt"))
+            os.makedirs(os.path.join(wd, "scripts", "required-files.txt"))
+        return wd
+
+    mini = _mini_tree()
+    bomb = _mini_tree(with_bomb=True)
+    poison = _mini_tree(with_poison=True)
+    crash = _mini_tree(crash_gate=True)
+    out = _attest_in_child("real=.", f"mini={mini}", f"bomb={bomb}",
+                           f"poison={poison}", f"crash={crash}")
+
+    # 1) the real tree attests green: five gates, fixed order, all ok
+    real = out["real"]
+    att = real["att"]
+    names = [g["name"] for g in att["gates"]]
+    checks.append(Check(
+        "real_tree_green",
+        (att["ok"] is True and names == list(GATES)
+         and all(g["ok"] for g in att["gates"])),
+        f"{len(names)} gates ok={att['ok']}"))
+    # 2) the doctest gate's counts are floor-pinned and honest
+    dt = att["gates"][2]["counts"]
+    checks.append(Check(
+        "doctest_floor_pinned",
+        (dt["with_examples"] >= 17 and dt["examples"] >= 53
+         and dt["failed"] == 0),
+        f"{dt['with_examples']} modules / {dt['examples']} examples, "
+        f"{dt['failed']} failures"))
+    # 3) the matrix gate covers the matrix
+    mx = att["gates"][4]["counts"]
+    checks.append(Check(
+        "matrix_covers_matrix",
+        (mx["tasks"] >= 40 and mx["with_prose"] == mx["tasks"]
+         and mx["expect_keys"] >= 137),
+        f"{mx['tasks']} tasks, {mx['with_prose']} prose, "
+        f"{mx['expect_keys']} expect keys"))
+    # 4) the manifest gate's tree hash matches an independent build
+    mf = att["gates"][3]["counts"]
+    tree = build_manifest(".")["tree_sha256"]
+    checks.append(Check(
+        "manifest_hash_verified",
+        (mf["files"] >= 150 and mf["tree_sha256"] == tree),
+        f"{mf['files']} files, hash match "
+        f"{mf['tree_sha256'][:12]}"))
+    # 5) a synthetic tree attests green — the gates are root-parametric
+    m = out["mini"]
+    matt = m["att"]
+    mdt = matt["gates"][2]["counts"]
+    checks.append(Check(
+        "synthetic_tree_green",
+        (matt["ok"] is True and all(g["ok"] for g in matt["gates"])
+         and mdt["modules"] == 1 and mdt["examples"] == 1),
+        f"mini ok={matt['ok']}, 1 module / 1 example"))
+    # 6) an import bomb folds the doctest gate red with the real exception
+    b = out["bomb"]["att"]
+    bg = b["gates"][2]
+    checks.append(Check(
+        "import_bomb_folds_loud",
+        (b["ok"] is False and bg["ok"] is False
+         and "import failed: RuntimeError" in bg["detail"]),
+        bg["detail"][:60]))
+    # 7) a planted secret turns the verdict red, file named, secret never
+    p = out["poison"]["att"]
+    pg = p["gates"][1]
+    checks.append(Check(
+        "planted_secret_red",
+        (p["ok"] is False and pg["ok"] is False
+         and "notes.txt" in pg["detail"] and "github_token" in pg["detail"]
+         and token not in pg["detail"]),
+        "audit gate red, file named, secret never echoed"))
+    # 8) a gate that crashes folds red carrying the real exception
+    c = out["crash"]["att"]
+    cg = c["gates"][0]
+    checks.append(Check(
+        "gate_crash_folds_red",
+        (c["ok"] is False and cg["ok"] is False
+         and "gate crashed: IsADirectoryError" in cg["detail"]),
+        cg["detail"][:70]))
+    # 9) the render is byte-deterministic
+    checks.append(Check(
+        "render_deterministic",
+        (m["render"] == m["render2"]
+         and real["render"] == real["render2"]),
+        "two renders byte-identical, real + mini"))
+    # 10) the render carries no wall-clock
+    import re
+    checks.append(Check(
+        "render_no_wall_clock",
+        (re.search(r"\d{10,}", m["render"]) is None
+         and re.search(r"\d{10,}", real["render"]) is None),
+        "no 10+-digit number in any render"))
+    # 11) the artifact is deterministic, sorted, and carries the hash
+    art = json.loads(m["art1"])
+    checks.append(Check(
+        "artifact_deterministic_sorted",
+        (m["art1"] == m["art2"]
+         and m["art1"].startswith('{"gates":')
+         and art["ok"] is True
+         and len(art["gates"][3]["counts"]["tree_sha256"]) == 64
+         and art["gates"][3]["counts"]["tree_sha256"]
+         == matt["gates"][3]["counts"]["tree_sha256"]),
+        "artifact byte-identical twice, 64-hex tree hash inside"))
+    # 12) the CLI agrees: exit 0 green / 1 red, stdout is the render
+    import subprocess
+    import sys
+    r0 = subprocess.run([sys.executable, "-m", "openagentx", "attest", mini],
+                        capture_output=True, text=True)
+    r1 = subprocess.run([sys.executable, "-m", "openagentx", "attest", poison],
+                        capture_output=True, text=True)
+    checks.append(Check(
+        "cli_exit_contract",
+        (r0.returncode == 0 and r1.returncode == 1
+         and r0.stdout.startswith("attest: 5 gates — OK")
+         and r1.stdout.startswith("attest: 5 gates — FAIL")),
+        f"cli exit {r0.returncode} green / {r1.returncode} red"))
+    return checks
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -3871,6 +4075,7 @@ DRILLS = {
     "replay_from": _replay_from_drill,
     "explain": _explain_drill,
     "doctest": _doctest_drill,
+    "attest": _attest_drill,
 }
 
 

@@ -46,8 +46,9 @@ failing `harness_error` check. The matrix only grows.
 | 38 | replay-from | replay_from (12) | the journal folds from the middle, honestly: from 0 is the whole run (state equals the full fold), every monotone counter of a mid-run suffix fold equals whole minus prefix while the non-additive fields (clamped runs_open, window-local last_reply/final_stop) describe only their own window, from max seq folds exactly one event, bounds are honest (max+1 / -1 / empty@1 raise ValueError, empty@0 folds zero — never silent clamping), a gapped journal is an integrity failure that raises instead of folding, a torn tail is invisible to the fold and reported, the render names its window and is byte-deterministic with no wall-clock, a runtime hand-written raw token inside a reply never leaves the state view ([REDACTED:github_token]), CLI 0 folded / 1 missing / 2 bad bounds with redacted stdout |
 | 39 | explain | explain (14) | the explainer view: spec + prose joined, deterministic render, no-prose reported loudly, prose coverage cross-checked both ways, CLI 0 found / 1 missing, matrix index covers all tasks sorted with deterministic render and loud NO-PROSE ghosts |
 | 40 | doctest | doctest (13) | docstring self-checks: the examples are graded, not decorative — real tree green (53 examples / 17 modules, floor pinned), every module reported sorted with none skipped, no-example modules counted honestly, poisoned docstring fails loudly with Failed example / Expected / Got, import bomb folds with the real exception, redaction example really graded (runtime-assembled fixture), render byte-deterministic with no wall-clock, one failure poisons the aggregate, CLI 0 green / 1 failing, floor flags enforced from the CLI (--min-examples 9999 fails loudly naming the floor) |
+| 41 | attest | attest (12) | the release attestation: one command, one artifact, every gate — the real tree attests green with the five gates in fixed order (doctor, audit, doctests, manifest, matrix), doctest counts floor-pinned (53 examples / 17 modules), the matrix gate covers every task with prose and every expect key, the manifest gate's tree hash matches an independent build, a synthetic probe tree attests green (root-parametric gates), an import bomb folds the doctest gate red with the real exception, a runtime-assembled planted secret turns the verdict red with the file named and the secret never echoed, a crashing gate folds red carrying the real exception, renders byte-deterministic with no wall-clock, the artifact is byte-identical twice and carries the 64-hex tree hash, CLI 0 green / 1 red |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **40 tasks, 462 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **41 tasks, 474 checks**.
 
 ## Adding a task (rules)
 
@@ -65,7 +66,7 @@ Run: `python3 -m openagentx eval` (all green or exit 1). Current: **40 tasks, 46
    `planner_script[]` + `step_scripts[][]`; `snapshot` needs `script[]` +
    `expect.checkpoints[]`; `prompt` needs `layers{}` + `entry` +
    `expect.render`; `audit` needs
-   `expect.planted_*`; `pack`/`sbom`/`doctest` need no
+   `expect.planted_*`; `pack`/`sbom`/`doctest`/`attest` need no
    script at all.
 4. Any fixture secret must be runtime-concatenated inside Python — never in JSON.
 5. Checks must observe real behavior from *this* run; no snapshots/caches.
