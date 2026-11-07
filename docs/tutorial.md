@@ -309,7 +309,9 @@ graded by `oax eval` against real runs in fresh temp workspaces. A drill
 never trusts its harness: exceptions fold into failing checks, and the
 check count only moves forward. Every task's prose — what the run does,
 what the checks grade, how it fails loudly — lives in
-`docs/explainers.md`.
+`docs/explainers.md`; a runnable version of this capstone — author a
+spec, grade a real run, watch the honest failures — lives at
+`examples/26_author_your_own_drill.py`.
 
 ```sh
 python3 -m openagentx eval          # 38 tasks, all green or exit 1
