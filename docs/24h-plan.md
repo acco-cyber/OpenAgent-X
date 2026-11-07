@@ -107,7 +107,14 @@ green.
   diamond includes expand per path, missing layers/variables name
   themselves, values stay literal so data never injects includes);
   example 10 live
-- [ ] S12-E3 — task 23 `tools-jit` (JIT tool disclosure)
+- [x] S12-E3 — task 23 `tools-jit` (JIT tool disclosure)
+  ✅ 23 tasks, 254 checks green; `JITDisclosure` + `JITAgentRunner`
+  (turn-zero visibility journaled, undisclosed calls refused before hooks
+  with one `tool_hidden` event and zero side effects, `tools_expand`
+  control-plane disclosure lands as an ordinary journaled call, keyword
+  rules with deterministic sorted cap that never hides the control plane,
+  every visibility change journaled as `tool_disclose` with the full set
+  and the additions, re-runs event-for-event identical); example 11 live
 - [ ] S13-E3 — task 24 `chaos` (combined faults in one run) + task 25 `hash-chain`
 
 ### Phase 2 — Power tooling & hardening
