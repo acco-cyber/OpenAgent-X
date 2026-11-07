@@ -1,10 +1,38 @@
 # OpenAgent-X
 
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](docs/tutorial.md)
+[![Dependencies](https://img.shields.io/badge/dependencies-zero-8A2BE2)](docs/adr/0002-stdlib-only-offline.md)
+[![Eval](https://img.shields.io/badge/eval-35_tasks_399_checks-brightgreen)](golden_tasks)
+[![Secret audit](https://img.shields.io/badge/secret_audit-0_findings-success)](docs/faq.md)
+[![Network](https://img.shields.io/badge/network-offline_first-orange)](docs/adr/0004-scripted-adapters.md)
+[![License](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
+
 **The most auditable pure-stdlib agent framework.** Python 3.10+, zero
 dependencies, zero network. Every observable action an agent takes becomes an
 append-only journal event — inspectable, replayable, and redacted by default.
 Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
+
+Three pillars hold everything up: **the journal is the truth** (event-sourced,
+append-only, dense sequences), **redaction by default** (secrets die at the
+journal boundary and every view re-applies the mask), and **honest grading**
+(35 golden drills, 399 checks, harness errors fold into failing checks — never
+silent passes). Ten ADRs in `docs/adr/` record why, with the costs admitted.
+
+## Quickstart — 60 seconds, zero API keys
+
+```
+git clone <this repo> && cd OpenAgent-X
+python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
+python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
+python3 -m openagentx examples # twenty-one runnable end-to-end demos
+```
+
+No model keys, no SDKs, no services. The default adapter is `ScriptedLLM`:
+deterministic turns you write yourself, so the whole matrix runs anywhere
+Python runs — CI, air-gapped, your laptop.
+
+## The CLI at a glance
 
 ```
 oax eval      # run every golden task drill, all green or exit 1   (35 tasks / 399 checks)
@@ -24,15 +52,6 @@ oax property  # property suite — invariants re-checked after every random trac
 oax dashboard # report v2 — self-contained HTML dashboard over one journal (zero assets)
 oax mermaid   # export a journal as a deterministic, escaped Mermaid flowchart
 oax examples  # execute every offline example end-to-end
-```
-
-Quickstart (no API keys, ever):
-
-```
-git clone <this repo> && cd OpenAgent-X
-python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
-python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # twenty-one runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
