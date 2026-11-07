@@ -46,7 +46,7 @@ evaluation.py  golden-task harness: JSON specs → drills of named Checks;
                (loop, redact, trace, team, router, budget, stop,
                redact_nested, audit, pack, sbom, memory, compact, cache,
                hooks, fanout, structured, retry, breaker, planner,
-               snapshot, prompt, jit)
+               snapshot, prompt, jit, chaos, chain)
 doctor.py      python>=3.10, stdlib purity (AST import scan vs sys.stdlib_module_names),
                offline purity (no net modules), required files, task contracts
 audit.py       secret-scan of the whole tree; must be 0 findings on this repo
@@ -101,6 +101,20 @@ jit.py         JITDisclosure + JITAgentRunner: tools stay registered but
                tools_expand control plane; undisclosed calls refused before
                hooks with zero side effects; every visibility change is a
                journaled tool_disclose / tool_hidden event
+chaos.py       ChaosLLM + ChaosTools: combined faults in ONE run on a
+               deterministic plan (planned 1-based LLM call numbers, first-n
+               calls per tool); every injection ledgered, faulted tool calls
+               never reach the registry (zero side effects), unknown targets
+               and sub-1 call numbers raise naming themselves,
+               chaos_summary is a deterministic count map
+chain.py       hash-chained traces: ChainedJournal commits chain
+               {prev, digest} per line (sha256 over prev digest + full
+               canonical event JSON, genesis 64 zeros) as an extra top-level
+               key old readers ignore; verify_journal recomputes two layers
+               and localizes edited/deleted/reordered lines; torn tails
+               isolate unsealable; plain journals verify chained:false;
+               seal() refuses anything it cannot verify; AgentRunner takes
+               journal_cls (default byte-for-byte unchanged)
 cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact
 ```
 

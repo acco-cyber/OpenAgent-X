@@ -7,7 +7,7 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (23 tasks / 254 checks)
+oax eval      # run every golden task drill, all green or exit 1   (25 tasks / 282 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
@@ -23,7 +23,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # eleven runnable end-to-end demos
+python3 -m openagentx examples # twelve runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -86,6 +86,15 @@ python3 -m openagentx examples # eleven runnable end-to-end demos
   effects, `tools_expand` requests disclosure as an ordinary journaled
   call, every visibility change lands in the journal with the full set
   and the additions, and re-runs are event-for-event identical.
+- **Chaos you can read** — `ChaosLLM`/`ChaosTools` inject combined faults
+  into ONE run on a fixed plan: every injection is ledgered, faulted tool
+  calls never reach the registry (zero side effects), recovery is real
+  (retry with scars), and same plan in means same faults out.
+- **Hash-chained traces** — every chained journal line commits
+  `{prev, digest}` over the previous digest plus the full event JSON:
+  editing, deleting or reordering any line is detected and localized,
+  torn tails isolate unsealable, plain journals verify honestly as
+  `chained: false`, and `seal` refuses anything it cannot verify.
 
 ## Why it matters
 
