@@ -1135,6 +1135,273 @@ def _structured_drill(task: dict) -> list:
     return checks
 
 
+def _retry_drill(task: dict) -> list:
+    """Retry with backoff: transient faults recovered on a fixed schedule.
+
+    Honest contract: every attempt is logged (outcome, error, delay), the
+    recovery path shows its scars, give-up raises a loud ``RetryExhausted``
+    that names the attempt count, non-retryable plan bugs propagate
+    immediately instead of being laundered, the backoff schedule is exactly
+    what the policy advertises, and a retried run journals exactly like a
+    healthy one — retries never touch the journal.
+    """
+    from .llm import LLMUnavailable, ScriptExhausted
+    from .retry import BackoffPolicy, RetryExhausted, RetryLLM
+
+    wd = _fresh_wd("retry")
+    exp = _expect(task)
+    script = _script(task)
+    fail_first = int(exp.get("fail_first", 1))
+    max_attempts = int(exp.get("max_attempts", 3))
+    base_delay = float(exp.get("base_delay", 0.0))
+    factor = float(exp.get("factor", 2.0))
+
+    class FlakyLLM:
+        """Fault double: fails the first *fail_first* calls, then serves."""
+
+        def __init__(self, script, fail_first):
+            self.inner = ScriptedLLM(script)
+            self.fail_first = int(fail_first)
+            self.calls = 0
+
+        def complete(self, messages):
+            self.calls += 1
+            if self.calls <= self.fail_first:
+                raise LLMUnavailable(f"transient outage (call {self.calls})")
+            return self.inner.complete(messages)
+
+    schedule = BackoffPolicy(max_attempts, base_delay, factor).delays()
+    want_schedule = [round(base_delay * (factor ** i), 6)
+                     for i in range(max_attempts - 1)]
+
+    flaky = FlakyLLM(['{"reply": "ok"}'], fail_first=2)
+    adapter = RetryLLM(flaky, BackoffPolicy(max_attempts=4, base_delay=0.001,
+                                            factor=2.0))
+    turn = adapter.complete([{"role": "user", "content": "hi"}])
+    ok_flags = [a["ok"] for a in adapter.attempts]
+    delays_seen = [a["delay"] for a in adapter.attempts]
+
+    giveup = RetryLLM(FlakyLLM(['{"reply": "x"}'], 99),
+                      BackoffPolicy(max_attempts=3))
+    gave_up_error = ""
+    try:
+        giveup.complete([])
+    except RetryExhausted as e:
+        gave_up_error = str(e)
+
+    planbug = RetryLLM(FlakyLLM([], 0), BackoffPolicy(max_attempts=5))
+    bug_type = "unraised"
+    try:
+        planbug.complete([])
+    except RetryExhausted:
+        bug_type = "wrapped"
+    except ScriptExhausted:
+        bug_type = "propagated"
+
+    flaky_run = FlakyLLM(list(script), fail_first)
+    jp = os.path.join(wd, "journal.jsonl")
+    result = AgentRunner(
+        RetryLLM(flaky_run, BackoffPolicy(max_attempts=max_attempts,
+                                          base_delay=base_delay, factor=factor)),
+        builtin_tools(wd), jp, max_steps=int(task.get("max_steps", 8)),
+        workdir=wd, run_id="retry-drill").run(str(task.get("task_text", "retry drill")))
+    events, torn = load_trace(jp)
+    healthy_jp = os.path.join(wd, "healthy.jsonl")
+    AgentRunner(ScriptedLLM(list(script)), builtin_tools(wd), healthy_jp,
+                max_steps=int(task.get("max_steps", 8)), workdir=wd,
+                run_id="retry-healthy").run(str(task.get("task_text", "retry drill")))
+    healthy_events, _t2 = load_trace(healthy_jp)
+    return [
+        Check("backoff_schedule_deterministic", schedule == want_schedule,
+              f"{schedule} vs {want_schedule}"),
+        Check("recovers_after_transient",
+              turn == {"reply": "ok"} and ok_flags == [False, False, True],
+              f"attempts ok={ok_flags}"),
+        Check("delays_follow_schedule", delays_seen == [0.001, 0.002, 0.0],
+              str(delays_seen)),
+        Check("give_up_is_loud", "gave up after 3 attempts" in gave_up_error,
+              gave_up_error[:70]),
+        Check("give_up_attempts_honest",
+              len(giveup.attempts) == 3
+              and not any(a["ok"] for a in giveup.attempts),
+              f"{len(giveup.attempts)} attempts, all failed"),
+        Check("non_retryable_propagates", bug_type == "propagated",
+              "ScriptExhausted is a plan bug, never retried"),
+        Check("retry_exhausted_is_llm_unavailable",
+              issubclass(RetryExhausted, LLMUnavailable),
+              "runners journal an honest stop, never a crash"),
+        Check("runner_reply_matches",
+              result.stop_reason == "reply" and result.reply == exp.get("reply", ""),
+              f"{result.stop_reason} {result.reply!r}"),
+        Check("runner_inner_calls_honest",
+              flaky_run.calls == fail_first + len(script),
+              f"inner calls={flaky_run.calls} want={fail_first + len(script)}"),
+        Check("retries_invisible_to_journal",
+              [e.type for e in events] == [e.type for e in healthy_events],
+              "same event-type stream as a healthy run"),
+        Check("zero_base_never_sleeps",
+              BackoffPolicy(max_attempts=4).delays() == [0.0, 0.0, 0.0],
+              "offline-fast contract"),
+        Check("journal_dense_reopen",
+              not torn and sequence_dense(events) and sequence_dense(_reopen(jp))),
+    ]
+
+
+def _breaker_drill(task: dict) -> list:
+    """Circuit breaker: trip on real failures, fast-fail, probe to recover.
+
+    Honest contract: the tripping failure still surfaces the *original*
+    fault, open-state calls are rejected without consulting the inner
+    adapter, exactly ``cooldown_calls`` rejections precede one probe, a
+    failed probe re-opens and a successful one closes with an honest
+    snapshot, and a runner behind an open circuit stops
+    ``model_unavailable`` with zero fabricated reply text.
+    """
+    from .llm import LLMUnavailable
+    from .breaker import CircuitBreaker, CircuitOpen
+
+    wd = _fresh_wd("breaker")
+    exp = _expect(task)
+    threshold = int(exp.get("threshold", 3))
+    cooldown = int(exp.get("cooldown", 2))
+
+    class DownLLM:
+        def __init__(self):
+            self.calls = 0
+
+        def complete(self, messages):
+            self.calls += 1
+            raise LLMUnavailable("dependency down")
+
+    class DownThenGoodLLM:
+        def __init__(self, fail_first, script):
+            self.inner = ScriptedLLM(script)
+            self.fail_first = int(fail_first)
+            self.calls = 0
+
+        def complete(self, messages):
+            self.calls += 1
+            if self.calls <= self.fail_first:
+                raise LLMUnavailable("down")
+            return self.inner.complete(messages)
+
+    inner = ScriptedLLM(['{"reply": "a"}', '{"reply": "b"}'])
+    cb0 = CircuitBreaker(inner, threshold=threshold, cooldown_calls=cooldown)
+    r1 = cb0.complete([])
+    r2 = cb0.complete([])
+
+    d1 = DownLLM()
+    cb1 = CircuitBreaker(d1, threshold=threshold, cooldown_calls=cooldown)
+    failure_types = []
+    for _ in range(threshold):
+        try:
+            cb1.complete([])
+        except CircuitOpen:
+            failure_types.append("circuit_open")
+        except LLMUnavailable:
+            failure_types.append("original")
+    trip_state = dict(cb1.snapshot())  # state AT trip time (probe may reopen later)
+    trip_calls = d1.calls
+    d1_before = d1.calls
+    ff_error = ""
+    try:
+        cb1.complete([])
+    except CircuitOpen as e:
+        ff_error = str(e)
+    ff_calls = d1.calls  # captured now: a rejection must not consult the inner
+    extra_rejections = 0
+    for _ in range(cooldown - 1):
+        try:
+            cb1.complete([])
+            extra_rejections += 0  # reaching here means no rejection: lie
+        except CircuitOpen:
+            extra_rejections += 1
+    probe_error_type = "unraised"
+    try:
+        cb1.complete([])
+    except CircuitOpen:
+        probe_error_type = "circuit_open"
+    except LLMUnavailable:
+        probe_error_type = "original"
+
+    dtg = DownThenGoodLLM(1, ['{"reply": "back"}'])
+    cb2 = CircuitBreaker(dtg, threshold=1, cooldown_calls=1)
+    try:
+        cb2.complete([])
+    except LLMUnavailable:
+        pass
+    try:
+        cb2.complete([])
+    except CircuitOpen:
+        pass
+    probe_reply = ""
+    try:
+        probe_reply = cb2.complete([]).get("reply", "")
+    except LLMUnavailable:
+        probe_reply = ""
+
+    d3 = DownLLM()
+    jp = os.path.join(wd, "journal.jsonl")
+    result = AgentRunner(
+        CircuitBreaker(d3, threshold=threshold, cooldown_calls=cooldown),
+        builtin_tools(wd), jp, max_steps=int(task.get("max_steps", 8)),
+        workdir=wd, run_id="breaker-drill").run(str(task.get("task_text", "breaker drill")))
+    events, torn = load_trace(jp)
+    raw_journal = open(jp, encoding="utf-8").read()
+    error_events = [e for e in events if e.type == "error"]
+    reply_events = [e for e in events if e.type == "reply"]
+    script_reply = str(exp.get("script_reply", ""))
+    return [
+        Check("closed_passes_through",
+              r1 == {"reply": "a"} and r2 == {"reply": "b"}
+              and cb0.snapshot()["successes"] == 2,
+              "healthy inner flows through untouched"),
+        Check("snapshot_honest",
+              cb0.snapshot() == {"state": "closed", "failures": 0,
+                                 "successes": 2, "rejections": 0,
+                                 "opens": 0, "probes": 0},
+              str(cb0.snapshot())),
+        Check("threshold_trips",
+              trip_state["state"] == "open" and trip_state["opens"] == 1
+              and trip_calls == threshold,
+              f"at trip: opens={trip_state['opens']} inner calls={trip_calls}"),
+        Check("tripping_failure_surfaced",
+              failure_types == ["original"] * threshold,
+              "every failure raised the original error, never a breaker artifact"),
+        Check("open_fast_fails_without_inner",
+              ff_error.startswith("circuit") and ff_calls == d1_before,
+              f"inner calls {d1_before} -> {ff_calls}"),
+        Check("cooldown_rejections_exact",
+              cb1.snapshot()["rejections"] == cooldown
+              and extra_rejections == cooldown - 1,
+              f"{cb1.snapshot()['rejections']} rejections before the probe"),
+        Check("probe_failure_reopens",
+              cb1.state == "open" and cb1.opens == 2 and cb1.probes == 1
+              and probe_error_type == "original"
+              and d1.calls == threshold + 1,
+              f"opens={cb1.opens} probes={cb1.probes} probe={probe_error_type}"),
+        Check("probe_success_closes",
+              probe_reply == "back" and cb2.state == "closed"
+              and cb2.snapshot()["probes"] == 1,
+              f"reply={probe_reply!r} state={cb2.state}"),
+        Check("runner_stops_model_unavailable",
+              result.stop_reason == exp.get("stop_reason", "model_unavailable"),
+              f"stop={result.stop_reason}"),
+        Check("no_fabricated_reply",
+              result.reply == "" and not reply_events
+              and (not script_reply or script_reply not in raw_journal),
+              "the scripted reply text never reaches the journal"),
+        Check("error_event_journaled",
+              len(error_events) == 1 and d3.calls == 1
+              and "LLMUnavailable" in str(error_events[0].payload.get("error", ""))
+              if error_events else False,
+              "one honest error event; the runner stops at the first "
+              "model_unavailable"),
+        Check("journal_dense_reopen",
+              not torn and sequence_dense(events) and sequence_dense(_reopen(jp))),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -1153,6 +1420,8 @@ DRILLS = {
     "hooks": _hooks_drill,
     "fanout": _fanout_drill,
     "structured": _structured_drill,
+    "retry": _retry_drill,
+    "breaker": _breaker_drill,
 }
 
 

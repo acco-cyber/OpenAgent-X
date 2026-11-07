@@ -1,0 +1,16 @@
+{
+  "id": "19-circuit-breaker",
+  "title": "Circuit breaker: threshold trips on real failures, open fast-fails without touching the inner, the runner stops model_unavailable without fabricating a reply",
+  "drill": "breaker",
+  "task_text": "the model dependency is down; stop honestly",
+  "max_steps": 4,
+  "script": [
+    "{\"reply\": \"should never be served\"}"
+  ],
+  "expect": {
+    "stop_reason": "model_unavailable",
+    "script_reply": "should never be served",
+    "threshold": 2,
+    "cooldown": 2
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "18-retry-backoff",
+  "title": "Retry with backoff: transient faults recovered on a deterministic schedule, give-up is loud, plan bugs are never retried, retries invisible to the journal",
+  "drill": "retry",
+  "task_text": "call the flaky model until it answers",
+  "max_steps": 4,
+  "script": [
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"2*3\"}}, \"thought\": \"compute\"}",
+    "{\"reply\": \"recovered after retry\"}"
+  ],
+  "expect": {
+    "reply": "recovered after retry",
+    "fail_first": 1,
+    "max_attempts": 4,
+    "base_delay": 0.001,
+    "factor": 2.0
+  }
+}
