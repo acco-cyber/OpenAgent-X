@@ -46,3 +46,4 @@ openagentx/cache.py
 openagentx/hooks.py
 golden_tasks/14-cache-replay.json
 golden_tasks/15-hooks-deny.json
+examples/06_cache_hooks.py
