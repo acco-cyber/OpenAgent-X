@@ -134,6 +134,7 @@ oax recall    # TF-IDF memory over past-run journals (read-only, deterministic)
 oax compact   # fold a journal into a denser copy; original never touched
 oax diff      # event-level journal diff: 0 = semantically same, 1 = different
 oax stats     # deterministic run analytics — replay's own counters, plus tools/type counts
+oax grep      # search one journal — matches render redacted (exit 1 = no matches)
 oax bench     # journal throughput microbench — honest wall-clock, never graded
 oax fuzz      # seeded fuzz over the journal contract (torn tails, middle tears)
 oax property  # property suite — invariants re-checked after every random trace step

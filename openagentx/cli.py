@@ -278,6 +278,20 @@ def _cmd_stats(args) -> int:
     return 0
 
 
+def _cmd_grep(args) -> int:
+    """Search one journal; matches render redacted (exit 1 = no matches)."""
+    from .grep import grep_journal, render_grep
+
+    if not os.path.exists(args.journal):
+        print(f"grep: journal {args.journal} does not exist")
+        return 1
+    r = grep_journal(args.journal, pattern=args.pattern, etype=args.type,
+                     tool=args.tool, since_seq=args.since,
+                     limit=args.limit)
+    print(render_grep(r))
+    return 0 if r["matched"] else 1
+
+
 def _cmd_bench(args) -> int:
     """Journal throughput microbench (wall-clock, reported not graded)."""
     from .bench import render_bench, run_bench
@@ -431,6 +445,19 @@ def build_parser() -> argparse.ArgumentParser:
     st = sub.add_parser("stats", help="deterministic run analytics for one journal")
     st.add_argument("journal")
     st.set_defaults(fn=_cmd_stats)
+
+    gp = sub.add_parser("grep",
+                        help="search one journal (matches render redacted; exit 1 = no matches)")
+    gp.add_argument("journal")
+    gp.add_argument("--pattern", default="",
+                    help="case-sensitive substring over type + payload JSON")
+    gp.add_argument("--type", default="", help="exact event type (e.g. tool_call)")
+    gp.add_argument("--tool", default="", help="exact tool name in the payload")
+    gp.add_argument("--since", type=int, default=0,
+                    help="only events with seq >= N")
+    gp.add_argument("--limit", type=int, default=0,
+                    help="cap matches at N in seq order (0 = uncapped)")
+    gp.set_defaults(fn=_cmd_grep)
 
     bn = sub.add_parser("bench", help="journal throughput microbench (synthetic, timed)")
     bn.add_argument("--events", type=int, default=2000,

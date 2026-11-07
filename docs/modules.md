@@ -110,6 +110,19 @@ consecutive pair; deterministic call/fail/err/say classing; extension event
 types render through the generic path; honest zero state for an empty
 journal; torn tails diagram the dense prefix only.
 
+### grep
+Journal grep — the journal is searchable truth, not just replayable truth.
+`grep_journal(path, pattern, etype, tool, since_seq, limit)`, `render_grep`.
+Invariants: all matchers AND together (case-sensitive substring over the
+type+payload JSON, exact event type, exact payload tool name, a seq floor,
+a result cap in seq order); matches render through the redaction engine, so
+raw secrets that live on disk can never leak through the search view —
+searching for the raw token itself matches (the disk is the truth) and
+still prints only the redacted form; torn tails are isolated, never
+searched, only reported; the empty result is honest (`matched: 0` with the
+scanned total named); no timestamps — same journal and matchers, same
+bytes out; CLI contract is exit 0 matched / 1 no matches or missing journal.
+
 ### compact
 Journal compaction — a deterministic, lossy *secondary* representation.
 `compact_events`, `compact_journal`. Invariants: adjacent tool pairs fold

@@ -297,3 +297,15 @@ green.
 If slots run out before 250 commits, continue with stretch slots (S26-E3+):
 per-drill explainers, `oax replay --from`, `oax grep`, more examples — never
 pad with empty commits.
+
+### Phase 5 — Stretch
+
+- [ ] S26-E3 — `oax grep`: the journal is searchable truth, not just
+  replayable truth — a new `grep.py` view (case-sensitive substring over
+  type+payload JSON, exact event type, exact payload tool name, a seq
+  floor, a result cap, all AND-ed; matches render through the redaction
+  engine so raw disk truth can never leak through the search view; torn
+  tails isolated, honest empty result, byte-deterministic output, CLI
+  exit 0 matched / 1 no matches or missing journal) + golden task 37
+  grading it + module guide, CLI table, tutorial and FAQ sync + example
+  24 running the story

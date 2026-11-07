@@ -129,3 +129,4 @@ examples/22_eval_parallel.py
 golden_tasks/36-release-sweep.json
 examples/23_release_sweep.py
 docs/retrospective.md
+openagentx/grep.py
