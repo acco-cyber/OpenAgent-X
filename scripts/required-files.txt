@@ -42,3 +42,4 @@ openagentx/compact.py
 golden_tasks/12-memory-recall.json
 golden_tasks/13-compaction.json
 examples/05_memory_compact.py
+openagentx/cache.py
