@@ -8,6 +8,24 @@ run on every commit (and in CI).
 
 ### Added — views
 
+- `oax replay --from N`: the journal folds from the middle, honestly.
+  `replay_from` folds every event with `seq >= N` from zero at that
+  point; bounds are honest (`0..max seq`, an empty journal exposes only
+  the zero state at 0, out-of-bounds raises `ValueError` — never silent
+  clamping); density is required, so a gapped journal is an integrity
+  failure that raises instead of folding; additivity is claimed only
+  where it is true (every monotone counter of the suffix equals whole
+  minus prefix) and never where it is false (`runs_open` is clamped,
+  `last_reply`/`final_stop` describe only their own window); a torn tail
+  is invisible to the fold and reported; the state is the view and
+  renders through the redaction engine, so a raw secret on disk never
+  leaves it even inside `last_reply`; the render names its window and is
+  byte-deterministic. CLI exits 0 folded / 1 missing journal / 2 bad
+  bounds with redacted stdout. Graded by golden task 38 (12 checks) and
+  demonstrated by `examples/25_replay_from.py`.
+
+### Added — views (grep)
+
 - `oax grep`: the journal is searchable truth, not just replayable truth.
   `grep_journal` filters one journal's events with plain deterministic
   matchers all AND-ed together (case-sensitive substring over the

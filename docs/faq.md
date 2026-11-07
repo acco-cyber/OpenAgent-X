@@ -151,3 +151,20 @@ isolated, never searched, only reported; the empty result is honest
 (`matched: 0` with the scanned total named); and the output carries no
 timestamps, so the same journal and matchers always print the same bytes.
 Exit 0 = matches, 1 = no matches or missing journal.
+
+## How do I re-derive state from the middle of a run?
+
+`oax replay <journal> --from N` — and the honest part is what it refuses
+to claim. The command folds every event with `seq >= N` from zero at
+that point: the suffix's own counters, its own `last_reply`, its own
+`final_stop`. Additivity is claimed only where it is true — every
+monotone counter of the suffix equals the whole-run counter minus the
+prefix counter — and never where it is false: `runs_open` is clamped at
+zero, and the window-local text fields describe only their own window.
+The bounds are honest too (`0..max seq`; an empty journal exposes only
+the zero state; out-of-bounds exits 2, never silently clamped), a gapped
+journal raises instead of folding, a torn tail is invisible to the fold
+and reported, and — defense in depth again — the state is a view, so a
+raw secret on disk never leaves it even inside `last_reply`. The render
+names its window and carries no timestamps: same journal, same window,
+same bytes.

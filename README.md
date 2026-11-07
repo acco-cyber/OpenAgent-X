@@ -337,7 +337,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | [`docs/modules.md`](docs/modules.md) | guides to all 40 modules with real entry points and per-module invariants |
 | [`docs/adr/`](docs/adr/) | ten decision records with Status / Context / Decision / Consequences — costs admitted |
 | [`docs/glossary.md`](docs/glossary.md) | thirty terms, each grounded in the module that owns it |
-| [`docs/faq.md`](docs/faq.md) | sixteen real questions answered honestly |
+| [`docs/faq.md`](docs/faq.md) | seventeen real questions answered honestly |
 | [`docs/00-ai-context.md`](docs/00-ai-context.md) | the brief for AI contributors working in this repo |
 | [`docs/retrospective.md`](docs/retrospective.md) | the 24-hour sprint reviewed honestly: three epochs, what was built, what the deliberate costs bought, what surprised us |
 | [`docs/24h-plan.md`](docs/24h-plan.md) | the live sprint plan: slot matrix, protocol, evidence |
