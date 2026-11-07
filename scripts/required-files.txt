@@ -98,3 +98,5 @@ openagentx/mermaid.py
 golden_tasks/33-dashboard.json
 golden_tasks/34-mermaid.json
 examples/17_dashboard_mermaid.py
+examples/18_budget_guard.py
+examples/19_cache_hits.py
