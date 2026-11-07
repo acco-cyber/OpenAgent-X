@@ -7,7 +7,7 @@
 [![CI](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml/badge.svg)](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](docs/tutorial.md)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-8A2BE2)](docs/adr/0002-stdlib-only-offline.md)
-[![Eval](https://img.shields.io/badge/eval-39_tasks_447_checks-brightgreen)](golden_tasks)
+[![Eval](https://img.shields.io/badge/eval-40_tasks_459_checks-brightgreen)](golden_tasks)
 [![Secret audit](https://img.shields.io/badge/secret_audit-0_findings-success)](docs/faq.md)
 [![Network](https://img.shields.io/badge/network-offline_first-orange)](docs/adr/0004-scripted-adapters.md)
 [![License](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
@@ -21,7 +21,7 @@ report a green check that did not actually run.
 Three pillars hold everything up: **the journal is the truth** (event-sourced,
 append-only, dense sequences), **redaction by default** (secrets die at the
 journal boundary and every view re-applies the mask), and **honest grading**
-(39 golden drills, 447 checks, harness errors fold into failing checks — never
+(40 golden drills, 459 checks, harness errors fold into failing checks — never
 silent passes). Ten ADRs in `docs/adr/` record why, with the costs admitted.
 
 | Navigate | | | |
@@ -48,7 +48,7 @@ What to look for in the video:
 
 - **`doctor`** — six gates pass before anything else runs: pure stdlib, no
   network modules, manifest present, golden tasks valid.
-- **`eval`** — 39 drills, 447/447 checks green, offline, in under two seconds.
+- **`eval`** — 40 drills, 459/459 checks green, offline, in under two seconds.
 - **`run --timeline`** — a real agent turn loop. Watch event `[004]`: the tool
   executed on the fixture secret, but the journal stored only
   `[REDACTED:github_token]` — the mask is applied at the boundary, and even
@@ -75,7 +75,7 @@ Python runs — CI, air-gapped, your laptop.
 **1. A working reference for patterns you keep reinventing.** Agent loop,
 event sourcing, budget governors, deny-policy hooks, retry with backoff,
 circuit breakers, chaos injection, hash-chained tamper evidence — each one is
-a small, readable module (~40 modules total) with its invariants written down
+a small, readable module (41 modules total) with its invariants written down
 in [docs/modules.md](docs/modules.md) and its design rationale in one of ten
 [ADRs](docs/adr/). Copy the ideas or copy the code — MIT.
 
@@ -199,7 +199,7 @@ same events, never from separate bookkeeping.
 ## The CLI at a glance
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (39 tasks / 447 checks)
+oax eval      # run every golden task drill, all green or exit 1   (40 tasks / 459 checks)
 oax explain   # one golden task's spec + its prose explainer (exit 1 = missing)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
@@ -373,7 +373,7 @@ not a strawman of any specific project:
 |---|---|---|
 | Source of truth | in-memory agent state; logs are best-effort | append-only JSONL journal; replay is a pure fold of it |
 | Secrets | flow into logs and prompts verbatim | redacted at the journal boundary, re-masked by every view; `oax audit .` scans the tree itself |
-| Grading | mocked calls or "it should pass" scripts | 39 golden drills execute real behavior; exceptions fold into a failing `harness_error` check |
+| Grading | mocked calls or "it should pass" scripts | 40 golden drills execute real behavior; exceptions fold into a failing `harness_error` check |
 | Dependencies | SDK + runtime + keys before hello-world | pure stdlib; the full matrix runs offline, zero keys |
 | Determinism | wall-clock and network inside the loop | same events → same replay state; semantic diff ignores the clock, `--strict` doesn't |
 | Tamper evidence | usually none | opt-in hash chains; edits localize to the exact seq |
@@ -415,7 +415,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | Doc | What's inside |
 |---|---|
 | [`docs/tutorial.md`](docs/tutorial.md) | zero-to-hero in ten steps; every snippet executed before it was committed |
-| [`docs/modules.md`](docs/modules.md) | guides to all 40 modules with real entry points and per-module invariants |
+| [`docs/modules.md`](docs/modules.md) | guides to all 41 modules with real entry points and per-module invariants |
 | [`docs/explainers.md`](docs/explainers.md) | one explainer per golden task: the run, the checks it grades, how it fails loudly |
 | [`docs/adr/`](docs/adr/) | ten decision records with Status / Context / Decision / Consequences — costs admitted |
 | [`docs/glossary.md`](docs/glossary.md) | thirty terms, each grounded in the module that owns it |

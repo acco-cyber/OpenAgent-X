@@ -1,0 +1,5 @@
+{
+  "id": "40-doctest",
+  "title": "docstring self-checks: the examples are graded, not decorative",
+  "drill": "doctest"
+}

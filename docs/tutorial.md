@@ -315,7 +315,7 @@ spec, grade a real run, watch the honest failures — lives at
 `examples/26_author_your_own_drill.py`.
 
 ```sh
-python3 -m openagentx eval          # 39 tasks, all green or exit 1
+python3 -m openagentx eval          # 40 tasks, all green or exit 1
 python3 -m openagentx examples      # every offline demo, all OK
 ```
 

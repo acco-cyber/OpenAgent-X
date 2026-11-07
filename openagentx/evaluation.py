@@ -3646,6 +3646,122 @@ def _explain_drill(task: dict) -> list:
     return checks
 
 
+def _doctest_drill(task: dict) -> list:
+    """Docstring self-checks: the examples are graded, not decorative.
+
+    Honest contract: every package module is reported — with examples or
+    without (a module with none is counted, never fabricated green); a
+    failing example is loud with the doctest log (Failed example /
+    Expected / Got); an import failure folds into a failing result
+    carrying the real exception; one failure poisons the aggregate ok;
+    the render is byte-deterministic with no wall-clock; probes are
+    graded by the same loaders that grade the real tree; the CLI exits
+    0 green / 1 failing.
+    """
+    import io
+    from contextlib import redirect_stdout
+    from . import doctests as dt
+    from .cli import main as cli_main
+
+    checks: list = []
+    # 1) the real tree is green: every docstring example passes
+    report = dt.run_doctests(dt.load_package_modules())
+    checks.append(Check(
+        "real_tree_green",
+        report["ok"] is True,
+        f"{report['total_examples']} examples, "
+        f"{report['total_failed']} failures"))
+    # 2) every package module is reported, sorted, none skipped
+    expected = sorted(
+        f[:-3] for f in os.listdir("openagentx")
+        if f.endswith(".py") and f[:-3] not in ("__init__", "__main__"))
+    got = [m["module"].split(".")[-1] for m in report["modules"]]
+    checks.append(Check(
+        "every_module_reported",
+        got == expected,
+        f"{len(got)} modules reported"))
+    # 3) examples exist and are distributed (floor pinned to today's matrix)
+    checks.append(Check(
+        "examples_exist",
+        (report["modules_with_examples"] >= 9
+         and report["total_examples"] >= 27),
+        f"{report['modules_with_examples']} modules, "
+        f"{report['total_examples']} examples"))
+    # 4) modules without examples are counted honestly, never faked green
+    zero = [m for m in report["modules"] if m["examples"] == 0]
+    checks.append(Check(
+        "no_examples_honest",
+        len(zero) > 0 and all(m["passed"] == 0 and m["failed"] == 0
+                              for m in zero),
+        f"{len(zero)} modules without examples, none faked"))
+    # 5) a poisoned docstring fails loudly (probe graded by the real path)
+    wd = _fresh_wd("doctest")
+    with open(os.path.join(wd, "poison_doc.py"), "w", encoding="utf-8") as fh:
+        fh.write('def add(a, b):\n'
+                 '    """Add two numbers.\n\n'
+                 '    >>> add(2, 3)\n'
+                 '    6\n'
+                 '    """\n'
+                 '    return a + b\n')
+    p = dt.run_doctests(dt.load_file_modules(wd))
+    pm = p["modules"][0]
+    checks.append(Check(
+        "poison_caught_loudly",
+        p["ok"] is False and pm["failed"] == 1,
+        f"failed={pm['failed']} ok={p['ok']}"))
+    # 6) the failure log names the example and expected/got
+    checks.append(Check(
+        "failure_log_names_expected_got",
+        ("Failed example" in pm["log"] and "Expected:" in pm["log"]
+         and "Got:" in pm["log"]),
+        "log carries Failed example / Expected / Got"))
+    # 7) an import bomb folds into a failing result with the real exception
+    with open(os.path.join(wd, "import_bomb.py"), "w", encoding="utf-8") as fh:
+        fh.write('raise RuntimeError("bomb went off")\n')
+    b = dt.run_doctests(dt.load_file_modules(wd))
+    bm = [m for m in b["modules"] if m["module"].endswith("import_bomb")][0]
+    checks.append(Check(
+        "import_error_folds",
+        b["ok"] is False and bm["ok"] is False
+        and "RuntimeError: bomb went off" in bm["log"],
+        bm["log"][:60]))
+    # 8) the redaction example is really graded (fixture assembled at runtime)
+    red = [m for m in report["modules"]
+           if m["module"].endswith(".redact")][0]
+    checks.append(Check(
+        "redaction_example_graded",
+        red["examples"] >= 3 and red["failed"] == 0,
+        f"redact {red['passed']}/{red['examples']}"))
+    # 9) render is byte-deterministic
+    out = dt.render_doctests(report)
+    checks.append(Check(
+        "render_deterministic",
+        out == dt.render_doctests(report),
+        "two renders byte-identical"))
+    # 10) no wall-clock anywhere in the render
+    checks.append(Check(
+        "no_wall_clock",
+        re.search(r"\d{10,}", out) is None,
+        "no 10+-digit number in the render"))
+    # 11) one failure poisons the aggregate
+    combined = dt.run_doctests(
+        dt.load_package_modules() + dt.load_file_modules(wd))
+    checks.append(Check(
+        "one_failure_poisons_aggregate",
+        combined["ok"] is False and combined["total_failed"] >= 1,
+        f"combined failed={combined['total_failed']}"))
+    # 12) the CLI agrees: exit 0 green / 1 failing
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        rc0 = cli_main(["doctest"])
+        rc1 = cli_main(["doctest", wd])
+    checks.append(Check(
+        "cli_exit_contract",
+        rc0 == 0 and rc1 == 1,
+        f"exit {rc0} green / {rc1} failing"))
+    return checks
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -3685,6 +3801,7 @@ DRILLS = {
     "grep": _grep_drill,
     "replay_from": _replay_from_drill,
     "explain": _explain_drill,
+    "doctest": _doctest_drill,
 }
 
 

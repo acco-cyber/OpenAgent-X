@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (39 tasks, 447 checks) is the repo's contract with
+The golden matrix (40 tasks, 459 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -437,6 +437,24 @@ loudly (`has_prose: False` naming the verify gate — never fabricated
 prose), a missing spec raises instead of an empty report, and the CLI
 agrees (exit 0 found / 1 missing). **Loud failure:** a task added
 without its prose, or an explain render that drifted between calls.
+
+### 40-doctest — docstring self-checks: the examples are graded, not decorative
+**The run:** no agent runs here either; the drill grades the package's
+own docstring examples through the stdlib doctest engine — the same
+loaders that grade the real tree also grade the probe files this drill
+writes. **The checks grade (12):** the real tree is green (27 examples
+across 9 modules, floor pinned so the set cannot quietly shrink), every
+package module is reported in sorted order with none skipped, modules
+without examples are counted honestly and never faked green, a poisoned
+docstring (`add(2, 3)` promised 6, got 5) fails loudly with its log, the
+log carries `Failed example` / `Expected` / `Got`, an import bomb folds
+into a failing result carrying the real `RuntimeError`, the redaction
+example is really graded (fixture assembled at runtime, marker in,
+raw token never printed), the render is byte-deterministic with no
+wall-clock, one failure poisons the aggregate, and the CLI agrees
+(exit 0 green / 1 failing). **Loud failure:** a docstring example that
+rots — the first run of this very drill caught two examples referencing
+a name their module never imported — or a probe that somehow passes.
 
 ## Adding a task
 
