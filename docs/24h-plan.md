@@ -424,7 +424,7 @@ pad with empty commits.
   40 + no-script shape note, example 29 + manifest 146, CHANGELOG
   [Unreleased] entry; audit 0, doctor 6/6
 
-- [ ] S33-E3 — doctests round two: the second ring — curated `>>>`
+- [x] S33-E3 — doctests round two: the second ring — curated `>>>`
   examples reach eight more core modules (llm, prompt, retry, jit,
   hooks, chain, snapshot, tools), the drill floor pins the grown set,
   the CLI gains floor flags so operators demand the same bar, task 40
@@ -449,19 +449,8 @@ pad with empty commits.
   matrix runs across both modes + 6/6 examples suites; README gallery
   row corrected in this commit (the (d) message claimed it a commit
   early — no history rewritten); audit 0, doctor 6/6
-  ✅ 26 new examples land on llm (scripted turns + loud qualified
-  exhaustion), prompt (include-then-substitute, missing-var and cycle
-  both raise with the path), retry (plain-math schedule), jit (frozen
-  rule repr, control tool), hooks (first-match wins, wildcard,
-  empty-allows), chain (genesis 64 zeros, empty head), snapshot
-  (one open run, ZERO_STATE equality), tools (static sorted registry) —
-  53 examples / 17 modules, floor pinned by the drill (9/27 -> 17/53);
-  first-run catches fixed at the root: doctest qualifies user-defined
-  exceptions with their module path (llm's ScriptExhausted expected in
-  full), and one announce that landed a commit late with a correction
-  note; `oax doctest --min-modules/--min-examples` makes the bar
-  operator-grade (floor violated: ..., exit 1) and the drill grows to
-  13 checks (cli_floor_enforced), matrix 40 tasks / 460 checks; README
-  badge/inline/quickstart/gallery synced, explainers intro + task-40
-  prose 13 checks, golden row 40 (13), example 29 step 8, modules.md
-  floor-flag note, CHANGELOG round-two bullet; audit 0, doctor 6/6
+
+- [ ] S34-E3 — the matrix index: `oax explain --all` — every task's
+  prose coverage in one deterministic render (sorted rows, honest
+  no-prose marks, exit 1 while any task lacks prose), graded by two new
+  explain-drill checks and demonstrated by example 28
