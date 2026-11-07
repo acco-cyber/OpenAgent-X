@@ -144,3 +144,4 @@ examples/29_doctests_tour.py
 docs/assets/banner.png
 docs/assets/demo.gif
 docs/assets/demo.mp4
+openagentx/attest.py

@@ -316,11 +316,16 @@ version of this capstone — author a
 spec, grade a real run, watch the honest failures — lives at
 `examples/26_author_your_own_drill.py`. The docstrings grade themselves too: every `>>>` example in
 the package runs under `oax doctest`, so prose that drifts from
-the code fails exactly like a drill.
+the code fails exactly like a drill. And before you ship, one command
+binds every gate into a single artifact: `oax attest` runs doctor,
+audit, doctests, the manifest (hashed identically twice) and the
+matrix's prose coverage, prints a counters-only verdict, and exits 1
+the moment one gate is red.
 
 ```sh
-python3 -m openagentx eval          # 40 tasks, all green or exit 1
+python3 -m openagentx eval          # 41 tasks, all green or exit 1
 python3 -m openagentx doctest       # every docstring example, graded
+python3 -m openagentx attest        # one artifact binding every gate
 python3 -m openagentx examples      # every offline demo, all OK
 ```
 

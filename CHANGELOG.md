@@ -6,6 +6,29 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — release attestation (attest)
+
+- `oax attest [root] [--json PATH]`: one command, one artifact, every
+  gate — `collect_gates(root)` runs doctor (purity + integrity),
+  audit (0 findings), doctests (every docstring example green), the
+  manifest (the tree hashes identically twice) and the matrix (every
+  golden-task spec has its prose) in fixed order and folds them into
+  one verdict; a gate that crashes folds red carrying the real
+  exception, an empty gate list is never green, the human render is
+  counters-only (no hash, no path, no wall-clock, byte-identical
+  across calls) while the machine artifact (sort_keys JSON) carries
+  the root path and the 64-hex tree hash so a byte-compare means the
+  tree moved; the gates are root-parametric — package-mode doctest
+  imports when the root is the running package, bare-file mode
+  otherwise, a tree with no package is a loud red, never a skip; the
+  CLI exits 0 green / 1 any gate red; graded by golden task 41 (12
+  checks, eval floor 40 → 41, matrix 41 tasks / 474 checks) in a fresh
+  child interpreter — the doctest drill's stdout discipline,
+  inherited — and demonstrated by example 30; attest.py itself carries
+  six curated `>>>` examples graded by `oax doctest` (floor 18 modules
+  / 59 examples); modules.md, the CLI table, the tutorial and the
+  explainer page synced; manifest 147 files
+
 ### Added — self-checks (doctest)
 
 - `oax doctest [dir]`: the docstring examples are graded, not decorative —
