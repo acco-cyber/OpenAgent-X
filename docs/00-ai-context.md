@@ -146,7 +146,22 @@ property.py    property suite: a seeded lottery picks each step (append,
                rewriting every ts on disk (semantic diff says same);
                no timings so the same seed always yields the same
                verdict; oax property exits 0 iff zero violations
-cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact|diff|stats|bench|fuzz|property
+pack2.py       signed pack manifests v2: HMAC-SHA256 over the canonical
+               sig-stripped manifest bytes; key_id = first 12 hex of
+               sha256(key) names without revealing; constant-time
+               verify (hmac.compare_digest); wrong key / edited entry /
+               tampered file each fail with a named problem while BOTH
+               layers always report; the v1 verifier reads the core
+depgraph.py    import dependency graph: every local import resolves to
+               an in-package edge with a kind — eager (module level)
+               builds the layers (longest path, base at layer 0) and
+               Tarjan cycle detection; lazy (function-body) edges are
+               reported as data (the CLI's deferral ring is real and
+               named); entries/leaves/orphans/fan-in/fan-out derived;
+               sorted, timestamp-free, graph_sha256 over the edge list;
+               oax graph exits 0 iff eager-acyclic with nothing
+               unresolved
+cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact|diff|stats|bench|fuzz|property|pack2|graph
 ```
 
 ## Invariants (never break)

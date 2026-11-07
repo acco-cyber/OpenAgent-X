@@ -7,10 +7,12 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (30 tasks / 342 checks)
+oax eval      # run every golden task drill, all green or exit 1   (32 tasks / 366 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
+oax pack2 .   # signed manifest (HMAC-SHA256) — authenticity on top of integrity
+oax graph     # import dependency graph — eager/lazy edges, layers, cycles as data
 oax sbom .    # stdlib bill of materials — purity verdict is computed (exit 1 if not pure)
 oax recall    # TF-IDF memory over past-run journals (read-only, deterministic)
 oax compact   # fold a journal into a denser copy; original never touched
@@ -28,7 +30,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # fifteen runnable end-to-end demos
+python3 -m openagentx examples # sixteen runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -127,6 +129,16 @@ python3 -m openagentx examples # fifteen runnable end-to-end demos
   the written plan, and rewriting every `ts` on disk folds to the
   identical replay state — replay is a function of events, never of the
   clock. Same seed, same verdict, forever.
+- **Authenticity, not just integrity** — `oax pack2` signs the
+  canonical manifest bytes with HMAC-SHA256: a wrong key, an edited
+  manifest entry and a tampered file each fail with their own named
+  problem while both layers always report; `key_id` names the key
+  without revealing it, and the v1 verifier still reads the core.
+- **Structure you can query** — `oax graph` derives the import
+  dependency graph from source: eager edges (module level) build the
+  layers and Tarjan cycle detection, lazy edges (function bodies) are
+  reported as the data they are — the CLI's deferred-import ring is
+  real and this graph says so out loud instead of hiding it.
 
 ## Why it matters
 
