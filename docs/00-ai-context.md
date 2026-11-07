@@ -137,7 +137,16 @@ fuzz.py        seeded fuzz harness: random.Random(seed) drives unicode/
                byte-identical restores, full round-trips and replay
                determinism; no timings so the same seed always yields
                the same verdict; oax fuzz exits 0 iff zero violations
-cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact|diff|stats|bench|fuzz
+property.py    property suite: a seeded lottery picks each step (append,
+               torn-tail injection, writer restart) and after EVERY step
+               the journal is re-read and the invariants re-demanded —
+               density 0..n-1, tears isolated + strictly refused,
+               truncation restores the exact pre-tear bytes, round-trip
+               matches the written plan, replay folds identically after
+               rewriting every ts on disk (semantic diff says same);
+               no timings so the same seed always yields the same
+               verdict; oax property exits 0 iff zero violations
+cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact|diff|stats|bench|fuzz|property
 ```
 
 ## Invariants (never break)

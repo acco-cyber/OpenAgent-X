@@ -7,7 +7,7 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (29 tasks / 330 checks)
+oax eval      # run every golden task drill, all green or exit 1   (30 tasks / 342 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
@@ -18,6 +18,7 @@ oax diff      # event-level journal diff: 0 = semantically same, 1 = different
 oax stats     # deterministic run analytics — replay's own counters, plus tools/type counts
 oax bench     # journal throughput microbench — honest wall-clock, never graded
 oax fuzz      # seeded fuzz over the journal contract (torn tails, middle tears)
+oax property  # property suite — invariants re-checked after every random trace step
 oax examples  # execute every offline example end-to-end
 ```
 
@@ -27,7 +28,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # fourteen runnable end-to-end demos
+python3 -m openagentx examples # fifteen runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -119,6 +120,13 @@ python3 -m openagentx examples # fourteen runnable end-to-end demos
   truncation, loud strict-reader failures, byte-identical restores, full
   round-trips (unicode included) and replay determinism — with no
   timings in the report, the same seed always yields the same verdict.
+- **Properties, not just tests** — `oax property` re-demands the
+  invariants after *every* step of a random trace: density is exactly
+  `0..n-1`, every injected tear isolates and is strictly refused,
+  truncation restores the exact pre-tear bytes, the round-trip matches
+  the written plan, and rewriting every `ts` on disk folds to the
+  identical replay state — replay is a function of events, never of the
+  clock. Same seed, same verdict, forever.
 
 ## Why it matters
 
