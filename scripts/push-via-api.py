@@ -40,7 +40,7 @@ import sys
 import urllib.error
 import urllib.request
 
-BRANCH = "main"
+BRANCH = os.environ.get("PUSH_BRANCH", "main")
 TOKEN_KEYS = ("GITHUB_TOKEN", "GH_TOKEN", "GITHUB_PAT")
 
 
@@ -121,7 +121,11 @@ class Api:
     def get_branch_tip(self) -> tuple[str | None, str | None]:
         status, body = self.call("GET", self.repo_url(f"branches/{BRANCH}"))
         if status == 200:
-            return body.get("object", {}).get("sha"), None
+            # real GitHub: {"commit": {"sha": ...}}; refs-style responses
+            # (and our mock) use {"object": {"sha": ...}} — accept both
+            sha = (body.get("object", {}).get("sha")
+                   or body.get("commit", {}).get("sha"))
+            return sha, None
         if status == 404:
             return None, None
         return None, f"HTTP {status}: {body.get('message', '')}"
@@ -165,8 +169,12 @@ class Api:
             "PATCH", self.repo_url(f"git/refs/heads/{BRANCH}"),
             {"sha": new_sha, "force": False},
         )
-        if status == 404:
-            # branch does not exist yet: create it (first push ever)
+        msg = str(body.get("message", "")).lower()
+        # 404 = missing ref; 422 may be either a refused fast-forward
+        # (leave it loud) or "reference does not exist" (first push ever
+        # -> create the branch)
+        if status == 404 or (status == 422 and "fast forward" not in msg
+                             and ("exist" in msg or "not found" in msg or not msg)):
             status, body = self.call(
                 "POST", self.repo_url("git/refs"),
                 {"ref": f"refs/heads/{BRANCH}", "sha": new_sha},
