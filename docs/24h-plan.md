@@ -396,10 +396,30 @@ pad with empty commits.
   38 — it describes the recording), tutorial counts 39, example 28 +
   manifest 144, CHANGELOG [Unreleased] entry; audit 0, doctor 6/6
 
-- [ ] S32-E3 — docstring self-checks: the examples are graded, not
+- [x] S32-E3 — docstring self-checks: the examples are graded, not
   decorative — a stdlib-doctest runner over every package module
   (`oax doctest`), curated `>>>` examples on the core modules
   (redaction, events, jdiff, memory, cache, breaker, compact, mermaid,
   structured), loud edges (poisoned docstring → expected/got, import
   bomb → folded real exception, one failure poisons the aggregate), and
   a new drill grading it all (task 40)
+  ✅ `doctests.py` (load_package_modules / load_file_modules feeding one
+  grading path, run_doctests / render_doctests) + CLI `oax doctest [dir]`
+  (exit 0 green / 1 failing, probed both ways) + modules.md section;
+  nine core modules gained curated `>>>` examples (27 examples, floor
+  pinned by the drill) — the first run caught two examples referencing a
+  name their module never imported (jdiff, mermaid), fixed at the root
+  rather than weakened; drill doctest grades 12 checks — real tree green
+  with the 27/9 floor pinned, every module reported sorted with none
+  skipped, no-example modules counted honestly (33 counted, never faked
+  green), poisoned docstring loud (promised 6, computed 5) with the
+  Failed example / Expected / Got log, import bomb folded with the real
+  RuntimeError, the redaction example really graded on its
+  runtime-assembled fixture, byte-deterministic render, no wall-clock,
+  one failure poisons the aggregate, CLI 0 green / 1 failing; task 40
+  lands with its explainers entry same-commit (gate 8 satisfied), eval
+  floor 39 → 40, matrix 40 tasks / 459 checks green; README
+  badge/inline/comparison/CLI-table synced + gallery row + quickstart
+  twenty-nine demos, tutorial snippet + capstone line, golden-table row
+  40 + no-script shape note, example 29 + manifest 146, CHANGELOG
+  [Unreleased] entry; audit 0, doctor 6/6
