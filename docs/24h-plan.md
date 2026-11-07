@@ -350,3 +350,7 @@ pad with empty commits.
   (12 checks) + example 25 + module guide + CLI-table row + tutorial
   verification-stack line + FAQ #17 + CHANGELOG [Unreleased] entry;
   eval floor 37 → 38; manifest 137 files
+
+- [ ] S29-E3 — per-drill explainers: every golden task gets its prose —
+  what the run does, what the checks grade, how it fails loudly — with a
+  verify gate so the prose cannot drift from the matrix
