@@ -16,6 +16,7 @@ import os
 from .audit import SKIP_DIRS
 
 MANIFEST_NAME = "pack.manifest.json"
+SIGNED_NAME = "pack.signed.json"  # v2 flavor; also never hashes itself
 
 
 def _sha256_file(path: str) -> tuple:
@@ -32,8 +33,8 @@ def _iter_files(root: str):
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
         for name in sorted(filenames):
-            if name == MANIFEST_NAME:
-                continue  # the manifest never hashes itself
+            if name in (MANIFEST_NAME, SIGNED_NAME):
+                continue  # a manifest never hashes itself (v1 or v2)
             yield os.path.join(dirpath, name)
 
 

@@ -1,9 +1,9 @@
 """oax — the OpenAgent-X command line.
 
 Subcommands: eval | doctor | audit | examples | trace | report | run | pack |
-sbom | recall | compact | diff | stats | bench | fuzz | property. Every
-subcommand is offline and stdlib-only; exit codes are contracts (0 = green,
-1 = anything else).
+sbom | recall | compact | diff | stats | bench | fuzz | property | pack2 |
+graph. Every subcommand is offline and stdlib-only; exit codes are contracts
+(0 = green, 1 = anything else).
 """
 
 from __future__ import annotations
@@ -95,6 +95,27 @@ def _cmd_pack(args) -> int:
             fh.write(manifest_json(m))
         print(f"pack: wrote {args.out}")
     print(f"pack: {m['file_count']} files tree_sha256={m['tree_sha256']}")
+    return 0
+
+
+def _cmd_pack2(args) -> int:
+    """Signed manifest v2: HMAC over the canonical bytes; verify both layers."""
+    from .pack2 import sign_manifest, signed_json, verify_signed
+
+    if args.check:
+        with open(args.check, encoding="utf-8") as fh:
+            manifest = json.load(fh)
+        ok, problems = verify_signed(args.root, manifest, args.key)
+        for p in problems:
+            print(f"PACK2 {p}")
+        print(f"pack2: {'OK' if ok else 'FAIL'} ({args.check})")
+        return 0 if ok else 1
+    m = sign_manifest(args.root, args.key)
+    out = args.out or os.path.join(args.root, "pack.signed.json")
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write(signed_json(m))
+    print(f"pack2: signed {m['file_count']} files "
+          f"key_id={m['sig']['key_id']} -> {out}")
     return 0
 
 
@@ -287,6 +308,16 @@ def build_parser() -> argparse.ArgumentParser:
     pk.add_argument("--out", default="", help="write canonical manifest JSON here")
     pk.add_argument("--check", default="", help="verify ROOT against this manifest")
     pk.set_defaults(fn=_cmd_pack)
+
+    pk2 = sub.add_parser("pack2",
+                         help="signed tree manifest (HMAC-SHA256 sign/check)")
+    pk2.add_argument("root", nargs="?", default=".")
+    pk2.add_argument("--key", required=True,
+                     help="signing/verifying key (kept out of the manifest)")
+    pk2.add_argument("--out", default="", help="write the signed manifest here")
+    pk2.add_argument("--check", default="",
+                     help="verify ROOT against this signed manifest")
+    pk2.set_defaults(fn=_cmd_pack2)
 
     sb = sub.add_parser("sbom", help="stdlib bill of materials (exit 1 if not pure)")
     sb.add_argument("root", nargs="?", default=".")
