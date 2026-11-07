@@ -2,8 +2,8 @@
 
 Subcommands: eval | doctor | audit | examples | trace | report | run | pack |
 sbom | recall | compact | diff | stats | bench | fuzz | property | pack2 |
-graph. Every subcommand is offline and stdlib-only; exit codes are contracts
-(0 = green, 1 = anything else).
+graph | dashboard | mermaid. Every subcommand is offline and stdlib-only;
+exit codes are contracts (0 = green, 1 = anything else).
 """
 
 from __future__ import annotations
@@ -162,6 +162,41 @@ def _cmd_report(args) -> int:
     with open(out, "w", encoding="utf-8") as fh:
         fh.write(html_report(args.journal, title=args.title))
     print(f"report: wrote {out}")
+    return 0
+
+
+def _cmd_dashboard(args) -> int:
+    """Report v2: self-contained HTML dashboard; exit 1 on a missing journal."""
+    import hashlib
+
+    from .dashboard import render_dashboard
+
+    if not os.path.exists(args.journal):
+        print(f"dashboard: journal {args.journal} does not exist")
+        return 1
+    out = args.out or (os.path.splitext(args.journal)[0] + ".dashboard.html")
+    page = render_dashboard(args.journal, title=args.title)
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write(page)
+    digest = hashlib.sha256(page.encode("utf-8")).hexdigest()[:16]
+    print(f"dashboard: wrote {out} sha256={digest}")
+    return 0
+
+
+def _cmd_mermaid(args) -> int:
+    """Mermaid trace export; exit 1 on a missing journal."""
+    from .mermaid import trace_mermaid
+
+    if not os.path.exists(args.journal):
+        print(f"mermaid: journal {args.journal} does not exist")
+        return 1
+    text = trace_mermaid(args.journal, title=args.title)
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        print(f"mermaid: wrote {args.out}")
+    else:
+        print(text, end="")
     return 0
 
 
@@ -344,6 +379,20 @@ def build_parser() -> argparse.ArgumentParser:
     gr.add_argument("--pkg-dir", default="", help="package dir (default: <root>/openagentx)")
     gr.add_argument("--out", default="", help="write canonical graph JSON here")
     gr.set_defaults(fn=_cmd_graph)
+
+    db = sub.add_parser("dashboard",
+                        help="report v2: self-contained HTML dashboard")
+    db.add_argument("journal")
+    db.add_argument("--out", default="",
+                    help="write the HTML here (default <stem>.dashboard.html)")
+    db.add_argument("--title", default="OpenAgent-X dashboard")
+    db.set_defaults(fn=_cmd_dashboard)
+
+    mm = sub.add_parser("mermaid", help="export a journal as a Mermaid flowchart")
+    mm.add_argument("journal")
+    mm.add_argument("--out", default="", help="write the .mmd text here (default stdout)")
+    mm.add_argument("--title", default="OpenAgent-X trace")
+    mm.set_defaults(fn=_cmd_mermaid)
 
     rn = sub.add_parser("run", help="run a scripted agent turn-loop offline")
     rn.add_argument("script", help="file of single-line JSON turns")
