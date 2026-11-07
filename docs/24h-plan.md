@@ -321,6 +321,9 @@ pad with empty commits.
 
 - [x] S27-E3 — `oax replay --from`: the journal folds from the middle,
   honestly
+
+- [ ] S28-E3 — presentation pass: the README grows a real banner, a
+  real-session demo video, and a developer-value map
   ✅ 38 tasks, 435 checks green; `replay.py` folds every event with
   `seq >= N` from zero at that point — bounds honest (0..max seq, an
   empty journal exposes only the zero state at 0, out-of-bounds raises
