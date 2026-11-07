@@ -7,6 +7,14 @@ the key. Hits are returned as fresh copies (mutation cannot poison the
 store), every lookup is counted (``hits``/``misses``), and an empty cache
 invents nothing. The cache sits at the LLM-adapter layer: runners and
 journals are untouched — a cached run journals exactly like a computed one.
+
+Example:
+
+    >>> k1 = prompt_key([{"role": "user", "content": "hi"}])
+    >>> k1 == prompt_key([{"role": "user", "content": "hi"}])
+    True
+    >>> k1 == prompt_key([{"role": "user", "content": "hi!"}])
+    False
 """
 
 from __future__ import annotations

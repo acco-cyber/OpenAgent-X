@@ -11,6 +11,15 @@ never silently coerced to ``{}`` or ``None``.
 subset (``type`` / ``required`` / ``properties`` / ``items`` / ``enum``) and
 returns a list of human-readable errors with ``$.a.b[0]`` paths. Empty list
 means valid. Note the sharp edge it gets right: ``True`` is NOT an integer.
+
+Example (fenced JSON is recovered; the bool-for-integer edge is kept sharp):
+
+    >>> parse_json_loose('```json\\n{"a": 1}\\n```')
+    ({'a': 1}, ['fences'])
+    >>> validate_schema({"a": 1}, {"type": "object", "properties": {"a": {"type": "number"}}})
+    []
+    >>> validate_schema(True, {"type": "integer"})
+    ['$: want integer, got bool']
 """
 
 from __future__ import annotations

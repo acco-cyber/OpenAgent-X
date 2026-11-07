@@ -14,6 +14,13 @@ reads events and writes a **new** journal holding a denser, renumbered stream.
 Compacted journals reload through ``load_trace``, replay deterministically,
 and compact again to identical bytes. A torn source journal is refused —
 compaction never launders an integrity failure.
+
+Example:
+
+    >>> evs = [Event(seq=0, run_id="r", ts=1.0, type="run_start", payload={"t": 1}),
+    ...        Event(seq=1, run_id="r", ts=1.1, type="step_start", payload={"s": 0})]
+    >>> [(e.seq, e.type) for e in compact_events(evs)]
+    [(0, 'run_start')]
 """
 
 from __future__ import annotations

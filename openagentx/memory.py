@@ -7,6 +7,11 @@ indexed run with smoothed TF-IDF and returns a deterministically ordered
 ranking: score descending, then run id, then index order. No cache walls, no
 hidden state — every recall recomputes from the term-document matrix built
 out of the journals themselves.
+
+Example:
+
+    >>> tokenize("Journal folds from the middle")
+    ['journal', 'folds', 'middle']
 """
 
 from __future__ import annotations

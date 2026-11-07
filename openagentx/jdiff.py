@@ -16,6 +16,17 @@ Diff semantics (aligned with diff(1) where it makes sense):
 - ``removed`` / ``added`` carry the diverging tails of A and B respectively;
 - ``same`` is True iff both tails are empty;
 - a self-diff is always ``same`` with ``diverged_at == -1``.
+
+Example (``ts`` is ignored by the default projection, a payload change is not):
+
+    >>> from openagentx.events import Event
+    >>> a = Event(seq=0, run_id="r", ts=1.0, type="run_start", payload={"t": "x"})
+    >>> b = Event(seq=0, run_id="r", ts=9.0, type="run_start", payload={"t": "x"})
+    >>> c = Event(seq=0, run_id="r", ts=9.0, type="run_start", payload={"t": "y"})
+    >>> diff_events([a], [b])["same"], diff_events([a], [b])["diverged_at"]
+    (True, -1)
+    >>> diff_events([a], [c])["same"], diff_events([a], [c])["diverged_at"]
+    (False, 0)
 """
 
 from __future__ import annotations

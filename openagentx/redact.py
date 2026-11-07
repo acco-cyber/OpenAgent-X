@@ -8,6 +8,14 @@ never carries a raw credential, while tools still execute on real values.
 
 Patterns are deliberately high-confidence (well-known token prefixes plus
 sufficient entropy) to avoid false positives on ordinary prose.
+
+Example (fixture assembled at runtime, exactly like the drills do):
+
+    >>> raw = "token " + "ghp_" + "A1b2C3d4E5" * 3 + "F9ab12"
+    >>> redact(raw)
+    ('token [REDACTED:github_token]', 1)
+    >>> redact("no secrets here")
+    ('no secrets here', 0)
 """
 
 from __future__ import annotations

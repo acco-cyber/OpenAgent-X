@@ -8,6 +8,16 @@ journal. Invariants enforced here:
 - **Torn-tail isolation**: an undecodable *trailing* line (crash mid-write) is
   reported as ``torn=True`` without corrupting the prefix; an undecodable
   *middle* line raises (integrity failure, never silently skipped).
+
+Example:
+
+    >>> e0 = Event(seq=0, run_id="r", ts=1.0, type="run_start", payload={})
+    >>> e1 = Event(seq=1, run_id="r", ts=1.1, type="note", payload={})
+    >>> sequence_dense([e0, e1])
+    True
+    >>> e2 = Event(seq=5, run_id="r", ts=1.2, type="note", payload={})
+    >>> sequence_dense([e0, e2])
+    False
 """
 
 from __future__ import annotations

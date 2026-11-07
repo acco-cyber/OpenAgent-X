@@ -15,6 +15,13 @@ included — advances the clock by one, so cooldown behavior is exact and
 reproducible. :class:`CircuitOpen` subclasses ``LLMUnavailable``, so runners
 journal an honest ``model_unavailable`` stop instead of crashing. The
 ``snapshot()`` is a plain dict of observed counters — nothing hidden.
+
+Example (a bad threshold is a loud construction-time failure):
+
+    >>> CircuitBreaker(None, threshold=0)
+    Traceback (most recent call last):
+        ...
+    ValueError: threshold must be >= 1
 """
 
 from __future__ import annotations

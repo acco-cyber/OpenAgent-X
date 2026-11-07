@@ -9,6 +9,13 @@ path as core types. No timestamps, no ids beyond ``seq`` — same events
 in, byte-identical text out. The export is a *view*: it re-uses report's
 redaction helpers, so even a pre-redaction journal cannot leak a secret
 through a diagram.
+
+Example:
+
+    >>> from openagentx.events import Event
+    >>> e = Event(seq=0, run_id="r", ts=1.0, type="run_start", payload={"t": 1})
+    >>> render_mermaid([e]).splitlines()[0]
+    'flowchart TD'
 """
 
 from __future__ import annotations
