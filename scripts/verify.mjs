@@ -17,7 +17,7 @@ for (const f of req) {
 const drills = new Set(['loop', 'redact', 'trace', 'team', 'router', 'budget', 'stop',
                         'redact_nested', 'audit', 'pack', 'sbom', 'memory', 'compact',
                         'cache', 'hooks', 'fanout', 'structured', 'retry', 'breaker',
-                        'planner', 'snapshot']);
+                        'planner', 'snapshot', 'prompt']);
 const runnerDrills = new Set(['loop', 'redact', 'trace', 'budget', 'stop', 'redact_nested',
                               'cache', 'retry', 'breaker']); // need script[]
 const teamDrills = new Set(['team']);    // need lead_script[] + specialist_script[]
@@ -28,6 +28,7 @@ const fanoutDrills = new Set(['fanout']); // need branches{}.script[] + coordina
 const structuredDrills = new Set(['structured']); // need script[] + cases[] + schema{}
 const plannerDrills = new Set(['planner']); // need planner_script[] + step_scripts[][].script
 const snapshotDrills = new Set(['snapshot']); // need script[] + expect.checkpoints[]
+const promptDrills = new Set(['prompt']); // need layers{} + entry + expect.render
 const gdir = join(root, 'golden_tasks');
 let nTasks = 0;
 if (existsSync(gdir)) {
@@ -75,12 +76,16 @@ if (existsSync(gdir)) {
                                                || !t.expect || !Array.isArray(t.expect.checkpoints) || !t.expect.checkpoints.length)) {
         console.error('EMPTY SCRIPT', f, '(snapshot needs script[] + expect.checkpoints[])'); fail++;
       }
+      else if (promptDrills.has(t.drill) && (!t.layers || !Object.keys(t.layers).length
+                                             || !t.entry || !t.expect || !t.expect.render)) {
+        console.error('EMPTY SCRIPT', f, '(prompt needs layers{} + entry + expect.render)'); fail++;
+      }
     } catch (e) { console.error('INVALID JSON', f, e.message); fail++; }
   }
 } else { console.error('MISSING golden_tasks/'); fail++; }
 
 // 3) eval count only moves forward (honest growth)
-if (nTasks < 21) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 21`); fail++; }
+if (nTasks < 22) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 22`); fail++; }
 
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);

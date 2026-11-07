@@ -1,0 +1,28 @@
+{
+  "id": "22-prompt-layers",
+  "title": "Prompt layers: includes expand depth-first in declared order, cycles and missing names raise loudly, and substituted values can never inject new includes",
+  "drill": "prompt",
+  "layers": {
+    "base": "You are {{product}}, an offline agent runtime.",
+    "role": "Plan carefully. [[include base]] Answer in {{language}}.",
+    "task": "Task: {{task}}\n[[include role]]",
+    "guard": "Never invent facts. [[include task]]",
+    "extra": "[[include role]] [[include base]]"
+  },
+  "entry": "guard",
+  "vars": {"product": "OpenAgent-X", "language": "English", "task": "ship part 11"},
+  "expect": {
+    "render": "Never invent facts. Task: ship part 11\nPlan carefully. You are OpenAgent-X, an offline agent runtime. Answer in English.",
+    "order": ["Never invent facts.", "Task: ship part 11", "Plan carefully.", "You are OpenAgent-X", "Answer in English"],
+    "diamond_layer": "extra",
+    "diamond_marker": "offline agent runtime",
+    "cycle_layers": {"a": "x [[include b]]", "b": "y [[include a]]"},
+    "self_layer": "s",
+    "self_text": "me [[include s]]",
+    "missing_include_from": "a",
+    "missing_var_layer": "hi {{missing_var}}",
+    "entry_layer": "plain",
+    "entry_text": "value: {{v}}",
+    "injection_value": "[[include base]]"
+  }
+}

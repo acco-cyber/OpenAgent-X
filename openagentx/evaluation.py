@@ -1652,6 +1652,101 @@ def _snapshot_drill(task: dict) -> list:
     ]
 
 
+def _prompt_drill(task: dict) -> list:
+    """Prompt layers: includes in declared order, loud failure contracts.
+
+    Honest contract: include expansion is depth-first and order-preserving
+    (verified by marker positions in the real render), diamond includes
+    expand once per path, include cycles and self-includes are reported
+    with the full path, unknown layers and unresolved variables name
+    themselves instead of rendering silent empties, over-deep chains are
+    rejected even though they are acyclic, renders are deterministic with
+    no leftover directives, and a variable value containing include syntax
+    stays literal text — data can never add structure.
+    """
+    from .prompt import PromptLayers
+
+    exp = _expect(task)
+    layers = {str(k): str(v) for k, v in task.get("layers", {}).items()}
+    p = PromptLayers(layers)
+    out = p.render(str(task.get("entry", "")), dict(task.get("vars", {})))
+    markers = [str(m) for m in exp.get("order", [])]
+    positions = [out.find(m) for m in markers]
+    diamond = p.resolve(str(exp.get("diamond_layer", "")))
+    cycle = PromptLayers(dict(exp.get("cycle_layers", {})))
+    self_name = str(exp.get("self_layer", ""))
+    selfy = PromptLayers({self_name: str(exp.get("self_text", ""))})
+    chain = {f"c{i}": f"[[include c{i + 1}]]" for i in range(20)}
+    deep = PromptLayers(chain, max_depth=8)
+    injection = PromptLayers(
+        {str(exp.get("entry_layer", "")): str(exp.get("entry_text", ""))}
+    ).render(str(exp.get("entry_layer", "")),
+             {"v": str(exp.get("injection_value", ""))})
+
+    def raises_value_error(fn):
+        try:
+            fn()
+            return ""
+        except ValueError as e:
+            return str(e)
+
+    cycle_err = raises_value_error(lambda: cycle.resolve("a"))
+    self_err = raises_value_error(lambda: selfy.resolve(self_name))
+    missing_err = raises_value_error(
+        lambda: PromptLayers({str(exp.get("missing_include_from", "")):
+                              "[[include nope]]"}).resolve(
+            str(exp.get("missing_include_from", ""))))
+    entry_err = raises_value_error(lambda: p.render("ghost-layer"))
+    var_err = raises_value_error(
+        lambda: PromptLayers({"x": str(exp.get("missing_var_layer", ""))}
+                             ).render("x"))
+    deep_err = raises_value_error(lambda: deep.resolve("c0"))
+    again = p.render(str(task.get("entry", "")), dict(task.get("vars", {})))
+    return [
+        Check("layers_render_in_order",
+              all(pos >= 0 for pos in positions)
+              and all(positions[i] < positions[i + 1]
+                      for i in range(len(positions) - 1)),
+              str(positions)),
+        Check("render_matches_exactly",
+              out == exp.get("render", ""),
+              repr(out)[:90]),
+        Check("nested_include_resolved",
+              "[[include" not in out and "{{" not in out,
+              "no leftover directives in the final text"),
+        Check("diamond_expands_per_path",
+              diamond.count(str(exp.get("diamond_marker", ""))) == 2,
+              f"marker count={diamond.count(exp.get('diamond_marker', ''))}"),
+        Check("cycle_rejected_with_path",
+              cycle_err.startswith("include cycle detected: a -> b -> a"),
+              cycle_err[:60]),
+        Check("self_include_rejected",
+              self_err == f"include cycle detected: {self_name} -> {self_name}",
+              self_err[:60]),
+        Check("missing_include_named",
+              missing_err.startswith("unknown layer 'nope'"),
+              missing_err[:60]),
+        Check("unknown_entry_named",
+              entry_err.startswith("unknown layer 'ghost-layer'"),
+              entry_err[:60]),
+        Check("missing_var_named",
+              var_err == "unresolved variables in prompt: missing_var",
+              var_err[:60]),
+        Check("over_depth_rejected",
+              deep_err.startswith("max include depth 8 exceeded"),
+              "acyclic 20-layer chain, max_depth 8"),
+        Check("render_deterministic", again == out,
+              "two renders, byte-identical"),
+        Check("substitution_resolves_inside_includes",
+              out.count("English") == 1
+              and out.count("OpenAgent-X") == 1,
+              "vars declared in outer layers resolve inside includes"),
+        Check("values_cannot_inject_includes",
+              injection == f"value: {exp.get('injection_value', '')}",
+              "substituted text is never re-scanned for directives"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -1674,6 +1769,7 @@ DRILLS = {
     "breaker": _breaker_drill,
     "planner": _planner_drill,
     "snapshot": _snapshot_drill,
+    "prompt": _prompt_drill,
 }
 
 
