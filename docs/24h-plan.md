@@ -380,3 +380,7 @@ pad with empty commits.
   tutorial Step-10 capstone link, CHANGELOG [Unreleased] entry,
   manifest 141 → 143; examples suite all OK, eval 38/435 unchanged,
   audit 0, doctor 6/6
+
+- [ ] S31-E3 — `oax explain`: the matrix explains itself from the CLI —
+  one task's spec and its prose joined, deterministic render, honest
+  when prose is missing, graded by a new drill (task 39)

@@ -1,6 +1,6 @@
 """oax — the OpenAgent-X command line.
 
-Subcommands: eval | doctor | audit | examples | trace | report | run | pack |
+Subcommands: eval | doctor | audit | examples | explain | trace | report | run | pack |
 sbom | recall | compact | diff | stats | grep | replay | bench | fuzz |
 property | pack2 | graph | dashboard | mermaid. Every subcommand is offline
 and stdlib-only; exit codes are contracts (0 = green, 1 = anything else,
@@ -309,6 +309,28 @@ def _cmd_replay(args) -> int:
     return 0
 
 
+def _cmd_explain(args) -> int:
+    """One golden task's spec + its prose explainer (exit 1 = missing)."""
+    from .explain import explain_task, render_explain
+
+    arg = args.task
+    if os.path.exists(arg):
+        path = arg
+    else:
+        name = arg if arg.endswith(".json") else arg + ".json"
+        path = os.path.join("golden_tasks", name)
+    if not os.path.exists(path):
+        print(f"explain: no task '{arg}' (tried {path})")
+        return 1
+    try:
+        r = explain_task(path)
+    except (json.JSONDecodeError, OSError, ValueError) as e:
+        print(f"explain: {e}")
+        return 1
+    print(render_explain(r))
+    return 0
+
+
 def _cmd_bench(args) -> int:
     """Journal throughput microbench (wall-clock, reported not graded)."""
     from .bench import render_bench, run_bench
@@ -483,6 +505,11 @@ def build_parser() -> argparse.ArgumentParser:
     rp.add_argument("--from", dest="from_seq", type=int, default=0,
                     help="fold only events with seq >= N (default 0 = whole)")
     rp.set_defaults(fn=_cmd_replay)
+
+    xp = sub.add_parser("explain",
+                        help="one golden task's spec + its prose explainer")
+    xp.add_argument("task", help="task id (NN-slug) or path to its JSON spec")
+    xp.set_defaults(fn=_cmd_explain)
 
     bn = sub.add_parser("bench", help="journal throughput microbench (synthetic, timed)")
     bn.add_argument("--events", type=int, default=2000,

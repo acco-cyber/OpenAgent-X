@@ -152,6 +152,18 @@ and reported; the state is the view, and the view renders through the
 redaction engine — a raw secret on disk never leaves it, even inside
 `last_reply`; the render names its window and carries no timestamps.
 
+### explain
+The matrix explains itself from the CLI — one task's spec and its prose
+joined. `explain_task(task_path, explainers_path)`, `render_explain(r)`,
+`oax explain <NN-slug|path>` (exit 0 found / 1 missing). Invariants: the
+report joins the machine-readable contract (drill, task text, script
+turns, sorted expect keys, max_steps) with the `### <stem>` prose
+section from `docs/explainers.md`; the render is byte-deterministic
+with no wall-clock; a task without prose is reported loudly
+(`has_prose: False` plus a line naming the verify gate that forbids it)
+— never papered over; a missing spec is a loud `FileNotFoundError`/exit
+1, not an empty report.
+
 ## Reliability
 
 ### retry
