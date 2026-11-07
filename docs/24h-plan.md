@@ -115,7 +115,15 @@ green.
   rules with deterministic sorted cap that never hides the control plane,
   every visibility change journaled as `tool_disclose` with the full set
   and the additions, re-runs event-for-event identical); example 11 live
-- [ ] S13-E3 — task 24 `chaos` (combined faults in one run) + task 25 `hash-chain`
+- [x] S13-E3 — task 24 `chaos` (combined faults in one run) + task 25 `hash-chain`
+  ✅ 25 tasks, 282 checks green; `ChaosLLM`/`ChaosTools` (combined faults in
+  ONE run on a deterministic plan, every injection ledgered, faulted tool
+  calls never execute — zero side effects, recovery via RetryLLM with scars,
+  re-runs identical) + `chain.py` (ChainedJournal commits chain {prev,
+  digest} per line invisible to old readers, verify_journal localizes
+  edited/deleted/reordered lines, torn tails isolate unsealable, plain
+  journals verify chained:false, seal refuses what it cannot verify);
+  example 12 live
 
 ### Phase 2 — Power tooling & hardening
 - [ ] S14-E3 — `oax diff` (event-level journal diff) + `oax stats` (run analytics)
