@@ -172,5 +172,35 @@ if (existsSync(readmePath)) {
   }
 } else { console.error('MISSING README.md'); fail++; }
 
+// 7) CI runs the same gates the repo enforces locally — and installs nothing
+const ciPath = join(root, '.github/workflows/ci.yml');
+if (existsSync(ciPath)) {
+  const ci = readFileSync(ciPath, 'utf8');
+  for (const cmd of ['node scripts/verify.mjs',
+                     'compileall -q openagentx examples',
+                     '-m openagentx doctor',
+                     '-m openagentx audit .',
+                     '-m openagentx eval',
+                     '-m openagentx examples']) {
+    if (!ci.includes(cmd)) { console.error('CI MISSING gate:', cmd); fail++; }
+  }
+  if (/\bpip3?\s+install\b/.test(ci)) {
+    console.error('CI INSTALLS PACKAGES (zero-dependency invariant)'); fail++;
+  }
+  if (/secrets\./.test(ci)) {
+    console.error('CI CONSUMES SECRETS (offline CI needs none)'); fail++;
+  }
+  if (!ci.includes('"3.10"') && !ci.includes("'3.10'")) {
+    console.error('CI does not test the 3.10 floor'); fail++;
+  }
+  // the README CI badge must point at a workflow that actually exists
+  const rdci = readFileSync(join(root, 'README.md'), 'utf8');
+  for (const m of rdci.matchAll(/actions\/workflows\/([A-Za-z0-9_.-]+)\/badge\.svg/g)) {
+    if (!existsSync(join(root, '.github/workflows', m[1]))) {
+      console.error('README badge names missing workflow', m[1]); fail++;
+    }
+  }
+} else { console.error('MISSING .github/workflows/ci.yml'); fail++; }
+
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);
