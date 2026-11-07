@@ -210,7 +210,18 @@ green.
   examples count now twenty-one
 
 ### Phase 3 — Docs & ecosystem
-- [ ] S20-E3 — docs: module guides + tutorial 0→hero
+- [x] S20-E3 — docs: module guides + tutorial 0→hero
+  ✅ 35 tasks, 399 checks green; `docs/modules.md` guides all 39 modules
+  grouped by job (core loop, views and analytics, reliability,
+  orchestration, integrity and supply chain, meta) with real entry points
+  and per-module invariants; `docs/tutorial.md` walks zero-to-hero in ten
+  steps (purity gate → first run → journal-as-truth → the four stop
+  reasons → redaction → cache/hooks → resilience → orchestration →
+  verification stack → ship → hero capstone: write and grade your own
+  drill) with every python and sh snippet executed green before commit;
+  README + ai-context cross-link both; `verify.mjs` gains a docs-sync gate
+  (every module guided, tutorial names only real subcommands and existing
+  examples); required-files manifest carries both docs
 - [ ] S21-E3 — docs: ADR pack (10 records) + glossary + FAQ
 - [ ] S22-E3 — README overhaul (SOTA presentation, badges, demo traces)
 - [ ] S23-E3 — CI: GitHub Actions (verify/compileall/eval/audit) + community files
