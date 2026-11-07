@@ -8,3 +8,4 @@ tmp/
 dist/
 build/
 *.egg-info/
+.env

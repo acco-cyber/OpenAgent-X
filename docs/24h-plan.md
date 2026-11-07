@@ -10,8 +10,10 @@
 >   (symlink `/home/z/OpenAgent-X` → there) so recycling can never wipe it again.
 >   Part numbering restarts at 1 in the fresh repository.
 > Origin push requires credentials that are currently absent — every slot
-> attempts `git push origin main` anyway so the backlog lands the moment
-> credentials return (never force-push, never rewrite history).
+> pushes anyway: the GitHub REST API path (`scripts/push-via-api.py`) lands
+> the backlog one commit at a time (blob → tree → commit → ref per commit,
+> tree SHA verified, fast-forward only, never force-push) the moment a
+> token appears in the environment or repo-root `.env`.
 
 ## Mission
 
@@ -48,8 +50,10 @@ green.
    - staged diff secret grep → 0 matches
 6. **Commit cadence**: 5–6 atomic commits per slot
    (feature → drills/golden task → docs → example → verify/chore → polish).
-7. **Push**: `git push origin main` always attempted; on credential failure,
-   record it and move on. Never force-push.
+7. **Push**: `python3 scripts/push-via-api.py` first (GitHub REST API, one
+   commit at a time, oldest first), then `sh scripts/push-one-by-one.sh` as
+   git-transport fallback; on credential failure, record it and move on.
+   Never force-push.
 8. **Slot bookkeeping**: mark `[x]` in this file with evidence, commit as the
    final chore, remove `.slot-lock`, report slot/part/commits/verification.
 
