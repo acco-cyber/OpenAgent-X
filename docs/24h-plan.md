@@ -249,7 +249,19 @@ green.
   paths; quickstart promoted to the top; `verify.mjs` gains the README-sync
   gate (subcommands/examples/docs references must resolve; eval-scale claims
   must equal the golden-task count)
-- [ ] S23-E3 — CI: GitHub Actions (verify/compileall/eval/audit) + community files
+- [x] S23-E3 — CI: GitHub Actions (verify/compileall/eval/audit) + community files
+  ✅ 35 tasks, 399 checks green; `.github/workflows/ci.yml` runs the seven
+  local gates on a Python 3.10 + 3.12 matrix with ZERO install steps (pure
+  stdlib: checkout + interpreters is the whole environment), no secrets,
+  least-privilege `contents: read`, manual dispatch included; community files
+  live (CONTRIBUTING.md with the seven-gate contract and purity rules,
+  CODE_OF_CONDUCT.md, SECURITY.md routing to private vulnerability reporting
+  with the project-specific vulnerability classes, bug-report template that
+  demands the journal excerpt); README wears the real workflow badge + a CI
+  section; FAQ #15 explains why zero-dependency CI has nothing to install;
+  verify.mjs gains the CI-sync gate (every gate command present, no
+  `pip install`, no `secrets.`, 3.10 floor pinned, badge workflow must
+  exist); manifest carries ci.yml + all community files
 - [ ] S24-E3 — eval parallelism + perf pass + CHANGELOG + 1.0.0-rc1
 
 ### Phase 4 — Release
