@@ -450,7 +450,7 @@ pad with empty commits.
   row corrected in this commit (the (d) message claimed it a commit
   early — no history rewritten); audit 0, doctor 6/6
 
-- [ ] S34-E3 — the matrix index: `oax explain --all` — every task's
+- [x] S34-E3 — the matrix index: `oax explain --all` — every task's
   prose coverage in one deterministic render (sorted rows, honest
   no-prose marks, exit 1 while any task lacks prose), graded by two new
   explain-drill checks and demonstrated by example 28
@@ -469,4 +469,18 @@ pad with empty commits.
   line, example 28 step 8, modules.md invariant, CHANGELOG round-two
   bullet; the 462 cascade split across two commits after a line-wrapped
   anchor missed — recorded in the completion commit; audit 0, doctor
-  6/6
+  6/6 (truth repair, next slot: this checkbox read [ ] at HEAD while
+  its own final commit 857d4d4 recorded [x] — the flip is applied now,
+  claims re-verified against the live tree before the edit: verify OK,
+  doctor 6/6, audit 0, eval 40 tasks / 462 checks green; no history
+  rewritten, the correction is the commit)
+
+- [ ] S35-E3 — the release attestation: `oax attest` — one command, one
+  artifact, every gate: doctor (purity + integrity), audit (0
+  findings), doctests (docstring examples green), manifest (the tree
+  hashes deterministically twice) and the matrix (specs + prose
+  coverage) aggregated into one byte-deterministic verdict — human
+  render counters-only, machine JSON carries the tree hash; a gate that
+  crashes is a red gate carrying the real exception, a planted secret
+  turns the verdict red, exit 0 green / 1 any gate red; graded by a new
+  drill (task 41) in a child interpreter and demonstrated by example 30
