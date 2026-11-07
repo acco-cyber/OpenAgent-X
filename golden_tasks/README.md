@@ -29,8 +29,10 @@ failing `harness_error` check. The matrix only grows.
 | 21 | snapshot-travel | snapshot (12) | checkpoints are pure prefix folds: later events and torn tails cannot rewrite an earlier checkpoint, travel is deterministic and monotone, bounds/order/density violations raise loudly, empty journal exposes exactly the zero state, reopened journals travel identically |
 | 22 | prompt-layers | prompt (13) | includes expand depth-first in declared order (marker positions prove it), diamond includes expand once per path, cycles and self-includes report the full path, unknown layers and missing variables name themselves, over-deep acyclic chains rejected, substituted values stay literal so data never injects includes |
 | 23 | tools-jit | jit (14) | turn-zero visibility is journaled before any step, undisclosed calls are refused with one `tool_hidden` event and zero side effects (no tool_call, no registry hit), `tools_expand` lands as an ordinary journaled call and makes its target visible, every visibility change is journaled with the full set and the additions, keyword matching is case-insensitive, capped rule disclosure truncates sorted without hiding the control plane, unknown expansion targets and rule tools name themselves, re-runs are event-for-event identical |
+| 24 | chaos | chaos (14) | combined faults in ONE run: deterministic plan injects LLM outages and tool faults together, RetryLLM recovers with scars, every injection ledgered, faulted tool calls never execute (ghost write leaves no file), faulted results journaled as ordinary ok:false tool_results, event-type stream matches a healthy run, re-runs reproduce identical ledgers, bad plans name themselves |
+| 25 | hash-chain | chain (14) | every chained line commits prev+digest over the full event JSON, edits (payload or ts) localize at the edited line, deletion/reorder break at the first mislinked line, head changes under tampering so a recorded seal exposes it, torn tails isolate with an intact but unsealable prefix, plain journals verify honestly as chained:false, empty journal reports the zero state, resume continues the chain, seal is loud |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **23 tasks, 254 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **25 tasks, 282 checks**.
 
 ## Adding a task (rules)
 

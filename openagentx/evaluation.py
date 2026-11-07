@@ -1903,6 +1903,310 @@ def _jit_drill(task: dict) -> list:
     ]
 
 
+def _chaos_drill(task: dict) -> list:
+    """Chaos: combined faults injected into ONE run, recovered honestly.
+
+    Honest contract: the deterministic plan is followed exactly (every
+    planned LLM outage and tool fault injected, nothing else), RetryLLM
+    recovers the model outages while the ledger shows the scars, faulted
+    tool calls never reach the real registry (zero side effects: the
+    ghost write leaves no file), the faulted results are journaled as
+    ordinary ok:false tool_results, the chaos run's event-type stream
+    matches a healthy run of the same script, the combined summary is a
+    deterministic count map, a full re-run reproduces identical ledgers
+    and stream, unplanned tools pass through untouched, and bad plans
+    (unknown tool target, sub-1 call numbers) raise naming themselves.
+    """
+    import os
+
+    from .chain import verify_journal
+    from .chaos import ChaosLLM, ChaosTools, chaos_summary
+    from .retry import BackoffPolicy, RetryLLM
+
+    wd = _fresh_wd("chaos")
+    exp = _expect(task)
+    script = _script(task)
+    llm_fail_calls = [int(c) for c in exp.get("llm_fail_calls", [])]
+    tool_plan = {str(t): int(n)
+                 for t, n in dict(exp.get("tool_fail_first", {})).items()}
+
+    def run_chaos(root: str):
+        llm = ChaosLLM(ScriptedLLM(list(script)),
+                       {c: "planned outage" for c in llm_fail_calls})
+        tools = ChaosTools(builtin_tools(root), dict(tool_plan))
+        retry = RetryLLM(llm, BackoffPolicy(max_attempts=3, base_delay=0.0))
+        jp = os.path.join(root, "journal.jsonl")
+        res = AgentRunner(
+            retry, tools, jp, max_steps=int(task.get("max_steps", 8)),
+            workdir=root, run_id="chaos-drill").run(
+                str(task.get("task_text", "chaos drill")))
+        events, torn = load_trace(jp)
+        return llm, tools, retry, res, events, torn
+
+    llm, tools, retry, res, events, torn = run_chaos(wd)
+    types = [e.type for e in events]
+    tool_results = [e.payload for e in events if e.type == "tool_result"]
+    faulted = [p for p in tool_results if str(p.get("error", "")).startswith("chaos:")]
+    calc_results = [p.get("result", {}).get("value")
+                    for p in tool_results if p.get("tool") == "calc"]
+
+    healthy_jp = os.path.join(wd, "healthy.jsonl")
+    healthy = AgentRunner(ScriptedLLM(list(script)), builtin_tools(wd),
+                          healthy_jp, max_steps=int(task.get("max_steps", 8)),
+                          workdir=wd, run_id="chaos-healthy").run(
+                              str(task.get("task_text", "chaos drill")))
+    healthy_types = [e.type for e in load_trace(healthy_jp)[0]]
+
+    wd2 = _fresh_wd("chaos2")
+    llm2, tools2, _retry2, res2, events2, _t2 = run_chaos(wd2)
+
+    # side-effect probe: a faulted write must leave NO file behind
+    ghost = str(exp.get("ghost_path", "ghost.txt"))
+    wd3 = _fresh_wd("chaos3")
+    ghost_llm = ChaosLLM(ScriptedLLM([
+        '{"action": {"tool": "write_file", "args": {"path": "%s", "text": "x"}}}' % ghost,
+        '{"reply": "done"}']), {})
+    ghost_tools = ChaosTools(builtin_tools(wd3), {"write_file": 1})
+    ghost_res = AgentRunner(ghost_llm, ghost_tools,
+                            os.path.join(wd3, "journal.jsonl"),
+                            max_steps=4, workdir=wd3,
+                            run_id="chaos-ghost").run("ghost probe")
+    ghost_results = [e.payload for e in load_trace(
+        os.path.join(wd3, "journal.jsonl"))[0] if e.type == "tool_result"]
+
+    # policy probes
+    empty = ChaosTools(builtin_tools(_fresh_wd("chaos4")), {})
+    echo_out = empty.call("echo", {"text": "hi"})
+    unknown_err = ""
+    try:
+        ChaosTools(builtin_tools(_fresh_wd("chaos5")), {"ghost_tool": 1})
+    except ValueError as e:
+        unknown_err = str(e)
+    one_based_err = ""
+    try:
+        ChaosLLM(ScriptedLLM([]), {0: "before first call"})
+    except ValueError as e:
+        one_based_err = str(e)
+
+    combined_ledger = llm.injected + tools.injected
+    attempts_ok = [a["ok"] for a in retry.attempts]
+    want_ok = [c not in llm_fail_calls
+               for c in range(1, llm.calls + 1)]
+    return [
+        Check("combined_faults_recovered_in_one_run",
+              res.stop_reason == "reply" and res.reply == exp.get("reply", ""),
+              f"{res.stop_reason} reply={res.reply!r}"),
+        Check("llm_outages_exactly_per_plan",
+              [e["call"] for e in llm.injected] == llm_fail_calls
+              and all(e["kind"] == "llm_outage" for e in llm.injected)
+              and llm.calls == len(script) + len(llm_fail_calls),
+              f"injected={[e['call'] for e in llm.injected]} "
+              f"calls={llm.calls}"),
+        Check("tool_faults_exactly_per_plan",
+              [e["tool"] for e in tools.injected] == list(tool_plan)
+              and all(e["kind"] == "tool_fault" for e in tools.injected),
+              str([e["tool"] for e in tools.injected])),
+        Check("retry_recovers_with_scars",
+              attempts_ok == want_ok
+              and sum(1 for a in retry.attempts if not a["ok"])
+              == len(llm_fail_calls),
+              f"attempts ok={attempts_ok}"),
+        Check("faulted_calls_zero_side_effects",
+              calc_results == [None, exp.get("calc_value")]
+              and tools.passthrough_calls() == len(tool_plan)
+              and open(os.path.join(wd, "out.txt"), encoding="utf-8").read()
+              == "survived",
+              "faulted calc returned no value; the pass-through write landed"),
+        Check("ghost_write_never_lands",
+              ghost_res.stop_reason == "reply"
+              and not os.path.exists(os.path.join(wd3, ghost))
+              and all(str(p.get("error", "")).startswith("chaos:")
+                      for p in ghost_results if p.get("ok") is False),
+              f"ghost exists={os.path.exists(os.path.join(wd3, ghost))}"),
+        Check("faulted_results_journaled_honestly",
+              len(faulted) == sum(tool_plan.values())
+              and all(p.get("ok") is False for p in faulted),
+              f"{len(faulted)} faulted tool_results journaled"),
+        Check("event_stream_matches_healthy_run",
+              types == healthy_types and healthy.stop_reason == "reply",
+              f"{len(types)} chaos events vs {len(healthy_types)} healthy"),
+        Check("summary_deterministic",
+              chaos_summary(combined_ledger)
+              == {"llm_outage": len(llm_fail_calls),
+                  "tool_fault": sum(tool_plan.values())},
+              str(chaos_summary(combined_ledger))),
+        Check("rerun_identical_ledgers_and_stream",
+              llm2.injected == llm.injected and tools2.injected == tools.injected
+              and [e.type for e in events2] == types
+              and res2.reply == res.reply,
+              "same plan in, same faults out"),
+        Check("unplanned_tools_pass_through",
+              echo_out == {"ok": True, "result": {"text": "hi"}}
+              and empty.injected == [],
+              "empty plan never injects"),
+        Check("unknown_chaos_target_names_itself",
+              "unknown chaos target tool 'ghost_tool'" in unknown_err,
+              unknown_err[:60]),
+        Check("plan_call_numbers_one_based",
+              "1-based" in one_based_err,
+              one_based_err[:60]),
+        Check("journal_dense_reopen",
+              not torn and sequence_dense(events)
+              and sequence_dense(_reopen(os.path.join(wd, "journal.jsonl")))
+              and verify_journal(os.path.join(wd, "journal.jsonl"))["ok"],
+              f"{len(events)} events, dense"),
+    ]
+
+
+def _chain_drill(task: dict) -> list:
+    """Hash-chained traces: every line committed, every edit localized.
+
+    Honest contract: a runner-written ChainedJournal verifies with stored
+    digests equal to an independent recomputation, the seal equals the head
+    and re-verification is stable, editing any stored byte of line *k*
+    breaks the chain at *k* (payload or ts), deletion and reorder break at
+    the first mislinked line, the head changes under tampering, a torn
+    tail isolates with an intact but unsealable prefix, plain journals
+    verify honestly as chained:false and refuse to seal, an empty journal
+    reports the zero state honestly, and appending to a chained journal
+    continues the chain.
+    """
+    import json as _json
+
+    from .chain import (ChainError, ChainedJournal, compute_chain, head_of,
+                        seal, verify_journal)
+    from .events import Journal, read_events
+
+    wd = _fresh_wd("chain")
+    exp = _expect(task)
+    jp = os.path.join(wd, "journal.jsonl")
+    res = AgentRunner(ScriptedLLM(_script(task)), builtin_tools(wd), jp,
+                      max_steps=int(task.get("max_steps", 8)), workdir=wd,
+                      run_id="chain-drill",
+                      journal_cls=ChainedJournal).run(
+                          str(task.get("task_text", "chain drill")))
+    r1 = verify_journal(jp)
+    events = read_events(jp)
+    lines = open(jp, encoding="utf-8").read().splitlines()
+
+    def rewrite(name: str, mutate) -> dict:
+        """Copy the journal, apply mutate(lines), verify the copy."""
+        copy = list(lines)
+        mutate(copy)
+        path = os.path.join(wd, name)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(copy) + "\n")
+        return verify_journal(path)
+
+    def edit_payload(copy):
+        obj = _json.loads(copy[exp.get("edit_index", 2)])
+        obj["payload"]["drill_note"] = "EVIL"
+        copy[exp.get("edit_index", 2)] = _json.dumps(obj, sort_keys=True,
+                                                     ensure_ascii=False)
+
+    def edit_ts(copy):
+        obj = _json.loads(copy[1])
+        obj["ts"] = obj["ts"] + 0.5
+        copy[1] = _json.dumps(obj, sort_keys=True, ensure_ascii=False)
+
+    def delete_line(copy):
+        del copy[1]
+
+    def reorder(copy):
+        copy[0], copy[1] = copy[1], copy[0]
+
+    r_edit = rewrite("edited.jsonl", edit_payload)
+    r_ts = rewrite("ts.jsonl", edit_ts)
+    r_del = rewrite("deleted.jsonl", delete_line)
+    r_reo = rewrite("reordered.jsonl", reorder)
+
+    def seal_error(path) -> str:
+        try:
+            seal(path)
+            return ""
+        except ChainError as e:
+            return str(e)
+
+    edit_idx = int(exp.get("edit_index", 2))
+    torn_path = os.path.join(wd, "torn.jsonl")
+    with open(torn_path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n" + '{"seq": 99, "tu')
+    r_torn = verify_journal(torn_path)
+
+    plain = os.path.join(wd, "plain.jsonl")
+    j = Journal(plain)
+    j.start_run("chain-plain")
+    j.append("run_start", {"task": "legacy"})
+    j.append("reply", {"text": "hi"})
+    r_plain = verify_journal(plain)
+
+    empty = verify_journal(os.path.join(wd, "empty.jsonl"))
+
+    # capture the pristine seal + re-read stability BEFORE the resume append
+    sealed_head = seal(jp)
+    r_stable = verify_journal(jp)
+
+    resume = ChainedJournal(jp)
+    resume.start_run(res.run_id)
+    resume.append("note", {"text": "appended later"})
+    r_resume = verify_journal(jp)
+
+    seal_msg = seal_error(os.path.join(wd, "edited.jsonl"))
+    return [
+        Check("runner_chained_journal_verifies",
+              res.stop_reason == "reply" and res.reply == exp.get("reply", "")
+              and r1["ok"] and r1["chained"] and r1["n"] == res.events
+              and r1["broken_at"] == -1 and not r1["torn_tail"],
+              f"{r1['n']} events head={r1['head'][:12]}"),
+        Check("stored_digests_match_independent_chain",
+              compute_chain(events)[-1] == r1["head"] == head_of(events),
+              "stored chain equals a from-scratch recomputation"),
+        Check("seal_matches_head_and_is_stable",
+              sealed_head == r1["head"] and r_stable == r1,
+              "seal is exactly the verified head"),
+        Check("payload_edit_localized",
+              not r_edit["ok"] and r_edit["broken_at"] == edit_idx,
+              f"edit at {edit_idx} -> broken_at={r_edit['broken_at']}"),
+        Check("ts_tamper_detected",
+              not r_ts["ok"] and r_ts["broken_at"] == 1,
+              "every stored byte is covered, including ts"),
+        Check("deletion_breaks_chain",
+              not r_del["ok"] and r_del["broken_at"] == 1,
+              f"delete -> broken_at={r_del['broken_at']}"),
+        Check("reorder_breaks_chain",
+              not r_reo["ok"] and r_reo["broken_at"] == 0,
+              f"reorder -> broken_at={r_reo['broken_at']}"),
+        Check("head_changes_under_tampering",
+              r_edit["head"] != r1["head"] and r_del["head"] != r1["head"],
+              "a previously recorded seal no longer matches"),
+        Check("seal_refuses_broken",
+              f"broken at index {edit_idx}" in seal_msg,
+              seal_msg[:60]),
+        Check("torn_tail_prefix_ok_unsealable",
+              r_torn["torn_tail"] and r_torn["ok"]
+              and r_torn["n"] == r1["n"]
+              and "torn tail" in seal_error(torn_path),
+              "prefix intact, file incomplete, seal refuses"),
+        Check("plain_journal_verifies_unchained",
+              r_plain["ok"] and not r_plain["chained"]
+              and r_plain["n"] == 2 and r_plain["head"]
+              and "not chain-written" in seal_error(plain),
+              "legacy journals verify honestly and refuse to seal"),
+        Check("empty_journal_honest",
+              empty["ok"] and empty["n"] == 0 and empty["head"] == ""
+              and "nothing to seal" in seal_error(os.path.join(wd, "empty.jsonl")),
+              "the zero state is reported, not faked"),
+        Check("chained_resume_continues",
+              r_resume["ok"] and r_resume["chained"]
+              and r_resume["n"] == r1["n"] + 1,
+              f"resumed chain: {r_resume['n']} events"),
+        Check("journal_dense_reopen",
+              sequence_dense(events)
+              and sequence_dense(_reopen(jp)),
+              f"{len(events)} events, dense across reopens"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -1927,6 +2231,8 @@ DRILLS = {
     "snapshot": _snapshot_drill,
     "prompt": _prompt_drill,
     "jit": _jit_drill,
+    "chaos": _chaos_drill,
+    "chain": _chain_drill,
 }
 
 

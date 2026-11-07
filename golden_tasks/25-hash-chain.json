@@ -1,0 +1,16 @@
+{
+  "id": "25-hash-chain",
+  "title": "Hash-chained traces: a runner-written ChainedJournal verifies with stored digests equal to an independent recomputation, the seal equals the head and re-verification is stable, editing any stored byte of a line (payload or ts) breaks the chain at that line, deletion and reorder break at the first mislinked line, the head changes under tampering so a recorded seal exposes the edit, torn tails isolate with an intact but unsealable prefix, plain journals verify honestly as chained:false and refuse to seal, the empty journal reports the zero state, and appending to a chained journal continues the chain",
+  "drill": "chain",
+  "task_text": "produce a chained journal worth sealing",
+  "max_steps": 6,
+  "script": [
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"2*21\"}}, \"thought\": \"compute\"}",
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"proof.txt\", \"text\": \"sealed\"}}, \"thought\": \"persist\"}",
+    "{\"reply\": \"chained and sealed\"}"
+  ],
+  "expect": {
+    "reply": "chained and sealed",
+    "edit_index": 2
+  }
+}

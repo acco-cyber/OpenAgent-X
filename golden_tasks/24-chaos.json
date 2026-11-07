@@ -1,0 +1,21 @@
+{
+  "id": "24-chaos",
+  "title": "Combined faults in one run: a deterministic chaos plan injects LLM outages and tool faults into the same run, RetryLLM recovers with scars on its attempt log, every injection is ledgered, faulted tool calls never reach the registry (the ghost write leaves no file), faulted results are journaled as ordinary ok:false tool_results, the event-type stream matches a healthy run, summaries and re-runs are deterministic, bad plans name themselves",
+  "drill": "chaos",
+  "task_text": "finish the task despite combined chaos",
+  "max_steps": 8,
+  "script": [
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"6*7\"}}, \"thought\": \"compute under chaos\"}",
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"6*7\"}}, \"thought\": \"compute again\"}",
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"out.txt\", \"text\": \"survived\"}}, \"thought\": \"persist\"}",
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"out.txt\", \"text\": \"survived\"}}, \"thought\": \"persist again\"}",
+    "{\"reply\": \"chaos survived\"}"
+  ],
+  "expect": {
+    "reply": "chaos survived",
+    "llm_fail_calls": [2, 5],
+    "tool_fail_first": {"calc": 1, "write_file": 1},
+    "calc_value": 42,
+    "ghost_path": "ghost.txt"
+  }
+}
