@@ -7,7 +7,7 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (22 tasks / 240 checks)
+oax eval      # run every golden task drill, all green or exit 1   (23 tasks / 254 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
@@ -23,7 +23,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # ten runnable end-to-end demos
+python3 -m openagentx examples # eleven runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -80,6 +80,12 @@ python3 -m openagentx examples # ten runnable end-to-end demos
   expansion in declared order, include cycles reported with their full
   path, missing layers and variables name themselves, and substituted
   values stay literal so data can never inject new includes.
+- **JIT tool disclosure** — tools stay registered but invisible until the
+  policy reveals them: turn-zero visibility is journaled, undisclosed calls
+  are refused before hooks with one `tool_hidden` event and zero side
+  effects, `tools_expand` requests disclosure as an ordinary journaled
+  call, every visibility change lands in the journal with the full set
+  and the additions, and re-runs are event-for-event identical.
 
 ## Why it matters
 

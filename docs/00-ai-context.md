@@ -46,7 +46,7 @@ evaluation.py  golden-task harness: JSON specs → drills of named Checks;
                (loop, redact, trace, team, router, budget, stop,
                redact_nested, audit, pack, sbom, memory, compact, cache,
                hooks, fanout, structured, retry, breaker, planner,
-               snapshot, prompt)
+               snapshot, prompt, jit)
 doctor.py      python>=3.10, stdlib purity (AST import scan vs sys.stdlib_module_names),
                offline purity (no net modules), required files, task contracts
 audit.py       secret-scan of the whole tree; must be 0 findings on this repo
@@ -96,6 +96,11 @@ prompt.py      PromptLayers: depth-first include expansion in declared
                order, include cycles reported with the full path, missing
                layers/variables name themselves, substitution after
                expansion keeps values literal (no data-driven includes)
+jit.py         JITDisclosure + JITAgentRunner: tools stay registered but
+               invisible until policy reveals them; keyword rules, cap,
+               tools_expand control plane; undisclosed calls refused before
+               hooks with zero side effects; every visibility change is a
+               journaled tool_disclose / tool_hidden event
 cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact
 ```
 

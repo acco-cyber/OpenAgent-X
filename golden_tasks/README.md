@@ -28,8 +28,9 @@ failing `harness_error` check. The matrix only grows.
 | 20 | planner-executor | planner (14) | one planning turn fans out into real executor runs on their own journals: fenced plans repaired with exact notes and schema-validated before anything executes, plan bugs journal an error (never laundered into empty plans), failing steps are data with dense child journals referenced by the parent, structural determinism on re-run |
 | 21 | snapshot-travel | snapshot (12) | checkpoints are pure prefix folds: later events and torn tails cannot rewrite an earlier checkpoint, travel is deterministic and monotone, bounds/order/density violations raise loudly, empty journal exposes exactly the zero state, reopened journals travel identically |
 | 22 | prompt-layers | prompt (13) | includes expand depth-first in declared order (marker positions prove it), diamond includes expand once per path, cycles and self-includes report the full path, unknown layers and missing variables name themselves, over-deep acyclic chains rejected, substituted values stay literal so data never injects includes |
+| 23 | tools-jit | jit (14) | turn-zero visibility is journaled before any step, undisclosed calls are refused with one `tool_hidden` event and zero side effects (no tool_call, no registry hit), `tools_expand` lands as an ordinary journaled call and makes its target visible, every visibility change is journaled with the full set and the additions, keyword matching is case-insensitive, capped rule disclosure truncates sorted without hiding the control plane, unknown expansion targets and rule tools name themselves, re-runs are event-for-event identical |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **22 tasks, 240 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **23 tasks, 254 checks**.
 
 ## Adding a task (rules)
 
