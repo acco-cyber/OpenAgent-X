@@ -90,7 +90,13 @@ green.
   the journal) + `CircuitBreaker` (trip surfaces the original fault,
   fast-fail without inner calls, tick-clock cooldown, probe closes or
   re-opens); example 08 live
-- [ ] S10-E3 — task 20 `planner-executor` + task 21 `snapshot-travel`
+- [x] S10-E3 — task 20 `planner-executor` + task 21 `snapshot-travel`
+  ✅ 21 tasks, 227 checks green; `PlannerExecutor` (one planning turn
+  fans out into real executor runs on `step-XX` journals, fenced plans
+  repaired with notes + schema-validated, plan bugs stop `script_error`,
+  failing steps are data) + `snapshot.py` (`snapshot_at`/`travel`: pure
+  prefix folds, torn-tail/prefix isolation, loud bounds errors); example 09
+  live
 - [ ] S11-E3 — task 22 `prompt-layers` (include order, cycles, substitution)
 - [ ] S12-E3 — task 23 `tools-jit` (JIT tool disclosure)
 - [ ] S13-E3 — task 24 `chaos` (combined faults in one run) + task 25 `hash-chain`

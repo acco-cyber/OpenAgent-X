@@ -57,3 +57,8 @@ openagentx/breaker.py
 golden_tasks/18-retry-backoff.json
 golden_tasks/19-circuit-breaker.json
 examples/08_retry_breaker.py
+openagentx/planner.py
+openagentx/snapshot.py
+golden_tasks/20-planner-executor.json
+golden_tasks/21-snapshot-travel.json
+examples/09_planner_snapshot.py
