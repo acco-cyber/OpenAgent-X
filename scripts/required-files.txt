@@ -97,3 +97,4 @@ openagentx/dashboard.py
 openagentx/mermaid.py
 golden_tasks/33-dashboard.json
 golden_tasks/34-mermaid.json
+examples/17_dashboard_mermaid.py
