@@ -146,7 +146,18 @@ green.
   two reads fold to one replay state, no timings so the same seed always
   yields the same verdict); `oax bench` / `oax fuzz` exit-code contracts
   live; example 14 live; examples count now fourteen
-- [ ] S16-E3 — property suite (torn-tail/replay/density under random traces)
+- [x] S16-E3 — property suite (torn-tail/replay/density under random traces)
+  ✅ 30 tasks, 342 checks green; `property.py` (a seeded lottery picks each
+  step — append / torn-tail injection / writer restart — and after EVERY
+  step the journal is re-read from disk: density exactly 0..n-1, every
+  injected tear isolated AND strictly refused AND truncation-restored to
+  the exact pre-tear bytes, the round-trip matching the written plan,
+  two independent reads folding to one state, and every `ts` on disk
+  rewritten to a different wall-clock folding to the identical replay
+  state with the semantic diff calling the shifted journal the same —
+  replay is a function of events, never of the clock); reports carry no
+  timings so the same seed always yields the same verdict; `oax property`
+  exit-code contract live; example 15 live; examples count now fifteen
 - [ ] S17-E3 — pack v2 (signed manifest) + sbom v2 (dependency graph)
 - [ ] S18-E3 — report v2 (dashboard HTML) + mermaid trace export
 - [ ] S19-E3 — examples gallery (budget guard, cache, hooks, replay diff)
