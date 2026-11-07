@@ -32,6 +32,93 @@ No model keys, no SDKs, no services. The default adapter is `ScriptedLLM`:
 deterministic turns you write yourself, so the whole matrix runs anywhere
 Python runs — CI, air-gapped, your laptop.
 
+## A real run, event by event
+
+No screenshots — the trace **is** the product. Script three turns, run
+offline, and read the journal that lands on disk:
+
+````text
+$ cat > turns.jsonl <<'EOF'
+{"action": {"tool": "vault_read", "args": {"key": "github"}}, "thought": "fetch the fixture token"}
+{"action": {"tool": "think", "args": {"note": "token handled at the boundary"}}, "thought": "reasoning is not a secret"}
+{"reply": "token stored safely"}
+EOF
+$ oax run turns.jsonl --task "read the github token and confirm safe handling" \
+      --workdir demo-wd --run-id readme-demo --timeline
+[000] RUN   task=read the github token and confirm safe handling
+[001] STEP  0
+[002] THINK fetch the fixture token
+[003] CALL  vault_read args={"key": "github"}
+[004] OBS   vault_read ok=True {"key": "github", "value": "[REDACTED:github_token]"}
+[005] STEP  1
+[006] THINK reasoning is not a secret
+[007] CALL  think args={"note": "token handled at the boundary"}
+[008] OBS   think ok=True {"note": "token handled at the boundary"}
+[009] STEP  2
+[010] REPLY token stored safely
+[011] END   reply
+run: stop=reply steps=3 events=12 dense=True journal=demo-wd/journal.jsonl
+````
+
+The tool executed on the real fixture value; the journal stored only
+`[REDACTED:github_token]`. Here is that journal exactly as written — 12
+events, sequences dense `0..11`, pasted verbatim from the run above:
+
+```jsonl
+{"payload": {"max_steps": 6, "max_tool_calls": 0, "task": "read the github token and confirm safe handling"}, "run_id": "readme-demo", "seq": 0, "ts": 1794052198.418759, "type": "run_start"}
+{"payload": {"step": 0}, "run_id": "readme-demo", "seq": 1, "ts": 1794052198.41887, "type": "step_start"}
+{"payload": {"step": 0, "text": "fetch the fixture token"}, "run_id": "readme-demo", "seq": 2, "ts": 1794052198.418964, "type": "thought"}
+{"payload": {"args": {"key": "github"}, "tool": "vault_read"}, "run_id": "readme-demo", "seq": 3, "ts": 1794052198.419017, "type": "tool_call"}
+{"payload": {"ok": true, "redactions": 1, "result": {"key": "github", "value": "[REDACTED:github_token]"}, "tool": "vault_read"}, "run_id": "readme-demo", "seq": 4, "ts": 1794052198.419059, "type": "tool_result"}
+{"payload": {"step": 1}, "run_id": "readme-demo", "seq": 5, "ts": 1794052198.41909, "type": "step_start"}
+{"payload": {"step": 1, "text": "reasoning is not a secret"}, "run_id": "readme-demo", "seq": 6, "ts": 1794052198.419125, "type": "thought"}
+{"payload": {"args": {"note": "token handled at the boundary"}, "tool": "think"}, "run_id": "readme-demo", "seq": 7, "ts": 1794052198.419157, "type": "tool_call"}
+{"payload": {"ok": true, "redactions": 0, "result": {"note": "token handled at the boundary"}, "tool": "think"}, "run_id": "readme-demo", "seq": 8, "ts": 1794052198.419188, "type": "tool_result"}
+{"payload": {"step": 2}, "run_id": "readme-demo", "seq": 9, "ts": 1794052198.419212, "type": "step_start"}
+{"payload": {"text": "token stored safely"}, "run_id": "readme-demo", "seq": 10, "ts": 1794052198.419237, "type": "reply"}
+{"payload": {"stop_reason": "reply"}, "run_id": "readme-demo", "seq": 11, "ts": 1794052198.419255, "type": "run_end"}
+```
+
+And the same journal as a deterministic diagram (`oax mermaid` — quote-escaped
+labels, one spine edge per consecutive pair):
+
+```mermaid
+flowchart TD
+%% OpenAgent-X trace - 12 events
+  E000["000 run_start {&quot;max_steps&quot;: 6, &quot;max_tool_calls&quot;: 0, &quot;task&quot;: &quot;read the githu..."]
+  E001["001 step_start {&quot;step&quot;: 0}"]
+  E002["002 thought {&quot;step&quot;: 0, &quot;text&quot;: &quot;fetch the fixture token&quot;}"]
+  E003["003 tool_call {&quot;args&quot;: {&quot;key&quot;: &quot;github&quot;}, &quot;tool&quot;: &quot;vault_read&quot;}"]
+  E004["004 tool_result {&quot;key&quot;: &quot;github&quot;, &quot;value&quot;: &quot;[REDACTED:github_token]&quot;}"]
+  E005["005 step_start {&quot;step&quot;: 1}"]
+  E006["006 thought {&quot;step&quot;: 1, &quot;text&quot;: &quot;reasoning is not a secret&quot;}"]
+  E007["007 tool_call {&quot;args&quot;: {&quot;note&quot;: &quot;token handled at the boundary&quot;}, &quot;tool&quot;: &quot;..."]
+  E008["008 tool_result {&quot;note&quot;: &quot;token handled at the boundary&quot;}"]
+  E009["009 step_start {&quot;step&quot;: 2}"]
+  E010["010 reply {&quot;text&quot;: &quot;token stored safely&quot;}"]
+  E011["011 run_end {&quot;stop_reason&quot;: &quot;reply&quot;}"]
+  E000 --> E001
+  E001 --> E002
+  E002 --> E003
+  E003 --> E004
+  E004 --> E005
+  E005 --> E006
+  E006 --> E007
+  E007 --> E008
+  E008 --> E009
+  E009 --> E010
+  E010 --> E011
+```
+
+How to read it: `run_start` records the caps (and, when set, the budget);
+`thought` and `tool_call` capture intent; `tool_result` carries the outcome
+**after** redaction with the redaction count recorded (`redactions: 1` — even
+the mask is auditable); `reply` and `run_end` close the run with the stop
+reason. Nothing else happened, so nothing else is in the file — and every
+view is a re-fold of these bytes: `oax stats demo-wd/journal.jsonl` and
+`oax trace demo-wd/journal.jsonl` derive their numbers and timeline from the
+same events, never from separate bookkeeping.
+
 ## The CLI at a glance
 
 ```
