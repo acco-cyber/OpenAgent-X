@@ -1,8 +1,9 @@
 """oax — the OpenAgent-X command line.
 
 Subcommands: eval | doctor | audit | examples | trace | report | run | pack |
-sbom | recall | compact | diff | stats. Every subcommand is offline and
-stdlib-only; exit codes are contracts (0 = green, 1 = anything else).
+sbom | recall | compact | diff | stats | bench. Every subcommand is
+offline and stdlib-only; exit codes are contracts (0 = green, 1 = anything
+else).
 """
 
 from __future__ import annotations
@@ -204,6 +205,15 @@ def _cmd_stats(args) -> int:
     return 0
 
 
+def _cmd_bench(args) -> int:
+    """Journal throughput microbench (wall-clock, reported not graded)."""
+    from .bench import render_bench, run_bench
+
+    b = run_bench(events=args.events)
+    print(render_bench(b))
+    return 0 if b["events"] == b["planned_events"] and b["dense"] else 1
+
+
 def _tools_for(wd: str):
     from .tools import builtin_tools
 
@@ -282,6 +292,11 @@ def build_parser() -> argparse.ArgumentParser:
     st = sub.add_parser("stats", help="deterministic run analytics for one journal")
     st.add_argument("journal")
     st.set_defaults(fn=_cmd_stats)
+
+    bn = sub.add_parser("bench", help="journal throughput microbench (synthetic, timed)")
+    bn.add_argument("--events", type=int, default=2000,
+                    help="synthetic events to append (default 2000)")
+    bn.set_defaults(fn=_cmd_bench)
 
     return p
 
