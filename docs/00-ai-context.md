@@ -44,7 +44,8 @@ trace.py       load_trace (safe), replay (pure deterministic fold),
 evaluation.py  golden-task harness: JSON specs → drills of named Checks;
                exceptions fold into failing harness_error; DRILLS registry
                (loop, redact, trace, team, router, budget, stop,
-               redact_nested, audit, pack, sbom, memory, compact, cache, hooks)
+               redact_nested, audit, pack, sbom, memory, compact, cache,
+               hooks, fanout, structured)
 doctor.py      python>=3.10, stdlib purity (AST import scan vs sys.stdlib_module_names),
                offline purity (no net modules), required files, task contracts
 audit.py       secret-scan of the whole tree; must be 0 findings on this repo
@@ -66,6 +67,15 @@ cache.py       ResponseCache + CachedLLM: sha256 canonical prompt keys,
 hooks.py       HookPolicy: ordered pre-tool-call deny rules, first match
                wins; runner journals every decision as a hook event and a
                denied call never reaches the registry
+fanout.py      FanoutRunner: one task → N real branch agents on their own
+               journals; parent journals branch_start/branch_end/fanin;
+               failures recorded as data; structural determinism (fixed
+               run_ids → identical seq/run_id/type/payload stream)
+structured.py  parse_json_loose: ordered repair pipeline (smart quotes,
+               fences, Python literals, trailing commas, balanced
+               extraction) with honest notes, loud ValueError on hopeless
+               input; validate_schema: lite JSON-Schema subset, bool is
+               never integer/number
 cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact
 ```
 

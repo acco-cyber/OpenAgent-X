@@ -7,7 +7,7 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (15 tasks / 152 checks)
+oax eval      # run every golden task drill, all green or exit 1   (17 tasks / 177 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
@@ -23,7 +23,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # six runnable end-to-end demos
+python3 -m openagentx examples # seven runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -51,6 +51,14 @@ python3 -m openagentx examples # six runnable end-to-end demos
   denied call produces a journaled `hook` event and zero side effects, the
   agent observes the denial and adapts, and a run without a policy is
   untouched (zero hook events).
+- **Parallel fan-out** — `FanoutRunner` dispatches one task to N real branch
+  agents on their own journals, records every branch outcome on the parent
+  journal (a failing branch is data, not a crash), and the coordinator
+  answers only from the fanin; re-runs are structurally identical.
+- **Structured output** — `parse_json_loose` repairs fences, trailing
+  commas, Python literals, smart quotes and prose-wrapped JSON with honest
+  repair notes; hopeless input raises loudly, and `validate_schema` catches
+  wrong types (including `True` masquerading as an integer).
 
 ## Why it matters
 
