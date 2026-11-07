@@ -173,3 +173,83 @@ cycles kill the layering while lazy-only cycles keep it, and rebuilds are
 byte-identical with a stable `graph_sha256`. **Loud failure:** a hidden
 cycle or an unresolved edge in the package itself.
 
+## Orchestration
+
+### 10-team-handoff — two agents, one dense journal
+**The run:** a lead agent writes a brief to disk and calls the reserved
+`handoff` tool; a specialist agent then reads the brief and answers —
+both on one shared journal. **The checks grade (12):** the brief exists on
+disk before the handoff, the reserved `handoff` event records its reason,
+the specialist's events follow the lead's on the same dense seq space,
+and the specialist's reply reflects what it read. **Loud failure:** a
+handoff that lost the brief, a forked journal, or a specialist answer
+that could not have come from the brief.
+
+### 11-router-fallback — failover that never fabricates
+**The run:** the primary adapter fails on cue; the router promotes the
+fallback; in a second probe every adapter is down. **The checks grade
+(10):** the primary failure is loud, the fallback serves the turn with
+every attempt logged, and a total outage stops with
+`model_unavailable` — without a fabricated reply. **Loud failure:** a
+silent failover, an unlogged attempt, or a reply invented after the
+model layer died.
+
+### 16-parallel-fanout — N real branches, failures recorded as data
+**The run:** one coordinator dispatches N branch agents, each running for
+real on its own journal. **The checks grade (14):** dispatch order is
+kept, branch failures land in the fanin as data (`script_error` + empty
+reply, never an exception escaping), every child journal carries its
+parent's `run_id` reference, and re-runs are structurally deterministic.
+**Loud failure:** a branch whose failure vanished, or a child that could
+not prove who launched it.
+
+### 20-planner-executor — plans validated before anything executes
+**The run:** one planning turn produces a fenced plan; the plan is
+repaired with exact notes, schema-validated, and only then fanned out to
+real executor runs on their own journals. **The checks grade (14):**
+fenced plans repair with named notes, schema violations stop the run
+before execution, plan bugs journal an error (never laundered into empty
+plans), failing steps are data with dense child journals referenced by
+the parent, and re-runs are structurally deterministic. **Loud failure:**
+a malformed plan that executed anyway.
+
+### 24-chaos — combined faults in one run, every injection ledgered
+**The run:** a deterministic plan injects LLM outages and tool faults
+*together* into a single run behind RetryLLM. **The checks grade (14):**
+every injection appears in the ledger, RetryLLM's recovery carries its
+scars, faulted tool calls never execute (the ghost write leaves no file),
+faulted results journal as ordinary `ok:false` tool_results, the
+event-type stream matches a healthy run, and re-runs reproduce identical
+ledgers. **Loud failure:** an unledgered fault, a side effect from a
+faulted call, or chaos that made the journal shape deviate.
+
+## Memory & context
+
+### 12-memory-recall — TF-IDF recall over past runs, honestly ranked
+**The run:** several runs are journaled, then queried through the
+TF-IDF memory. **The checks grade (10):** the run that actually contains
+the queried terms ranks first, rankings are deterministic, unknown
+queries return nothing instead of a guess, memory reads past runs
+read-only, and what it surfaces passes the redaction engine. **Loud
+failure:** a recall that leaked a redacted payload or hallucinated a
+hit.
+
+### 13-compaction — fold the steps, keep the truth
+**The run:** a finished run's journal is compacted: tool call/result
+pairs fold into `tool_fold` events. **The checks grade (13):** the fold
+keeps `{tool, ok, redactions}` per pair, step bookkeeping is dropped,
+run-level truth survives (start, reply, end), the original file is
+byte-identical after the read, and re-compaction is deterministic.
+**Loud failure:** a compaction that changed what actually happened, or
+one that touched the original bytes.
+
+### 22-prompt-layers — includes expand in declared order, cycles report the path
+**The run:** layered prompts with ordered includes, a diamond include, a
+cycle, and a missing variable are each expanded. **The checks grade
+(13):** depth-first expansion follows declared order (marker positions
+prove it), diamonds expand once per path, cycles and self-includes report
+the full path, unknown layers and missing variables name themselves,
+over-deep chains are rejected, and substituted values stay literal so
+data can never inject an include. **Loud failure:** an include that
+executed out of order, or a value that smuggled an include in.
+
