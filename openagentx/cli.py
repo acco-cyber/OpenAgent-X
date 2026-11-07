@@ -14,6 +14,7 @@ import os
 import runpy
 import sys
 import tempfile
+import time
 
 from .audit import run_audit
 from .doctor import run_doctor
@@ -22,10 +23,12 @@ from .doctor import run_doctor
 def _cmd_eval(args) -> int:
     from .evaluation import run_eval
 
-    reports, ok = run_eval(args.dir)
+    t0 = time.perf_counter()
+    reports, ok = run_eval(args.dir, workers=args.workers)
+    wall = time.perf_counter() - t0
     for r in reports:
         print(f"{r.task_id:<28} {r.drill:<10} {r.passed}/{len(r.checks):<3} "
-              f"{'OK' if r.ok else 'FAIL'}")
+              f"{r.seconds:7.3f}s {'OK' if r.ok else 'FAIL'}")
         if not r.ok:
             for c in r.checks:
                 if not c.ok:
@@ -33,7 +36,8 @@ def _cmd_eval(args) -> int:
     total = sum(len(r.checks) for r in reports)
     green = sum(r.passed for r in reports)
     print(f"eval: {len(reports)} tasks, {green}/{total} checks "
-          f"{'green' if ok else 'FAILING'}")
+          f"{'green' if ok else 'FAILING'} (wall-clock {wall:.3f}s, "
+          f"workers={args.workers}; timings reported, never graded)")
     return 0 if ok else 1
 
 
@@ -327,6 +331,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     e = sub.add_parser("eval", help="run every golden task drill")
     e.add_argument("dir", nargs="?", default="golden_tasks")
+    e.add_argument("--workers", type=int, default=1,
+                   help="run drills on a thread pool (default 1 = serial; "
+                        "verdicts are identical either way)")
     e.set_defaults(fn=_cmd_eval)
 
     d = sub.add_parser("doctor", help="purity + integrity gate")

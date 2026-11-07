@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from dataclasses import dataclass
 
 from .audit import run_audit
@@ -41,6 +42,7 @@ class DrillReport:
     task_id: str
     drill: str
     checks: list
+    seconds: float = 0.0  # wall-clock of this drill, reported never graded
 
     @property
     def ok(self) -> bool:
@@ -3141,8 +3143,30 @@ def list_golden_tasks(tasks_dir: str = "golden_tasks") -> list:
     )
 
 
-def run_eval(tasks_dir: str = "golden_tasks") -> tuple:
-    """Run every golden task. Returns (reports, all_ok)."""
-    reports = [run_golden_task(p) for p in list_golden_tasks(tasks_dir)]
+def run_eval(tasks_dir: str = "golden_tasks", workers: int = 1) -> tuple:
+    """Run every golden task. Returns (reports, all_ok).
+
+    Reports are always in task order. With ``workers > 1`` the drills run on
+    a thread pool: every drill works only inside its own fresh temp
+    workspace and reads nothing another drill writes, so the verdicts are
+    identical to the serial run — parallelism changes the wall-clock, never
+    the grade. Each report carries its own wall-clock seconds (reported,
+    never graded).
+    """
+    paths = list_golden_tasks(tasks_dir)
+    workers = max(1, min(int(workers), len(paths) or 1))
+
+    def timed(path: str) -> DrillReport:
+        t0 = time.perf_counter()
+        rep = run_golden_task(path)
+        return DrillReport(rep.task_id, rep.drill, rep.checks,
+                           seconds=time.perf_counter() - t0)
+
+    if workers <= 1:
+        reports = [timed(p) for p in paths]
+    else:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            reports = list(pool.map(timed, paths))  # pool.map keeps input order
     all_ok = bool(reports) and all(r.ok for r in reports)
     return reports, all_ok
