@@ -46,7 +46,7 @@ evaluation.py  golden-task harness: JSON specs → drills of named Checks;
                (loop, redact, trace, team, router, budget, stop,
                redact_nested, audit, pack, sbom, memory, compact, cache,
                hooks, fanout, structured, retry, breaker, planner,
-               snapshot)
+               snapshot, prompt)
 doctor.py      python>=3.10, stdlib purity (AST import scan vs sys.stdlib_module_names),
                offline purity (no net modules), required files, task contracts
 audit.py       secret-scan of the whole tree; must be 0 findings on this repo
@@ -92,6 +92,10 @@ planner.py     PlannerExecutor: one planning turn (parse_json_loose +
 snapshot.py    snapshot_at / travel: checkpoint state = pure replay fold of
                the event prefix; later events and torn tails cannot rewrite
                an earlier checkpoint; loud bounds/order/density errors
+prompt.py      PromptLayers: depth-first include expansion in declared
+               order, include cycles reported with the full path, missing
+               layers/variables name themselves, substitution after
+               expansion keeps values literal (no data-driven includes)
 cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact
 ```
 

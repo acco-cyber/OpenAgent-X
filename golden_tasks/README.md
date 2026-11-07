@@ -27,8 +27,9 @@ failing `harness_error` check. The matrix only grows.
 | 19 | circuit-breaker | breaker (12) | consecutive real failures trip the circuit (original fault surfaced), open fast-fails without consulting the inner, exact cooldown rejections then one probe that closes or re-opens, runner stops `model_unavailable` without fabricating a reply |
 | 20 | planner-executor | planner (14) | one planning turn fans out into real executor runs on their own journals: fenced plans repaired with exact notes and schema-validated before anything executes, plan bugs journal an error (never laundered into empty plans), failing steps are data with dense child journals referenced by the parent, structural determinism on re-run |
 | 21 | snapshot-travel | snapshot (12) | checkpoints are pure prefix folds: later events and torn tails cannot rewrite an earlier checkpoint, travel is deterministic and monotone, bounds/order/density violations raise loudly, empty journal exposes exactly the zero state, reopened journals travel identically |
+| 22 | prompt-layers | prompt (13) | includes expand depth-first in declared order (marker positions prove it), diamond includes expand once per path, cycles and self-includes report the full path, unknown layers and missing variables name themselves, over-deep acyclic chains rejected, substituted values stay literal so data never injects includes |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **21 tasks, 227 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **22 tasks, 240 checks**.
 
 ## Adding a task (rules)
 
@@ -44,7 +45,8 @@ Run: `python3 -m openagentx eval` (all green or exit 1). Current: **21 tasks, 22
    `schema{}`; `retry`/`breaker` need `script[]` (fault doubles are
    injected by the drills themselves, tuned via `expect`); `planner` needs
    `planner_script[]` + `step_scripts[][]`; `snapshot` needs `script[]` +
-   `expect.checkpoints[]`; `audit` needs
+   `expect.checkpoints[]`; `prompt` needs `layers{}` + `entry` +
+   `expect.render`; `audit` needs
    `expect.planted_*`; `pack`/`sbom` need no
    script at all.
 4. Any fixture secret must be runtime-concatenated inside Python — never in JSON.
