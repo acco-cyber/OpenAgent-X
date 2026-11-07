@@ -59,6 +59,16 @@ class Journal:
     def start_run(self, run_id: str) -> None:
         self.run_id = run_id
 
+    def _line(self, ev: Event) -> str:
+        """Serialized form of one journal line (hook for enriched writers).
+
+        The default is exactly the canonical event JSON; subclasses (e.g.
+        :class:`openagentx.chain.ChainedJournal`) may append integrity
+        metadata as extra top-level keys — ``Event.from_json`` ignores
+        unknown keys, so plain readers stay compatible.
+        """
+        return ev.to_json()
+
     def append(self, type: str, payload: dict) -> Event:
         """Append one event; assigns the next dense seq. Returns the event."""
         if not self.run_id:
@@ -72,7 +82,7 @@ class Journal:
             ts=round(time.time(), 6),
         )
         with open(self.path, "a", encoding="utf-8") as fh:
-            fh.write(ev.to_json() + "\n")
+            fh.write(self._line(ev) + "\n")
             fh.flush()
         return ev
 

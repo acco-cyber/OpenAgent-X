@@ -45,6 +45,7 @@ class AgentRunner:
         run_id: str = "",
         hooks=None,
         disclosure=None,
+        journal_cls=Journal,
     ):
         self.llm = llm
         self.tools = tools
@@ -57,10 +58,13 @@ class AgentRunner:
         # optional JIT disclosure policy (see jit.py): None keeps the loop
         # byte-for-byte unchanged — no extra events, no refusals
         self.disclosure = disclosure
+        # journal writer class (chain.ChainedJournal adds per-line integrity;
+        # the default keeps journals byte-for-byte as before)
+        self.journal_cls = journal_cls
 
     def run(self, task: str) -> RunResult:
         run_id = self._fixed_run_id or uuid.uuid4().hex[:12]
-        j = Journal(self.journal_path)
+        j = self.journal_cls(self.journal_path)
         j.start_run(run_id)
 
         history: list = [{"role": "user", "content": task}]

@@ -71,3 +71,4 @@ openagentx/jit.py
 golden_tasks/23-tools-jit.json
 examples/11_tools_jit.py
 openagentx/chaos.py
+openagentx/chain.py
