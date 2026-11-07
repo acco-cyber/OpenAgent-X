@@ -85,3 +85,5 @@ golden_tasks/28-journal-bench.json
 golden_tasks/29-fuzz-harness.json
 examples/13_diff_stats.py
 examples/14_bench_fuzz.py
+openagentx/property.py
+golden_tasks/30-property-suite.json

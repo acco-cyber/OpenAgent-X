@@ -1,0 +1,10 @@
+{
+  "id": "30-property-suite",
+  "title": "Property suite: the journal invariants hold after every step of a random trace — after each append, torn-tail injection and writer restart the journal is re-read from disk and density must be exactly 0..n-1 (never a gap, never a repeat, across restarts and tear/recover cycles), injected garbage always isolates as a torn tail with the intact prefix returned while strict readers refuse loudly, truncation restores the exact pre-tear bytes byte-for-byte (not just event-for-event), every (seq,type,payload) round-trips after every op including unicode, nesting and empty payloads, two independent reads fold to identical replay state after every op, rewriting every ts on disk to a different wall-clock folds to the identical replay state and the semantic diff calls the shifted journal the same (replay is a function of events, never of the clock), reports carry no timings so the same seed always yields the same verdict while different seeds drive different traces, the zero-op run still verifies, and the CLI contract holds",
+  "drill": "property",
+  "task_text": "hold journal invariants under random traces",
+  "expect": {
+    "ops": 60,
+    "seeds": [0, 1, 2]
+  }
+}

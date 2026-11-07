@@ -2563,6 +2563,92 @@ def _fuzz_drill(task: dict) -> list:
     ]
 
 
+def _property_drill(task: dict) -> list:
+    """Property suite: invariants re-demanded after every step of a trace.
+
+    Honest contract: every seed's random trace ends clean with the torn
+    tails isolated, the strict reader having refused every one of them,
+    truncation having restored the exact pre-tear bytes, density
+    re-checked after every single op, the round-trip matching the written
+    plan, replay proven ts-independent, reports deterministic (no
+    timings), different seeds driving different traces, the zero-op run
+    still verifying, and the CLI contract holding.
+    """
+    from .cli import main as cli_main
+    from .property import (render_property, run_property_suite,
+                           run_property_trace)
+
+    wd = _fresh_wd("property")
+    exp = _expect(task)
+    ops = int(exp.get("ops", 60))
+    seeds = [int(s) for s in exp.get("seeds", [0, 1, 2])]
+    suite = run_property_suite(seeds=seeds, n_ops=ops, workdir=wd)
+
+    r_a = run_property_trace(seed=11, n_ops=45, workdir=wd)
+    r_b = run_property_trace(seed=11, n_ops=45, workdir=wd)
+    r_c = run_property_trace(seed=12, n_ops=45, workdir=os.path.join(wd, "twelve"))
+    r0 = run_property_trace(seed=13, n_ops=0, workdir=os.path.join(wd, "zero"))
+    a_ev = _reopen(r_a["journal"])
+    c_ev = _reopen(r_c["journal"])
+    rendered = render_property(suite[0])
+
+    return [
+        Check("suite_clean_on_all_seeds",
+              len(suite) == len(seeds) and all(r["ok"] and not r["violations"]
+                                               for r in suite),
+              f"{len(suite)} seeds x {ops} steps, 0 violations"),
+        Check("torn_tails_always_isolated",
+              all(r["torn_injected"] > 0
+                  and r["torn_isolated"] == r["torn_injected"]
+                  and r["strict_refusals"] == r["torn_injected"]
+                  for r in suite),
+              f"min {min(r['torn_injected'] for r in suite)} tears/seed, "
+              f"every one isolated and strictly refused"),
+        Check("truncation_restores_exact_bytes",
+              all(r["byte_exact_resumes"] == r["torn_injected"]
+                  for r in suite),
+              "every tear ended byte-identical to the pre-tear file"),
+        Check("density_rechecked_after_every_step",
+              all(r["reads_checked"] == r["n_ops"] and r["dense"]
+                  for r in suite),
+              f"{ops} full read-backs per seed, all dense"),
+        Check("roundtrip_matches_written_plan",
+              all(r["events_written"] == r["appends"] and r["appends"] > 0
+                  for r in suite),
+              f"min {min(r['appends'] for r in suite)} appends/seed, "
+              f"nothing lost or invented"),
+        Check("replay_is_ts_independent",
+              all(r["ts_invariant"] for r in suite),
+              "a different wall-clock folds to the identical state"),
+        Check("report_fully_deterministic",
+              r_a == r_b,
+              "no timings: same seed -> identical report dict"),
+        Check("seed_changes_the_trace",
+              [(e.type, json.dumps(e.payload, sort_keys=True)) for e in a_ev[:8]]
+              != [(e.type, json.dumps(e.payload, sort_keys=True)) for e in c_ev[:8]]
+              and r_a["ok"] and r_c["ok"],
+              "different seeds drive different random traces"),
+        Check("writer_restarts_resume_dense",
+              all(r["resumes"] > 0 for r in suite)
+              and all(len(_reopen(r["journal"])) == r["events_written"]
+                      for r in suite),
+              f"min {min(r['resumes'] for r in suite)} restarts/seed, "
+              f"all resumed dense"),
+        Check("zero_ops_honest",
+              r0["events_written"] == 0 and r0["ok"] and r0["dense"]
+              and r0["torn_injected"] == 0 and r0["checks_run"] >= 3,
+              "the zero state still verifies and reports"),
+        Check("render_deterministic_one_line",
+              rendered == render_property(run_property_trace(
+                  seed=suite[0]["seed"], n_ops=ops, workdir=wd))
+              and " OK" in rendered,
+              "same seed -> byte-identical verdict line"),
+        Check("cli_contract",
+              cli_main(["property", "--seeds", "31,32", "--ops", "35"]) == 0,
+              "exit 0 = zero violations across seeds"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -2593,6 +2679,7 @@ DRILLS = {
     "stats": _stats_drill,
     "bench": _bench_drill,
     "fuzz": _fuzz_drill,
+    "property": _property_drill,
 }
 
 

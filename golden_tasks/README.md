@@ -35,8 +35,9 @@ failing `harness_error` check. The matrix only grows.
 | 27 | run-stats | stats (12) | the fingerprint IS replay's counters (one source of truth), type counts match the raw stream and sum to the total, planned tool profile (4 calls, 1 failure) visible, per-tool pairing sums with the failed read_file named, think counted as a tool, wall-clock span reported but never graded, empty journal exposes the zero state, torn tails honest with prefix counted, CLI exits 0 report / 1 missing |
 | 28 | journal-bench | bench (12) | deterministic synthetic workload lands every planned event dense, three timed phases report honest wall-clock with positive rates, bytes re-statted from disk and read-back equals the plan, doubling the workload doubles the journal, zero-event bench exposes 0.0 rates instead of dividing by zero, render labels timings never-graded, structure stable across runs, no check ever asserts a timing value |
 | 29 | fuzz-harness | fuzz (12) | seeded attack schedule (torn tail every 7th op, middle tear every 11th) fires exactly per seed, torn tails isolate + truncate to a dense resume, middle tears raise and restore byte-identically, payloads round-trip including unicode, two reads fold to one replay state, reports carry no timings (same seed -> same verdict), zero-op run still verifies, CLI exits 0 iff zero violations |
+| 30 | property-suite | property (12) | invariants re-demanded after every step of a random trace (append / torn-tail / writer-restart lottery): density is exactly 0..n-1 after every step, every injected tear isolates and is strictly refused, truncation restores the exact pre-tear bytes byte-for-byte, the round-trip matches the written plan after every op, replay is ts-independent (a shifted wall-clock folds identically and semantic diff says same), reports deterministic (same seed -> same verdict), restarts resume dense, zero-op run verifies, CLI exits 0 iff zero violations |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **29 tasks, 330 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **30 tasks, 342 checks**.
 
 ## Adding a task (rules)
 
