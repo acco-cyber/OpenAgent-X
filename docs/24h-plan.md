@@ -351,6 +351,15 @@ pad with empty commits.
   verification-stack line + FAQ #17 + CHANGELOG [Unreleased] entry;
   eval floor 37 → 38; manifest 137 files
 
-- [ ] S29-E3 — per-drill explainers: every golden task gets its prose —
+- [x] S29-E3 — per-drill explainers: every golden task gets its prose —
   what the run does, what the checks grade, how it fails loudly — with a
   verify gate so the prose cannot drift from the matrix
+  ✅ `docs/explainers.md` walks all 38 golden tasks in the modules.md
+  lens (ten theme groups, three honest lines each: the run / the checks
+  grade with real check counts / loud failure), stems cross-checked
+  against `golden_tasks/` (38/38, zero unknown headings); verify.mjs
+  gate 8 welds the page to the matrix both directions (probe: typoed
+  heading → `EXPLAINERS MISSING` + `names unknown task`, exit 1,
+  restored green); README doc-map row + tutorial Step-10 link;
+  manifest 140 → 141; eval 38 tasks / 435 checks unchanged (docs-only
+  slot, count cannot regress), audit 0, doctor 6/6

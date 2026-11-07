@@ -6,6 +6,17 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — docs
+
+- Per-drill explainers: `docs/explainers.md` gives every golden task its
+  prose — what the run does, which invariants the checks grade (with the
+  real check counts), and what a loud failure looks like — grouped by the
+  job the code does, the same lens as `docs/modules.md`; the explainer
+  gate in `scripts/verify.mjs` keeps the page welded to the matrix (a
+  task without its entry fails the build; an entry without a task fails
+  it from the other direction); README's documentation map and tutorial
+  Step 10 link it; manifest 141 files.
+
 ### Added — presentation
 
 - README professional overhaul: a programmatic banner (rendered art, no
