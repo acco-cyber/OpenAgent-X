@@ -97,7 +97,12 @@ green.
   failing steps are data) + `snapshot.py` (`snapshot_at`/`travel`: pure
   prefix folds, torn-tail/prefix isolation, loud bounds errors); example 09
   live
-- [ ] S11-E3 — task 22 `prompt-layers` (include order, cycles, substitution)
+- [x] S11-E3 — task 22 `prompt-layers` (include order, cycles, substitution)
+  ✅ 22 tasks, 240 checks green; `PromptLayers` (depth-first include
+  expansion in declared order, include cycles reported with the full path,
+  diamond includes expand per path, missing layers/variables name
+  themselves, values stay literal so data never injects includes);
+  example 10 live
 - [ ] S12-E3 — task 23 `tools-jit` (JIT tool disclosure)
 - [ ] S13-E3 — task 24 `chaos` (combined faults in one run) + task 25 `hash-chain`
 
