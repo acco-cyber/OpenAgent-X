@@ -3231,6 +3231,135 @@ def _sweep_drill(task: dict) -> list:
     ]
 
 
+def _grep_drill(task: dict) -> list:
+    """Journal grep: searchable truth whose search view cannot leak.
+
+    Honest contract: matchers AND together (substring over the type+
+    payload JSON projection, exact event type, exact payload tool name,
+    a seq floor, a seq-ordered limit cap); the empty result is honest
+    (matched 0 with the scanned total named); torn tails are isolated
+    and never searched; a raw token hand-written into a journal at
+    runtime matches on disk (the disk is the truth) yet prints only the
+    redacted form — even when the pattern IS the raw token; output is
+    byte-deterministic with no timestamps; the CLI exits 0 on matches,
+    1 on no matches, 1 on a missing journal.
+    """
+    from .cli import main as cli_main
+    from .grep import grep_journal, render_grep
+
+    wd = _fresh_wd("grep")
+    events, result = _run_offline(task, wd)
+    exp = _expect(task)
+    jp = os.path.join(wd, "journal.jsonl")
+
+    by_type = grep_journal(jp, etype="tool_call")
+    type_hits = [m for m in by_type["matches"]]
+    n_calls = sum(1 for ev in events if ev.type == "tool_call")
+
+    by_tool = grep_journal(jp, tool="write_file")
+    tool_events = [ev for ev in events
+                   if (ev.payload or {}).get("tool") == "write_file"]
+
+    combined = grep_journal(jp, etype="tool_result", tool="write_file")
+    since = grep_journal(jp, etype="tool_call", since_seq=4, limit=1)
+    since_hits = [ev for ev in events
+                  if ev.type == "tool_call" and ev.seq >= 4]
+
+    nomatch = grep_journal(jp, pattern="zzz-not-in-this-journal")
+    render_empty = render_grep(nomatch)
+
+    # torn tail: isolated, never searched, only reported
+    torn_path = os.path.join(wd, "torn.jsonl")
+    with open(torn_path, "wb") as fh:
+        fh.write(open(jp, "rb").read() + b'{"seq": 99, "tu')
+    clean = grep_journal(jp, pattern="write")
+    torn = grep_journal(torn_path, pattern="write")
+
+    # defense in depth: a raw secret on disk never leaves the view
+    raw = "ghp_" + "A1b2C3d4E5" * 3 + "F9ab12"
+    leak = os.path.join(wd, "leak.jsonl")
+    lj = Journal(leak)
+    lj.start_run("grep-leak")
+    lj.append("thought", {"text": "token " + raw})
+    g1 = grep_journal(leak, pattern="token ")
+    g2 = grep_journal(leak, pattern=raw)
+
+    # deterministic render, no wall-clock in the output
+    r1 = render_grep(grep_journal(jp, etype="tool_call"))
+    r2 = render_grep(grep_journal(jp, etype="tool_call"))
+
+    # the CLI contract, stdout suppressed (the drill grades exit codes)
+    import io as _io
+    from contextlib import redirect_stdout as _rso
+    with _rso(_io.StringIO()):
+        c_hit = cli_main(["grep", jp, "--type", "tool_call"])
+        c_none = cli_main(["grep", jp, "--pattern", "zzz-not-in-this-journal"])
+        c_missing = cli_main(["grep", os.path.join(wd, "gone.jsonl")])
+        c_flag = cli_main(["grep", jp, "--tool", "write_file", "--limit", "1"])
+    with _rso(_io.StringIO()) as _buf:
+        cli_main(["grep", leak, "--pattern", "token "])
+        cli_out = _buf.getvalue()
+
+    return [
+        Check("run_stops_as_planned",
+              result.stop_reason == exp.get("stop_reason", "reply")
+              and result.reply == str(exp.get("reply", "")),
+              f"stop={result.stop_reason}"),
+        Check("filter_by_type",
+              by_type["matched"] == n_calls
+              and all('"type": "tool_call"' in m for m in type_hits),
+              f"{by_type['matched']} tool_call matches"),
+        Check("filter_by_tool_covers_pairs",
+              by_tool["matched"] == len(tool_events)
+              and all('"write_file"' in m for m in by_tool["matches"]),
+              f"{len(tool_events)} events carry tool=write_file"),
+        Check("pattern_hits_projection",
+              grep_journal(jp, pattern="write_file")["matched"] >= 2
+              and grep_journal(jp, pattern="vault_read")["matched"] >= 1,
+              "substring reaches tool names inside payload JSON"),
+        Check("combined_matchers_and",
+              combined["matched"] == 1
+              and '"type": "tool_result"' in combined["matches"][0]
+              and '"write_file"' in combined["matches"][0],
+              "etype + tool AND-ed to one tool_result"),
+        Check("since_seq_floor_and_limit_order",
+              since["matched"] == 1 and since_hits
+              and f'"seq": {since_hits[0].seq}' in since["matches"][0]
+              and since["matches"][0].index('"seq":') > since["matches"][0].index('"payload":'),
+              f"first kept match is seq {since_hits[0].seq if since_hits else '?'}"),
+        Check("limit_caps_in_seq_order",
+              c_flag == 0
+              and grep_journal(jp, tool="write_file", limit=1)["matched"] == 1
+              and grep_journal(jp, tool="write_file", limit=0)["matched"] == len(tool_events),
+              "limit 1 caps, limit 0 uncaps"),
+        Check("no_match_is_honest",
+              nomatch["matched"] == 0 and nomatch["matches"] == []
+              and nomatch["total"] == len(events)
+              and "no matches" in render_empty
+              and str(len(events)) in render_empty,
+              f"0/{len(events)} named, not fabricated"),
+        Check("torn_tail_isolated_not_searched",
+              torn["torn_tail"] is True and clean["torn_tail"] is False
+              and torn["matched"] == clean["matched"]
+              and torn["total"] == clean["total"],
+              "tear reported, dense prefix searched identically"),
+        Check("raw_token_redacted_even_when_searched",
+              g1["matched"] >= 1 and raw not in "".join(g1["matches"])
+              and "[REDACTED:github_token]" in g1["matches"][0]
+              and g2["matched"] == 1 and raw not in "".join(g2["matches"])
+              and g1["redactions"] >= 1,
+              "pattern IS the raw token: matches on disk, prints redacted"),
+        Check("deterministic_no_ts_output",
+              r1 == r2 and "ts" not in r1.splitlines()[1],
+              "same journal, same matchers, same bytes"),
+        Check("cli_contract",
+              c_hit == 0 and c_none == 1 and c_missing == 1
+              and raw not in cli_out
+              and "[REDACTED:github_token]" in cli_out,
+              "0 matched / 1 none / 1 missing; stdout redacted"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -3267,6 +3396,7 @@ DRILLS = {
     "dashboard": _dashboard_drill,
     "mermaid": _mermaid_drill,
     "sweep": _sweep_drill,
+    "grep": _grep_drill,
 }
 
 

@@ -308,7 +308,7 @@ never trusts its harness: exceptions fold into failing checks, and the
 check count only moves forward.
 
 ```sh
-python3 -m openagentx eval          # 36 tasks, all green or exit 1
+python3 -m openagentx eval          # 37 tasks, all green or exit 1
 python3 -m openagentx examples      # every offline demo, all OK
 ```
 

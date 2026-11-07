@@ -130,3 +130,4 @@ golden_tasks/36-release-sweep.json
 examples/23_release_sweep.py
 docs/retrospective.md
 openagentx/grep.py
+golden_tasks/37-grep-journal.json

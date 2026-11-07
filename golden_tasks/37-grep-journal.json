@@ -1,0 +1,18 @@
+{
+  "id": "37-grep-journal",
+  "title": "Journal grep: the journal is searchable truth whose search view cannot leak — matchers AND together (case-sensitive substring over the type+payload JSON projection reaching tool names inside payloads, exact event type, exact payload tool name covering tool_call and tool_result alike, a since_seq floor whose first kept match is the real first surviving seq, a limit cap kept in seq order with 0 = uncapped); the empty result is honest (matched 0, matches [], the scanned total named in the render — never fabricated); a torn tail is isolated, never searched, only reported, with the dense prefix searched identically; a raw token hand-written into a journal at runtime matches on disk (the disk is the truth) yet prints only [REDACTED:github_token] — even when the pattern IS the raw token itself; output is byte-deterministic with no wall-clock; the CLI exits 0 on matches, 1 on no matches, 1 on a missing journal, and its stdout is redacted",
+  "drill": "grep",
+  "task_text": "produce a journal worth searching",
+  "max_steps": 8,
+  "script": [
+    "{\"action\": {\"tool\": \"vault_read\", \"args\": {\"key\": \"github\"}}, \"thought\": \"read the secret\"}",
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"a.txt\", \"content\": \"hi\"}}, \"thought\": \"write it\"}",
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"search me\"}}, \"thought\": \"plan\"}",
+    "{\"reply\": \"searched\"}"
+  ],
+  "expect": {
+    "reply": "searched",
+    "tool_calls": 3,
+    "tool_fails": 0
+  }
+}
