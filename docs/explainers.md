@@ -253,3 +253,116 @@ over-deep chains are rejected, and substituted values stay literal so
 data can never inject an include. **Loud failure:** an include that
 executed out of order, or a value that smuggled an include in.
 
+## Reliability wrappers
+
+### 14-cache-replay — the cache never changes what happened
+**The run:** one script runs twice through a shared `ResponseCache`.
+**The checks grade (10):** exact repeats are served without touching the
+inner adapter (observable: inner call count stays flat), keys are
+canonical and order-sensitive, mutating the cached payload cannot poison
+a later hit, and the cached run's journal is identical to the fresh
+run's. **Loud failure:** a cache hit that changed the journal, or a key
+that collided on content order.
+
+### 15-hooks-deny — the deny lands before the tool does
+**The run:** a hook policy denies specific tool calls; the agent keeps
+working around the refusal. **The checks grade (11):** denied tools never
+execute (zero side effects), every decision — allows included — is
+journaled as a `hook` event, first match wins in the rule list, and the
+agent observes the denial and still produces a reply. **Loud failure:** a
+denied call that reached the registry, or an unjournaled decision.
+
+### 17-structured-output — repair with named notes, refuse with named reasons
+**The run:** messy LLM replies (fences, literals, trailing commas, smart
+quotes, prose around JSON) go through `parse_json_loose`; hopeless input
+and schema violations follow. **The checks grade (11):** every repair
+produces its exact note list, hopeless input raises instead of guessing,
+the schema rejects missing keys, wrong types, and `True` posing as an
+integer. **Loud failure:** a repair that was silently wrong, or a bool
+that slipped through an integer gate.
+
+### 18-retry-backoff — retries on a schedule, scars on the record
+**The run:** a fault-injected adapter fails transiently; `RetryLLM`
+backs off on a deterministic exponential schedule. **The checks grade
+(12):** recovery succeeds on the planned attempt, every attempt is
+logged, give-up raises loudly with the last fault attached, plan bugs are
+never retried, and a retried run journals exactly like a healthy one
+(retries are invisible to the event stream). **Loud failure:** a retry
+that leaked into the journal, or a give-up that pretended success.
+
+### 19-circuit-breaker — trip, fast-fail, probe, and mean it
+**The run:** consecutive real failures trip the breaker; the open circuit
+then rejects calls; after cooldown a probe decides the next state.
+**The checks grade (12):** tripping surfaces the original fault (not a
+generic error), an open circuit fast-fails without consulting the inner
+adapter, cooldown rejections are exact, and the probe closes the circuit
+or re-opens it; a runner behind a broken breaker stops
+`model_unavailable` without fabricating a reply. **Loud failure:** a
+half-open state that hid the original fault or called the inner anyway.
+
+### 23-tools-jit — visibility is journaled, refusals have zero side effects
+**The run:** a JIT-disclosure runner starts with a hidden tool set;
+keyword rules disclose tools mid-run via `tools_expand`. **The checks
+grade (14):** turn-zero visibility is journaled before any step,
+undisclosed calls are refused with one `tool_hidden` event and zero side
+effects (no tool_call, no registry hit), disclosure lands as an ordinary
+journaled call, every visibility change records the full set and the
+additions, keyword matching is case-insensitive, capped disclosures
+truncate sorted without hiding the control plane, and re-runs are
+event-for-event identical. **Loud failure:** a hidden tool that executed,
+or a disclosure that happened off the record.
+
+## Views & analytics
+
+### 26-journal-diff — the diff that knows wall-clock is not truth
+**The run:** two runs of one script, plus deliberately drifted variants,
+go through the event-level diff. **The checks grade (12):** two runs of
+the same script are semantically SAME (wall-clock ignored), the self-diff
+is the zero diff, strict mode diverges at seq 0 over a single edited
+timestamp, an edited reply localizes at its seq with both tails verbatim,
+deletions and additions land in their named sections, torn tails isolate
+per side, and renders are byte-deterministic. **Loud failure:** a diff
+that called a real drift "same", or blamed the clock for it.
+
+### 27-run-stats — the fingerprint is replay's counters, verbatim
+**The run:** a real run's journal is folded and fingerprinted. **The
+checks grade (12):** the fingerprint takes every counter from `replay()`
+itself so stats can never disagree with the fold, type counts match the
+raw stream and sum to the total, the planned tool profile (calls, the
+one planned failure, think counted as a tool) is visible, the per-tool
+table pairs calls with ok/fail, the wall-clock span is reported but never
+graded, and an empty journal exposes the zero state. **Loud failure:** a
+counter that only a second computation path could produce.
+
+### 28-journal-bench — honest timings, never graded
+**The run:** a deterministic synthetic workload runs through a real
+Journal in three timed phases. **The checks grade (12):** every planned
+event lands dense, the three phases report honest single-run wall-clock
+with positive rates, bytes re-statted from disk match the plan, doubling
+the workload doubles the journal, a zero-event bench reports 0.0 rates
+instead of dividing by zero, and no check ever asserts a timing value.
+**Loud failure:** a bench that lied about its own structure — timings
+themselves are reported, never asserted.
+
+### 33-dashboard — one HTML file, one source of numbers
+**The run:** a run is rendered to the v2 HTML dashboard, including a
+probe journal with a hand-written raw token. **The checks grade (12):**
+the dashboard's counters are taken from `run_stats` (which takes
+replay's) so dashboard/stats/replay never disagree, type counts match the
+raw stream, the planned tool profile lands in the per-tool table with
+read_file named, renders are byte-identical with a stable sha256, the
+HTML is self-contained (doctype, inline style, zero external URLs, zero
+scripts), the raw hand-written token is re-redacted by the view, and
+empty/torn states render honestly. **Loud failure:** a dashboard number
+that no journal fold could produce, or a leak through the timeline.
+
+### 34-mermaid — the trace you can paste into a diagram
+**The run:** a real run's journal renders to Mermaid. **The checks grade
+(11):** the first line is exactly `flowchart TD`, every event gets one
+zero-padded node with a quote-escaped, newline-stripped label, spine
+edges chain every consecutive pair, the planned failure carries the fail
+class while replies and run ends carry say, extension event types render
+through the generic path, re-renders are byte-identical, and torn tails
+diagram the dense prefix only. **Loud failure:** a node that escaped its
+label or a diagram that imagined an event.
+
