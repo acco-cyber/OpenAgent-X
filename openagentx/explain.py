@@ -80,7 +80,6 @@ def render_explain(r: dict) -> str:
             f"explainer: no prose entry for {r['id']} — every golden task "
             "must have one (the verify gate fails the build without it)")
     return "\n".join(lines).rstrip() + "\n"
-    return "\n".join(lines).rstrip() + "\n"
 
 
 def explain_all(tasks_dir: str = "golden_tasks",

@@ -189,6 +189,25 @@ example, and inside the eval thread pool that swap races other drills'
 prints and redirects — a child process has one thread and its own
 stdout, so comparisons stay exact and no drill disturbs another.
 
+### attest
+The release attestation — one command, one artifact, every gate.
+`collect_gates(root)` runs five gates in fixed order (doctor, audit,
+doctests, manifest, matrix) and `aggregate()` folds them into one
+verdict; `oax attest [root] [--json PATH]` renders the human card
+(exit 0 green / 1 any gate red) and optionally writes the machine
+artifact. Invariants: a gate that crashes is a red gate carrying the
+real exception — the attestation never crashes on a gate and never
+fabricates green; an empty gate list is never green; the human render
+carries counters only (no hash, no path, no wall-clock — byte-identical
+across calls), while the machine artifact (`sort_keys` JSON) carries
+the root path and the tree hash, so a byte-compare means the tree or a
+verdict moved; the gates are root-parametric — the same code attests
+the real repository and any probe tree (package-mode doctest imports
+when the root is the running package, bare-file mode otherwise, and a
+tree with no package is a loud red, never a skip); the manifest gate
+demands the tree hash identically twice. Graded from the matrix in a
+fresh child interpreter, mirroring the doctest engine's own discipline.
+
 ## Reliability
 
 ### retry

@@ -1,6 +1,6 @@
 """oax — the OpenAgent-X command line.
 
-Subcommands: eval | doctor | doctest | audit | examples | explain | trace | report | run |
+Subcommands: eval | doctor | doctest | attest | audit | examples | explain | trace | report | run |
 pack | sbom | recall | compact | diff | stats | grep | replay | bench | fuzz |
 property | pack2 | graph | dashboard | mermaid. Every subcommand is offline
 and stdlib-only; exit codes are contracts (0 = green, 1 = anything else,
@@ -325,6 +325,18 @@ def _cmd_replay(args) -> int:
     return 0
 
 
+def _cmd_attest(args) -> int:
+    """One artifact binding every gate (exit 1 = any gate red)."""
+    from .attest import artifact_json, collect_gates, render
+
+    att = collect_gates(args.root or ".")
+    print(render(att), end="")
+    if getattr(args, "json", ""):
+        with open(args.json, "w", encoding="utf-8") as fh:
+            fh.write(artifact_json(att))
+    return 0 if att["ok"] else 1
+
+
 def _cmd_explain(args) -> int:
     """One golden task's spec + its prose explainer (exit 1 = missing)."""
     from .explain import explain_all, explain_task, render_explain, \
@@ -425,6 +437,16 @@ def build_parser() -> argparse.ArgumentParser:
     dc.add_argument("--min-examples", type=int, default=0,
                     help="fail unless at least N docstring examples exist")
     dc.set_defaults(fn=_cmd_doctest)
+
+    at = sub.add_parser("attest",
+                        help="one artifact binding every gate "
+                             "(exit 1 = any gate red)")
+    at.add_argument("root", nargs="?", default=".",
+                    help="tree to attest (default: the working tree)")
+    at.add_argument("--json", default="", metavar="PATH",
+                    help="also write the machine artifact as "
+                         "byte-deterministic JSON")
+    at.set_defaults(fn=_cmd_attest)
 
     a = sub.add_parser("audit", help="secret-scan a tree")
     a.add_argument("root", nargs="?", default=".")
