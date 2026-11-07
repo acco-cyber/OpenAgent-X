@@ -126,7 +126,16 @@ green.
   example 12 live
 
 ### Phase 2 — Power tooling & hardening
-- [ ] S14-E3 — `oax diff` (event-level journal diff) + `oax stats` (run analytics)
+- [x] S14-E3 — `oax diff` (event-level journal diff) + `oax stats` (run analytics)
+  ✅ 27 tasks, 306 checks green; `jdiff.py` (semantic projection ignores
+  wall-clock ts, strict mode compares every stored byte, longest common
+  prefix names diverged_at, removed/added tails carry real payloads, torn
+  tails isolate per side, byte-deterministic render, `oax diff` exits 0
+  same / 1 different) + `stats.py` (fingerprint takes every counter from
+  replay() itself so the two views never disagree, adds per-type counts,
+  per-tool call/ok/fail pairing, torn/density flags and the wall-clock
+  span reported but never graded); example 13 live; examples count now
+  thirteen
 - [ ] S15-E3 — `oax bench` (journal throughput microbench) + fuzz harness (seeded)
 - [ ] S16-E3 — property suite (torn-tail/replay/density under random traces)
 - [ ] S17-E3 — pack v2 (signed manifest) + sbom v2 (dependency graph)
