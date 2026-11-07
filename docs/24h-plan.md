@@ -74,7 +74,11 @@ green.
   ✅ 13 tasks, 131 checks green; `MemoryLite` + `oax recall`, `compact.py` +
   `oax compact` (tool pairs → `tool_fold`, torn sources refused); example 05
   live; examples count now five
-- [ ] S07-E3 — task 14 `cache` (prompt-hash response cache) + task 15 `hooks` (deny policy)
+- [x] S07-E3 — task 14 `cache` (prompt-hash response cache) + task 15 `hooks` (deny policy)
+  ✅ 15 tasks, 152 checks green; `ResponseCache`/`CachedLLM` (exact-prompt
+  hits, inner adapter saved, journals identical) + `HookPolicy` runner
+  integration (every decision journaled as `hook`, denied calls never
+  execute); example 06 live
 - [ ] S08-E3 — task 16 `parallel-fanout` + task 17 `structured-output` (JSON repair)
 - [ ] S09-E3 — task 18 `retry-backoff` + task 19 `circuit-breaker`
 - [ ] S10-E3 — task 20 `planner-executor` + task 21 `snapshot-travel`
