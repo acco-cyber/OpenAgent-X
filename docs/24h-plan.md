@@ -280,7 +280,19 @@ green.
   release candidate; manifest carries CHANGELOG.md + example 22
 
 ### Phase 4 — Release
-- [ ] S25-E3 — final regression sweep + release 1.0.0 + retrospective
+- [x] S25-E3 — final regression sweep + release 1.0.0 + retrospective
+  ✅ 36 tasks, 411 checks green; the release-sweep drill (golden task 36,
+  12 checks) re-demands the core invariants on one real run: counters one
+  source of truth, views byte-identical, self-diff the zero diff, raw
+  runtime tokens re-redacted by both views, chained journals seal, repo
+  audits 0, doctor 6/6, and `__version__` must equal the top CHANGELOG
+  entry (enforced release-metadata sync); `__version__` 1.0.0-rc1 → 1.0.0
+  with the CHANGELOG 1.0.0 entry recording the release engineering
+  honestly; example 23 performs the sweep's story (and example 22's
+  matrix assert moved to a grow-only floor of 36);
+  `docs/retrospective.md` reviews the sprint with every number gated;
+  README badge/counts 36 tasks / 411 checks, gallery and documentation
+  map rows live; eval floor 35 → 36 in verify.mjs; manifest 131 files
 
 If slots run out before 250 commits, continue with stretch slots (S26-E3+):
 per-drill explainers, `oax replay --from`, `oax grep`, more examples — never
