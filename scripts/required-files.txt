@@ -105,3 +105,16 @@ examples/21_replay_diff.py
 golden_tasks/35-budget-gallery.json
 docs/modules.md
 docs/tutorial.md
+docs/adr/README.md
+docs/adr/0001-journal-is-the-truth.md
+docs/adr/0002-stdlib-only-offline.md
+docs/adr/0003-redaction-defense-in-depth.md
+docs/adr/0004-scripted-adapters.md
+docs/adr/0005-honest-golden-drills.md
+docs/adr/0006-stop-reasons-control-plane.md
+docs/adr/0007-views-from-replay.md
+docs/adr/0008-hash-chained-journals.md
+docs/adr/0009-supply-chain-proofs.md
+docs/adr/0010-docs-that-cannot-drift.md
+docs/glossary.md
+docs/faq.md

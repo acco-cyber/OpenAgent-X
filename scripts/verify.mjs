@@ -116,5 +116,25 @@ if (existsSync(join(root, 'docs/modules.md')) && existsSync(join(root, 'docs/tut
   }
 } else { console.error('MISSING docs/modules.md + docs/tutorial.md'); fail++; }
 
+// 5) the ADR pack: every record structurally complete and indexed
+const adrDir = join(root, 'docs/adr');
+if (existsSync(adrDir)) {
+  const recs = readdirSync(adrDir).filter(f => /^\d{4}-.*\.md$/.test(f)).sort();
+  if (recs.length < 10) {
+    console.error(`ADR PACK REGRESSED: ${recs.length} records < 10`); fail++;
+  }
+  const index = existsSync(join(adrDir, 'README.md'))
+    ? readFileSync(join(adrDir, 'README.md'), 'utf8') : '';
+  for (const f of recs) {
+    const txt = readFileSync(join(adrDir, f), 'utf8');
+    for (const sec of ['## Status', '## Context', '## Decision', '## Consequences']) {
+      if (!txt.includes(sec)) { console.error('ADR INCOMPLETE', f, `(${sec})`); fail++; }
+    }
+    if (!index.includes(`(${f})`)) {
+      console.error('ADR NOT INDEXED', f); fail++;
+    }
+  }
+} else { console.error('MISSING docs/adr/'); fail++; }
+
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);
