@@ -7,13 +7,15 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (25 tasks / 282 checks)
+oax eval      # run every golden task drill, all green or exit 1   (27 tasks / 306 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
 oax sbom .    # stdlib bill of materials — purity verdict is computed (exit 1 if not pure)
 oax recall    # TF-IDF memory over past-run journals (read-only, deterministic)
 oax compact   # fold a journal into a denser copy; original never touched
+oax diff      # event-level journal diff: 0 = semantically same, 1 = different
+oax stats     # deterministic run analytics — replay's own counters, plus tools/type counts
 oax examples  # execute every offline example end-to-end
 ```
 
@@ -23,7 +25,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # twelve runnable end-to-end demos
+python3 -m openagentx examples # thirteen runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -95,6 +97,16 @@ python3 -m openagentx examples # twelve runnable end-to-end demos
   editing, deleting or reordering any line is detected and localized,
   torn tails isolate unsealable, plain journals verify honestly as
   `chained: false`, and `seal` refuses anything it cannot verify.
+- **Event-level diff** — `oax diff A B` compares two journals where
+  wall-clock `ts` is noise (semantic mode) or data (`--strict`): the
+  longest common prefix names `diverged_at`, removed/added tails carry
+  real payloads, torn tails isolate per side, renders are
+  byte-deterministic, and the exit code is a contract (0 = same).
+- **Run analytics** — `oax stats` is a numeric fingerprint that takes
+  every counter replay() already derives (one source of truth, two views
+  can never disagree) and adds per-type counts, per-tool call/ok/fail
+  pairing, torn-tail and density flags, and the wall-clock span —
+  reported honestly, never graded.
 
 ## Why it matters
 

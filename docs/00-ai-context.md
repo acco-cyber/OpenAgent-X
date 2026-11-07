@@ -115,7 +115,17 @@ chain.py       hash-chained traces: ChainedJournal commits chain
                isolate unsealable; plain journals verify chained:false;
                seal() refuses anything it cannot verify; AgentRunner takes
                journal_cls (default byte-for-byte unchanged)
-cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact
+jdiff.py       event-level journal diff: semantic projection ignores
+               wall-clock ts (strict mode compares every stored byte);
+               longest common prefix names diverged_at; removed/added tails
+               carry real payloads; torn tails isolate per side;
+               byte-deterministic render; oax diff exits 0 same / 1 different
+stats.py       run analytics fingerprint: counters taken from replay()
+               itself so the two views never disagree; adds per-type event
+               counts, per-tool call/ok/fail pairing, torn/density flags
+               and the wall-clock span (reported, never graded);
+               sorted keys so the same file always renders byte-identically
+cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact|diff|stats
 ```
 
 ## Invariants (never break)
