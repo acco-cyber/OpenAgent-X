@@ -431,6 +431,26 @@ pad with empty commits.
   grades it all
   ✅ 26 new examples land on llm (scripted turns + loud qualified
   exhaustion), prompt (include-then-substitute, missing-var and cycle
+  raise with the path), retry (plain-math schedule), jit (frozen rule
+  repr, control tool), hooks (first-match wins, wildcard, empty
+  allows), chain (genesis 64 zeros, empty head), snapshot (one open
+  run, ZERO_STATE equality), tools (static sorted registry) — 53
+  examples / 17 modules, drill floor pinned 9/27 -> 17/53; first-run
+  catches fixed at the root: doctest qualifies user-defined exceptions
+  with their module path (llm's ScriptExhausted expected in full), one
+  announce landed a commit late with a correction note; floor flags
+  --min-modules/--min-examples make the bar operator-grade (drill grows
+  to 13 checks, matrix 40 tasks / 460 checks); the slot also caught and
+  fixed a real latent eval flake at the root — the doctest engine's
+  process-global sys.stdout swap raced the parallel pool (explain lost
+  captured lines, doctests saw foreign prints; 3/16 loops red) — the
+  engine now grades in a fresh child interpreter and the five
+  redirecting drills hold CLI_STDOUT_LOCK; proof 0 failures in 30 full
+  matrix runs across both modes + 6/6 examples suites; README gallery
+  row corrected in this commit (the (d) message claimed it a commit
+  early — no history rewritten); audit 0, doctor 6/6
+  ✅ 26 new examples land on llm (scripted turns + loud qualified
+  exhaustion), prompt (include-then-substitute, missing-var and cycle
   both raise with the path), retry (plain-math schedule), jit (frozen
   rule repr, control tool), hooks (first-match wins, wildcard,
   empty-allows), chain (genesis 64 zeros, empty head), snapshot
