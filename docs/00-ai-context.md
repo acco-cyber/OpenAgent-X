@@ -125,7 +125,19 @@ stats.py       run analytics fingerprint: counters taken from replay()
                counts, per-tool call/ok/fail pairing, torn/density flags
                and the wall-clock span (reported, never graded);
                sorted keys so the same file always renders byte-identically
-cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact|diff|stats
+bench.py       journal throughput microbench: deterministic synthetic
+               workload (fixed payload shapes indexed by position) through
+               a real Journal; three timed phases (append, read-back,
+               replay fold) reported as honest single-run wall-clock that
+               is never graded; zero-event bench reports 0.0 rates
+fuzz.py        seeded fuzz harness: random.Random(seed) drives unicode/
+               nested payloads on a fixed attack schedule (torn-tail
+               garbage every 7th op, middle-tear splice every 11th);
+               isolation, clean truncation, loud strict-reader failures,
+               byte-identical restores, full round-trips and replay
+               determinism; no timings so the same seed always yields
+               the same verdict; oax fuzz exits 0 iff zero violations
+cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact|diff|stats|bench|fuzz
 ```
 
 ## Invariants (never break)

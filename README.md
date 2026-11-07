@@ -7,7 +7,7 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (27 tasks / 306 checks)
+oax eval      # run every golden task drill, all green or exit 1   (29 tasks / 330 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
@@ -16,6 +16,8 @@ oax recall    # TF-IDF memory over past-run journals (read-only, deterministic)
 oax compact   # fold a journal into a denser copy; original never touched
 oax diff      # event-level journal diff: 0 = semantically same, 1 = different
 oax stats     # deterministic run analytics — replay's own counters, plus tools/type counts
+oax bench     # journal throughput microbench — honest wall-clock, never graded
+oax fuzz      # seeded fuzz over the journal contract (torn tails, middle tears)
 oax examples  # execute every offline example end-to-end
 ```
 
@@ -25,7 +27,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # thirteen runnable end-to-end demos
+python3 -m openagentx examples # fourteen runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -107,6 +109,16 @@ python3 -m openagentx examples # thirteen runnable end-to-end demos
   can never disagree) and adds per-type counts, per-tool call/ok/fail
   pairing, torn-tail and density flags, and the wall-clock span —
   reported honestly, never graded.
+- **Throughput you can measure** — `oax bench` drives a deterministic
+  synthetic workload through a real Journal and reports append / read /
+  replay rates as single-run wall-clock: the numbers are observations,
+  the structure (everything lands dense, bytes match the plan) is the
+  contract.
+- **Fuzzed invariants** — `oax fuzz` attacks the journal contract with a
+  seeded schedule of torn tails and middle tears: isolation, clean
+  truncation, loud strict-reader failures, byte-identical restores, full
+  round-trips (unicode included) and replay determinism — with no
+  timings in the report, the same seed always yields the same verdict.
 
 ## Why it matters
 
