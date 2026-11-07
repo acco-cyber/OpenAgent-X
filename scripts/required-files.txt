@@ -102,3 +102,4 @@ examples/18_budget_guard.py
 examples/19_cache_hits.py
 examples/20_hooks_deny.py
 examples/21_replay_diff.py
+golden_tasks/35-budget-gallery.json

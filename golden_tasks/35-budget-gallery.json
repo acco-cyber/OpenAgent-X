@@ -1,0 +1,22 @@
+{
+  "id": "35-budget-gallery",
+  "title": "Budget-guard gallery story: a cap of 3 tool calls lets think, calc and the first write_file execute as exactly the pre-budget prefix, the second write_file attempt is refused BEFORE the registry with the budget event naming it (kind tool_calls, used=cap=3, rejected_tool write_file), the cap is recorded at run_start, the final run_end carries stop_reason budget with the cap, no reply is fabricated, the capped attempt still counts as a step (4), the scripted reply tail stays unconsumed (budget is not script exhaustion), and both journals reopen dense",
+  "drill": "budget",
+  "task_text": "guard a gallery run with a three-call budget",
+  "max_steps": 8,
+  "max_tool_calls": 3,
+  "run_id": "budget-gallery",
+  "script": [
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"gallery budget\"}}, \"thought\": \"plan\"}",
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"21*2\"}}, \"thought\": \"compute\"}",
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"note.txt\", \"text\": \"within cap\"}}, \"thought\": \"persist\"}",
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"note2.txt\", \"text\": \"over cap\"}}, \"thought\": \"this one is refused\"}",
+    "{\"reply\": \"never reached\"}"
+  ],
+  "expect": {
+    "stop_reason": "budget",
+    "steps": 4,
+    "tool_calls": 3,
+    "rejected_tool": "write_file"
+  }
+}
