@@ -119,3 +119,8 @@ docs/adr/0010-docs-that-cannot-drift.md
 docs/glossary.md
 docs/faq.md
 .github/workflows/ci.yml
+.github/ISSUE_TEMPLATE/bug_report.md
+.github/ISSUE_TEMPLATE/config.yml
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
