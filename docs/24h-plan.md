@@ -319,5 +319,20 @@ pad with empty commits.
   manifest 134 files; task 37's write_file now uses the real signature
   (path+text) so its expectations are truly observed
 
-- [ ] S27-E3 — `oax replay --from`: the journal folds from the middle,
+- [x] S27-E3 — `oax replay --from`: the journal folds from the middle,
   honestly
+  ✅ 38 tasks, 435 checks green; `replay.py` folds every event with
+  `seq >= N` from zero at that point — bounds honest (0..max seq, an
+  empty journal exposes only the zero state at 0, out-of-bounds raises
+  ValueError, never silently clamped), density required (a gapped
+  journal raises, never folds), additivity claimed only where true
+  (11 monotone counters == whole − prefix) and never where false
+  (clamped runs_open; window-local last_reply/final_stop), from max
+  seq folds exactly one event, torn tails invisible + reported, the
+  state view renders through the redaction engine — a runtime-assembled
+  raw token on disk never leaves it even inside last_reply; the render
+  names its window, byte-deterministic, no timestamps; CLI 0 folded /
+  1 missing / 2 bad bounds with redacted stdout; golden task 38
+  (12 checks) + example 25 + module guide + CLI-table row + tutorial
+  verification-stack line + FAQ #17 + CHANGELOG [Unreleased] entry;
+  eval floor 37 → 38; manifest 137 files
