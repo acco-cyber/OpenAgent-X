@@ -327,7 +327,13 @@ def _cmd_replay(args) -> int:
 
 def _cmd_explain(args) -> int:
     """One golden task's spec + its prose explainer (exit 1 = missing)."""
-    from .explain import explain_task, render_explain
+    from .explain import explain_all, explain_task, render_explain, \
+        render_explain_index
+
+    if getattr(args, "all", False):
+        idx = explain_all()
+        print(render_explain_index(idx), end="")
+        return 0 if idx["ok"] else 1
 
     arg = args.task
     if os.path.exists(arg):
@@ -535,7 +541,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     xp = sub.add_parser("explain",
                         help="one golden task's spec + its prose explainer")
-    xp.add_argument("task", help="task id (NN-slug) or path to its JSON spec")
+    xp.add_argument("--all", action="store_true",
+                    help="render the whole matrix index "
+                         "(exit 1 = any task lacks prose)")
+    xp.add_argument("task", nargs="?", default="",
+                    help="task id (NN-slug) or path to its JSON spec")
     xp.set_defaults(fn=_cmd_explain)
 
     bn = sub.add_parser("bench", help="journal throughput microbench (synthetic, timed)")

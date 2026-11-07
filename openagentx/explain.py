@@ -80,3 +80,54 @@ def render_explain(r: dict) -> str:
             f"explainer: no prose entry for {r['id']} — every golden task "
             "must have one (the verify gate fails the build without it)")
     return "\n".join(lines).rstrip() + "\n"
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def explain_all(tasks_dir: str = "golden_tasks",
+                explainers_path: str = EXPLAINERS_PATH) -> dict:
+    """The whole matrix at a glance: every task's prose coverage, honest.
+
+    Rows are sorted by task id (the matrix's own order, spec filenames
+    as fallback); a task without prose is a row with ``has_prose: False``
+    — the index never fabricates coverage, and the CLI exits 1 while any
+    row lacks prose. An unreadable spec is a loud ``error`` row, never a
+    silent skip.
+    """
+    prose_map = load_explainers(explainers_path)
+    rows: list = []
+    if os.path.isdir(tasks_dir):
+        for fname in sorted(os.listdir(tasks_dir)):
+            if not fname.endswith(".json"):
+                continue
+            path = os.path.join(tasks_dir, fname)
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    task = json.load(fh)
+            except (json.JSONDecodeError, OSError) as e:
+                rows.append({"id": fname[:-5], "drill": "",
+                             "title": "", "has_prose": False,
+                             "error": f"{type(e).__name__}: {e}"})
+                continue
+            stem = str(task.get("id") or fname[:-5])
+            rows.append({"id": stem,
+                         "drill": str(task.get("drill", "")),
+                         "title": str(task.get("title", "")),
+                         "has_prose": stem in prose_map})
+    covered = sum(1 for r in rows if r["has_prose"])
+    return {"rows": rows, "tasks": len(rows), "with_prose": covered,
+            "ok": bool(rows) and covered == len(rows)}
+
+
+def render_explain_index(idx: dict) -> str:
+    """Deterministic, timestamp-free render of the matrix index."""
+    verdict = "OK" if idx["ok"] else "PROSE MISSING"
+    lines = [
+        f"explain --all: {idx['tasks']} tasks, "
+        f"{idx['with_prose']} with prose — {verdict}",
+    ]
+    for r in idx["rows"]:
+        mark = "prose" if r["has_prose"] else "NO-PROSE"
+        title = r["title"] or ("(unreadable: " + r["error"] + ")"
+                               if r.get("error") else "(untitled)")
+        lines.append(f"  {r['id']:<22} {r['drill']:<12} [{mark}] {title}")
+    return "\n".join(lines) + "\n"

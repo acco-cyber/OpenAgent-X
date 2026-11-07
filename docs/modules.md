@@ -162,7 +162,10 @@ section from `docs/explainers.md`; the render is byte-deterministic
 with no wall-clock; a task without prose is reported loudly
 (`has_prose: False` plus a line naming the verify gate that forbids it)
 — never papered over; a missing spec is a loud `FileNotFoundError`/exit
-1, not an empty report.
+1, not an empty report; `explain_all()` + `oax explain --all` render
+the whole matrix index (sorted rows, honest `NO-PROSE` marks, an
+unreadable spec is a loud error row) and exit 1 while any task lacks
+prose — coverage is reported, never fabricated.
 
 ### doctests
 Docstring self-checks — the examples are graded, not decorative.
