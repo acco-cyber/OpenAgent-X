@@ -47,3 +47,8 @@ openagentx/hooks.py
 golden_tasks/14-cache-replay.json
 golden_tasks/15-hooks-deny.json
 examples/06_cache_hooks.py
+openagentx/fanout.py
+openagentx/structured.py
+golden_tasks/16-parallel-fanout.json
+golden_tasks/17-structured-output.json
+examples/07_fanout_structured.py

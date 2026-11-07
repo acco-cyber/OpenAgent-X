@@ -79,7 +79,11 @@ green.
   hits, inner adapter saved, journals identical) + `HookPolicy` runner
   integration (every decision journaled as `hook`, denied calls never
   execute); example 06 live
-- [ ] S08-E3 — task 16 `parallel-fanout` + task 17 `structured-output` (JSON repair)
+- [x] S08-E3 — task 16 `parallel-fanout` + task 17 `structured-output` (JSON repair)
+  ✅ 17 tasks, 177 checks green; `FanoutRunner` (N real branch agents on
+  their own journals, failures recorded as data, structural determinism) +
+  `structured.py` (`parse_json_loose` repair notes, `validate_schema` lite
+  subset where True is never an integer); example 07 live
 - [ ] S09-E3 — task 18 `retry-backoff` + task 19 `circuit-breaker`
 - [ ] S10-E3 — task 20 `planner-executor` + task 21 `snapshot-travel`
 - [ ] S11-E3 — task 22 `prompt-layers` (include order, cycles, substitution)
