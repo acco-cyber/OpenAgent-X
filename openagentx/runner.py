@@ -13,6 +13,7 @@ import uuid
 from dataclasses import dataclass
 
 from .events import Journal
+from .hooks import ALLOW, DENY
 from .llm import LLMUnavailable, ScriptExhausted, ScriptParseError
 from .redact import redact_obj
 from .tools import ToolRegistry, jsonable
@@ -42,6 +43,7 @@ class AgentRunner:
         max_tool_calls: int = 0,
         workdir: str = ".",
         run_id: str = "",
+        hooks=None,
     ):
         self.llm = llm
         self.tools = tools
@@ -50,6 +52,7 @@ class AgentRunner:
         self.max_tool_calls = int(max_tool_calls)
         self.workdir = workdir
         self._fixed_run_id = run_id
+        self.hooks = hooks
 
     def run(self, task: str) -> RunResult:
         run_id = self._fixed_run_id or uuid.uuid4().hex[:12]
@@ -119,6 +122,18 @@ class AgentRunner:
                                      "cap": self.max_tool_calls})
                 stop_reason = "budget"
                 break
+
+            # hook policy: every decision is journaled; a denied call never
+            # reaches the registry (no tool_call, no tool_result, no effects)
+            decision, deny_reason = ALLOW, ""
+            if self.hooks is not None:
+                decision, deny_reason = self.hooks.decide(tool, args)
+                j.append("hook", {"tool": tool, "decision": decision,
+                                  "reason": deny_reason})
+            if decision == DENY:
+                history.append({"role": "user",
+                                "content": f"DENY {tool}: {deny_reason}"})
+                continue
 
             jp, n_red = redact_obj({"tool": tool, "args": args})
             j.append("tool_call", jp)
