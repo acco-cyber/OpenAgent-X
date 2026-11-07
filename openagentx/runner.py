@@ -44,6 +44,7 @@ class AgentRunner:
         workdir: str = ".",
         run_id: str = "",
         hooks=None,
+        disclosure=None,
     ):
         self.llm = llm
         self.tools = tools
@@ -53,6 +54,9 @@ class AgentRunner:
         self.workdir = workdir
         self._fixed_run_id = run_id
         self.hooks = hooks
+        # optional JIT disclosure policy (see jit.py): None keeps the loop
+        # byte-for-byte unchanged — no extra events, no refusals
+        self.disclosure = disclosure
 
     def run(self, task: str) -> RunResult:
         run_id = self._fixed_run_id or uuid.uuid4().hex[:12]
@@ -66,6 +70,15 @@ class AgentRunner:
 
         j.append("run_start", {"task": str(task), "max_steps": self.max_steps,
                                "max_tool_calls": self.max_tool_calls})
+
+        # JIT disclosure: journal the turn-zero visible set, then keep the
+        # journaled set in lockstep with the policy after every observation
+        last_disclosed: list = []
+        if self.disclosure is not None:
+            initial_added = self.disclosure.update(str(task))
+            last_disclosed = self.disclosure.visible_names()
+            j.append("tool_disclose", {"step": 0, "disclosed": list(last_disclosed),
+                                       "added": list(initial_added)})
 
         stop_reason = "max_steps"
         while steps < self.max_steps:
@@ -123,6 +136,17 @@ class AgentRunner:
                 stop_reason = "budget"
                 break
 
+            # JIT disclosure: a hidden tool is refused before the hook layer
+            # and before any execution — one journaled event, zero side
+            # effects, and the observation tells the model the escape hatch
+            if self.disclosure is not None and not self.disclosure.check(tool):
+                j.append("tool_hidden", {"tool": tool, "step": steps - 1,
+                                         "reason": "not disclosed"})
+                history.append({"role": "user",
+                                "content": (f"HIDDEN {tool}: tool is not disclosed; "
+                                            "call tools_expand to request it")})
+                continue
+
             # hook policy: every decision is journaled; a denied call never
             # reaches the registry (no tool_call, no tool_result, no effects)
             decision, deny_reason = ALLOW, ""
@@ -153,6 +177,18 @@ class AgentRunner:
                 "role": "user",
                 "content": "OBS " + jsonable(payload.get("result", payload.get("error"))),
             })
+
+            # JIT disclosure: observations may unlock tool groups, and an
+            # expansion request made the target visible mid-call — resync
+            # the journaled visibility with the policy
+            if self.disclosure is not None:
+                self.disclosure.update(history[-1]["content"])
+                cur = self.disclosure.visible_names()
+                if cur != last_disclosed:
+                    j.append("tool_disclose", {
+                        "step": steps - 1, "disclosed": cur,
+                        "added": sorted(set(cur) - set(last_disclosed))})
+                    last_disclosed = cur
         else:
             j.append("run_end", {"stop_reason": "max_steps"})
 
