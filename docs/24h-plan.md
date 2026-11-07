@@ -429,3 +429,19 @@ pad with empty commits.
   hooks, chain, snapshot, tools), the drill floor pins the grown set,
   the CLI gains floor flags so operators demand the same bar, task 40
   grades it all
+  ✅ 26 new examples land on llm (scripted turns + loud qualified
+  exhaustion), prompt (include-then-substitute, missing-var and cycle
+  both raise with the path), retry (plain-math schedule), jit (frozen
+  rule repr, control tool), hooks (first-match wins, wildcard,
+  empty-allows), chain (genesis 64 zeros, empty head), snapshot
+  (one open run, ZERO_STATE equality), tools (static sorted registry) —
+  53 examples / 17 modules, floor pinned by the drill (9/27 -> 17/53);
+  first-run catches fixed at the root: doctest qualifies user-defined
+  exceptions with their module path (llm's ScriptExhausted expected in
+  full), and one announce that landed a commit late with a correction
+  note; `oax doctest --min-modules/--min-examples` makes the bar
+  operator-grade (floor violated: ..., exit 1) and the drill grows to
+  13 checks (cli_floor_enforced), matrix 40 tasks / 460 checks; README
+  badge/inline/quickstart/gallery synced, explainers intro + task-40
+  prose 13 checks, golden row 40 (13), example 29 step 8, modules.md
+  floor-flag note, CHANGELOG round-two bullet; audit 0, doctor 6/6

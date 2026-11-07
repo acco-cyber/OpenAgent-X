@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import time
 from dataclasses import dataclass
 
@@ -25,6 +26,15 @@ from .runner import AgentRunner, RESERVED_TOOLS
 from .team import TeamRunner
 from .tools import builtin_tools, vault_value
 from .trace import load_trace, replay, truncate_torn_tail, view
+
+# redirect_stdout swaps the *process-global* sys.stdout, which every thread
+# sees. Drills that capture CLI output therefore must hold this lock while
+# the swap is live, or two drills on the eval thread pool can steal each
+# other's stdout mid-capture (observed: explain's captured lines landing in
+# another drill's discarded buffer under workers=4). Drills that never swap
+# are unaffected; their concurrent prints may land in a swapper's buffer,
+# which the drills' containment-only stdout assertions tolerate by design.
+CLI_STDOUT_LOCK = threading.Lock()
 
 MARKER = REDACTED_PREFIX
 WORKROOT_ENV = "OAX_DRILL_ROOT"
@@ -3168,8 +3178,8 @@ def _sweep_drill(task: dict) -> list:
     cli_same = False
     import io as _io
     from contextlib import redirect_stdout as _rso
-    with _rso(_io.StringIO()):          # the diff report is CLI noise here;
-        cli_same = cli_main(["diff", jp, jp]) == 0   # the drill grades exit codes
+    with CLI_STDOUT_LOCK, _rso(_io.StringIO()):  # the diff report is
+        cli_same = cli_main(["diff", jp, jp]) == 0  # CLI noise; exit only
     return [
         Check("run_stops_as_planned",
               result.stop_reason == exp.get("stop_reason", "reply")
@@ -3294,12 +3304,12 @@ def _grep_drill(task: dict) -> list:
     # the CLI contract, stdout suppressed (the drill grades exit codes)
     import io as _io
     from contextlib import redirect_stdout as _rso
-    with _rso(_io.StringIO()):
+    with CLI_STDOUT_LOCK, _rso(_io.StringIO()):
         c_hit = cli_main(["grep", jp, "--type", "tool_call"])
         c_none = cli_main(["grep", jp, "--pattern", "zzz-not-in-this-journal"])
         c_missing = cli_main(["grep", os.path.join(wd, "gone.jsonl")])
         c_flag = cli_main(["grep", jp, "--tool", "write_file", "--limit", "1"])
-    with _rso(_io.StringIO()) as _buf:
+    with CLI_STDOUT_LOCK, _rso(_io.StringIO()) as _buf:
         cli_main(["grep", leak, "--pattern", "token "])
         cli_out = _buf.getvalue()
 
@@ -3466,12 +3476,12 @@ def _replay_from_drill(task: dict) -> list:
 
     import io as _io
     from contextlib import redirect_stdout as _rso
-    with _rso(_io.StringIO()):
+    with CLI_STDOUT_LOCK, _rso(_io.StringIO()):
         c_ok = cli_main(["replay", jp, "--from", str(mid)])
         c_missing = cli_main(["replay", os.path.join(wd, "gone.jsonl")])
         c_bounds = cli_main(["replay", jp, "--from",
                              str(events[-1].seq + 1)])
-    with _rso(_io.StringIO()) as _buf:
+    with CLI_STDOUT_LOCK, _rso(_io.StringIO()) as _buf:
         cli_main(["replay", leak])
         cli_out = _buf.getvalue()
 
@@ -3634,7 +3644,7 @@ def _explain_drill(task: dict) -> list:
     from contextlib import redirect_stdout
     from .cli import main as cli_main
     buf = io.StringIO()
-    with redirect_stdout(buf):
+    with CLI_STDOUT_LOCK, redirect_stdout(buf):
         rc0 = cli_main(["explain", "01-loop-stop"])
         rc1 = cli_main(["explain", "no-such-task"])
     so = buf.getvalue()
@@ -3646,6 +3656,24 @@ def _explain_drill(task: dict) -> list:
     return checks
 
 
+def _doctests_in_child(*targets: str) -> tuple:
+    """Run the doctest engine in a fresh single-threaded interpreter.
+
+    The doctest engine swaps the process-global sys.stdout around every
+    example (doctest._SpoofOut); inside the eval thread pool that swap
+    races every other thread's prints and redirects — observed as explain
+    drills losing captured CLI lines and doctests seeing foreign output.
+    A child process has one thread and its own stdout, so comparisons
+    stay exact and no other drill can be disturbed. Returns (report, rc).
+    """
+    import json
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable, "-m", "openagentx.doctests", *targets],
+                       capture_output=True, text=True)
+    return json.loads(r.stdout), r.returncode
+
+
 def _doctest_drill(task: dict) -> list:
     """Docstring self-checks: the examples are graded, not decorative.
 
@@ -3655,22 +3683,19 @@ def _doctest_drill(task: dict) -> list:
     Expected / Got); an import failure folds into a failing result
     carrying the real exception; one failure poisons the aggregate ok;
     the render is byte-deterministic with no wall-clock; probes are
-    graded by the same loaders that grade the real tree; the CLI exits
-    0 green / 1 failing.
+    graded by the same loaders that grade the real tree — from the same
+    fresh single-threaded interpreter, so the parallel eval pool can
+    never race the engine's stdout handling; the CLI exits 0 green /
+    1 failing and its floor flags are enforced.
     """
-    import io
-    from contextlib import redirect_stdout
-    from . import doctests as dt
-    from .cli import main as cli_main
-
     checks: list = []
     # 1) the real tree is green: every docstring example passes
-    report = dt.run_doctests(dt.load_package_modules())
+    report, rc = _doctests_in_child("PACKAGE")
     checks.append(Check(
         "real_tree_green",
-        report["ok"] is True,
+        report["ok"] is True and rc == 0,
         f"{report['total_examples']} examples, "
-        f"{report['total_failed']} failures"))
+        f"{report['total_failed']} failures, child rc={rc}"))
     # 2) every package module is reported, sorted, none skipped
     expected = sorted(
         f[:-3] for f in os.listdir("openagentx")
@@ -3703,12 +3728,12 @@ def _doctest_drill(task: dict) -> list:
                  '    6\n'
                  '    """\n'
                  '    return a + b\n')
-    p = dt.run_doctests(dt.load_file_modules(wd))
+    p, prc = _doctests_in_child(wd)
     pm = p["modules"][0]
     checks.append(Check(
         "poison_caught_loudly",
-        p["ok"] is False and pm["failed"] == 1,
-        f"failed={pm['failed']} ok={p['ok']}"))
+        p["ok"] is False and pm["failed"] == 1 and prc == 1,
+        f"failed={pm['failed']} ok={p['ok']} child rc={prc}"))
     # 6) the failure log names the example and expected/got
     checks.append(Check(
         "failure_log_names_expected_got",
@@ -3718,7 +3743,7 @@ def _doctest_drill(task: dict) -> list:
     # 7) an import bomb folds into a failing result with the real exception
     with open(os.path.join(wd, "import_bomb.py"), "w", encoding="utf-8") as fh:
         fh.write('raise RuntimeError("bomb went off")\n')
-    b = dt.run_doctests(dt.load_file_modules(wd))
+    b, brc = _doctests_in_child(wd)
     bm = [m for m in b["modules"] if m["module"].endswith("import_bomb")][0]
     checks.append(Check(
         "import_error_folds",
@@ -3732,7 +3757,8 @@ def _doctest_drill(task: dict) -> list:
         "redaction_example_graded",
         red["examples"] >= 3 and red["failed"] == 0,
         f"redact {red['passed']}/{red['examples']}"))
-    # 9) render is byte-deterministic
+    # 9) render is byte-deterministic (pure function of the report dict)
+    from . import doctests as dt
     out = dt.render_doctests(report)
     checks.append(Check(
         "render_deterministic",
@@ -3744,32 +3770,35 @@ def _doctest_drill(task: dict) -> list:
         re.search(r"\d{10,}", out) is None,
         "no 10+-digit number in the render"))
     # 11) one failure poisons the aggregate
-    combined = dt.run_doctests(
-        dt.load_package_modules() + dt.load_file_modules(wd))
+    combined, crc = _doctests_in_child("PACKAGE", wd)
     checks.append(Check(
         "one_failure_poisons_aggregate",
-        combined["ok"] is False and combined["total_failed"] >= 1,
-        f"combined failed={combined['total_failed']}"))
-    # 12) the CLI agrees: exit 0 green / 1 failing
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        rc0 = cli_main(["doctest"])
-        rc1 = cli_main(["doctest", wd])
+        combined["ok"] is False and combined["total_failed"] >= 1
+        and crc == 1,
+        f"combined failed={combined['total_failed']} child rc={crc}"))
+    # 12) the CLI agrees: exit 0 green / 1 failing (subprocess: its own
+    #     interpreter, so the engine's stdout handling stays isolated)
+    import subprocess
+    import sys
+    r0 = subprocess.run([sys.executable, "-m", "openagentx", "doctest"],
+                        capture_output=True, text=True)
+    r1 = subprocess.run([sys.executable, "-m", "openagentx", "doctest", wd],
+                        capture_output=True, text=True)
     checks.append(Check(
         "cli_exit_contract",
-        rc0 == 0 and rc1 == 1,
-        f"exit {rc0} green / {rc1} failing"))
+        r0.returncode == 0 and r1.returncode == 1,
+        f"exit {r0.returncode} green / {r1.returncode} failing"))
     # 13) floors are enforceable from the CLI too (operator-grade bar)
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        rc2 = cli_main(["doctest", "--min-examples", "9999"])
-    so2 = buf.getvalue()
+    r2 = subprocess.run(
+        [sys.executable, "-m", "openagentx", "doctest",
+         "--min-examples", "9999"],
+        capture_output=True, text=True)
     checks.append(Check(
         "cli_floor_enforced",
-        rc2 == 1 and "floor violated" in so2 and "9999" in so2,
-        f"exit {rc2}, floor named in output"))
+        r2.returncode == 1 and "floor violated" in r2.stdout
+        and "9999" in r2.stdout,
+        f"exit {r2.returncode}, floor named in output"))
     return checks
-
 
 DRILLS = {
     "loop": _loop_drill,

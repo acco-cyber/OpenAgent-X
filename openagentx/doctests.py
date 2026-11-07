@@ -158,3 +158,40 @@ def render_doctests(report: dict) -> str:
             lines.append(f"  --- {r['module']}")
             lines.extend("  " + ln for ln in r["log"].rstrip().splitlines())
     return "\n".join(lines) + "\n"
+
+
+
+
+def _main(argv: list) -> int:
+    """Child-process entry: grade targets, print the report as JSON.
+
+    The doctest engine swaps the process-global ``sys.stdout`` around
+    every example (``doctest._SpoofOut``). Inside a multi-threaded eval
+    pool that swap races every other thread's prints and redirects, so
+    the matrix grades this module in a fresh single-threaded interpreter
+    via ``python3 -m openagentx.doctests PACKAGE|dir [...]`` — one thread,
+    one stdout, exact comparisons. Targets: ``PACKAGE`` grades the real
+    package, anything else is a directory of plain ``.py`` probe files.
+    """
+    import json
+    import sys
+
+    loaded: list = []
+    for target in argv:
+        if target == "PACKAGE":
+            loaded += load_package_modules()
+        else:
+            loaded += load_file_modules(target)
+    import io
+    from contextlib import redirect_stdout
+    quiet = io.StringIO()
+    with redirect_stdout(quiet):
+        report = run_doctests(loaded)  # summarize() banners stay out of the pipe
+    print(json.dumps(report))
+    return 0 if report["ok"] else 1
+
+
+if __name__ == "__main__":
+    import sys
+
+    raise SystemExit(_main(sys.argv[1:]))

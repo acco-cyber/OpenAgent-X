@@ -178,7 +178,13 @@ is byte-deterministic with no wall-clock; probes are graded by the
 same code that grades the real tree, so a poisoned docstring fails
 exactly like a drill fails; floor flags (`--min-modules`,
 `--min-examples`) let any operator demand the same bar the matrix
-pins — a shrunk example set is a loud named failure.
+pins — a shrunk example set is a loud named failure. Graded from the
+matrix, the engine runs in a fresh single-threaded interpreter
+(`python3 -m openagentx.doctests PACKAGE|dir` prints the JSON report):
+the doctest engine swaps the process-global `sys.stdout` around every
+example, and inside the eval thread pool that swap races other drills'
+prints and redirects — a child process has one thread and its own
+stdout, so comparisons stay exact and no drill disturbs another.
 
 ## Reliability
 
