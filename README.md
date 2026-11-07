@@ -26,7 +26,7 @@ silent passes). Ten ADRs in `docs/adr/` record why, with the costs admitted.
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # twenty-three runnable end-to-end demos
+python3 -m openagentx examples # twenty-four runnable end-to-end demos
 ```
 
 No model keys, no SDKs, no services. The default adapter is `ScriptedLLM`:
@@ -314,6 +314,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | `examples/21_replay_diff.py` | replay diff | two real runs diff SAME with wall-clock ignored, one drifted argument diverges at the exact seq with both payloads named, a single edited ts is semantic-SAME but strict-DIFFERENT, torn tails isolate per side, exit 0 = same / 1 = different |
 | `examples/22_eval_parallel.py` | parallel eval | the full matrix run serially and with 4 workers yields identical verdicts, identical task order and identical per-task pass counts — parallelism changes the wall-clock, never the grade, and the wall-clock itself is reported for what it is: an observation |
 | `examples/23_release_sweep.py` | release sweep | before a release, one real run re-demands the core invariants: counters agree with the raw stream, every view re-renders byte-identically, the self-diff is the zero diff, a runtime-assembled raw token is re-redacted by both rendered views, `__version__` equals the top CHANGELOG entry — then the real drill grades 12/12 green |
+| `examples/24_grep_journal.py` | journal grep | the journal is searchable truth that cannot leak: matchers AND to one surviving event, the empty result is honest, and a runtime-assembled raw token matches on disk (the disk is the truth) yet prints only `[REDACTED:github_token]` — even when the pattern IS the raw token; the CLI exits 0/1/1 and its stdout stays redacted |
 | `examples/01`–`17` | foundations | hello-loop, redaction, team handoff, pack+sbom, memory+compact, cache+hooks, fanout+structured, retry+breaker, planner+snapshot, prompt layers, JIT tools, chaos+chain, diff+stats, bench+fuzz, property, pack2+graph, dashboard+mermaid |
 
 ## Why it matters

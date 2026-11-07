@@ -6,7 +6,7 @@
   "max_steps": 8,
   "script": [
     "{\"action\": {\"tool\": \"vault_read\", \"args\": {\"key\": \"github\"}}, \"thought\": \"read the secret\"}",
-    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"a.txt\", \"content\": \"hi\"}}, \"thought\": \"write it\"}",
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"a.txt\", \"text\": \"hi\"}}, \"thought\": \"write it\"}",
     "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"search me\"}}, \"thought\": \"plan\"}",
     "{\"reply\": \"searched\"}"
   ],

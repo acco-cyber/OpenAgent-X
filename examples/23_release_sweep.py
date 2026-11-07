@@ -91,15 +91,18 @@ def main() -> int:
     assert "[REDACTED:github_token]" in render_dashboard(leak)
     assert "[REDACTED:github_token]" in trace_mermaid(leak)
 
-    # release metadata cannot drift: __version__ is the top CHANGELOG entry
+    # release metadata cannot drift: __version__ is the top *version* entry
+    # ([Unreleased] sections are not versions — skip them)
     from openagentx import __version__
     with open(CHANGELOG, encoding="utf-8") as fh:
         top = ""
         for line in fh:
             s = line.strip()
             if s.startswith("## [") and "]" in s:
-                top = s[4:s.index("]")]
-                break
+                candidate = s[4:s.index("]")]
+                if candidate and candidate[0].isdigit():
+                    top = candidate
+                    break
     assert top == __version__, f"changelog {top} != __version__ {__version__}"
 
     # and the real drill grades green: all twelve checks, no exceptions

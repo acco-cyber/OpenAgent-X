@@ -19,7 +19,7 @@ run on every commit (and in CI).
   `[REDACTED:github_token]`. Torn tails are isolated, never searched, only
   reported; the empty result is honest; output is byte-deterministic; CLI
   exits 0 matched / 1 no matches or missing journal. Graded by golden task
-  37 (12 checks).
+  37 (12 checks) and demonstrated by `examples/24_grep_journal.py`.
 
 ## [1.0.0] — 2026-11-07
 
