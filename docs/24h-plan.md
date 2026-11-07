@@ -262,7 +262,22 @@ green.
   verify.mjs gains the CI-sync gate (every gate command present, no
   `pip install`, no `secrets.`, 3.10 floor pinned, badge workflow must
   exist); manifest carries ci.yml + all community files
-- [ ] S24-E3 — eval parallelism + perf pass + CHANGELOG + 1.0.0-rc1
+- [x] S24-E3 — eval parallelism + perf pass + CHANGELOG + 1.0.0-rc1
+  ✅ 35 tasks, 399 checks green; `oax eval --workers N` runs drills on a
+  stdlib thread pool with verdicts proven identical to the serial run
+  (order, pass counts, verdicts; parallelism changes the wall-clock, never
+  the grade) and per-task wall-clock on every line, reported never graded;
+  honest finding recorded: GIL-bound drills make 4 workers slower than
+  serial (1.77s vs 1.37s pre-optimization); perf pass profiled the matrix
+  and removed the real hot spot — build_depgraph re-parsed every module
+  after build_sbom had already parsed it, now one read + one parse feeds
+  both (graph_sha256 unchanged, BOM delta confined to the two edited
+  sources, proven against HEAD; eval median 1.349s → 1.247s serial,
+  1.772s → 1.569s at 4 workers); CHANGELOG.md records the Epoch 3 rebuild
+  for 1.0.0-rc1 with the deliberate costs pointed at their ADRs;
+  __version__ 0.1.0 → 1.0.0-rc1; example 22 proves the parallel-identity
+  contract end-to-end; README counts twenty-two demos and names the
+  release candidate; manifest carries CHANGELOG.md + example 22
 
 ### Phase 4 — Release
 - [ ] S25-E3 — final regression sweep + release 1.0.0 + retrospective
