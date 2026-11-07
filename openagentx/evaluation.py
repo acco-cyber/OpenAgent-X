@@ -1747,6 +1747,162 @@ def _prompt_drill(task: dict) -> list:
     ]
 
 
+def _jit_drill(task: dict) -> list:
+    """JIT tool disclosure: visibility is policy, and policy is journaled.
+
+    Honest contract: the turn-zero visible set is journaled before any step,
+    an undisclosed call is refused with exactly one ``tool_hidden`` event and
+    zero side effects (no tool_call, no tool_result, no registry hit), the
+    ``tools_expand`` control plane lands as an ordinary journaled call and
+    makes its target visible, every visibility change (keyword-driven or
+    expansion-driven) is journaled with the full visible set and what was
+    added, keyword matching is case-insensitive and deterministic, capped
+    rule disclosure truncates in sorted order without hiding the control
+    plane, unknown expansion targets and unknown rule tools name themselves,
+    and a full re-run in a fresh workspace produces the identical
+    (type, payload) event sequence.
+    """
+    import os
+    import tempfile
+
+    from .events import Journal
+    from .jit import JITAgentRunner, JITDisclosure, DisclosureRule
+    from .llm import ScriptedLLM
+    from .tools import ToolError, builtin_tools
+
+    exp = _expect(task)
+    rules = [DisclosureRule(tuple(r.get("keywords", ())),
+                            tuple(r.get("tools", ())))
+             for r in task.get("rules", [])]
+
+    def build(root: str):
+        reg = builtin_tools(root)
+        disc = JITDisclosure(reg, rules, always=tuple(task.get("always", ("think",))),
+                             max_visible=int(task.get("max_visible", 0)))
+        runner = JITAgentRunner(ScriptedLLM(task.get("script", [])), reg,
+                                os.path.join(root, "journal.jsonl"),
+                                disclosure=disc, max_steps=8)
+        return disc, runner.run(str(task.get("task", "")))
+
+    tmp1 = tempfile.mkdtemp(prefix="oax-jit-1-")
+    disc, res = build(tmp1)
+    evs = Journal(os.path.join(tmp1, "journal.jsonl")).events()
+    seq = [(e.type, dict(e.payload)) for e in evs]
+    discloses = [p for t, p in seq if t == "tool_disclose"]
+    hiddens = [p for t, p in seq if t == "tool_hidden"]
+    calls = [(p.get("tool"), i) for i, (t, p) in enumerate(seq) if t == "tool_call"]
+    results = {p.get("tool"): p for t, p in seq if t == "tool_result"}
+
+    tmp2 = tempfile.mkdtemp(prefix="oax-jit-2-")
+    disc2, res2 = build(tmp2)
+    evs2 = Journal(os.path.join(tmp2, "journal.jsonl")).events()
+    seq2 = [(e.type, dict(e.payload)) for e in evs2]
+
+    # policy-level probes on fresh registries
+    probe_reg = builtin_tools(tempfile.mkdtemp(prefix="oax-jit-3-"))
+    cap_rule = [DisclosureRule(tuple(exp.get("cap_keywords", ())),
+                               tuple(exp.get("cap_tools", ())))]
+    probe = JITDisclosure(probe_reg, cap_rule, always=tuple(exp.get("cap_always", ("echo",))),
+                          max_visible=int(exp.get("cap_max", 2)))
+    cap_added = probe.update(str(exp.get("cap_keywords", [""])[0]))
+
+    case_reg = builtin_tools(tempfile.mkdtemp(prefix="oax-jit-4-"))
+    case_disc = JITDisclosure(case_reg, rules)
+    case_added = case_disc.update(str(exp.get("case_probe", "")))
+
+    def raises_tool_error(fn):
+        try:
+            fn()
+            return ""
+        except ToolError as e:
+            return str(e)
+
+    unknown_err = raises_tool_error(
+        lambda: JITDisclosure(probe_reg, rules).expand(str(exp.get("unknown_tool", ""))))
+    bad_rule = [DisclosureRule(("x",), (str(exp.get("bad_rule_tool", "")),))]
+
+    def raises_value(fn):
+        try:
+            fn()
+            return ""
+        except ValueError as e:
+            return str(e)
+
+    bad_err = raises_value(lambda: JITDisclosure(probe_reg, bad_rule))
+    visible_now = [v["name"] for v in disc.visible_schemas()]
+
+    expand_idx = next((i for name, i in calls
+                       if name == str(exp.get("expand_target", ""))), -1)
+    calc_calls_before_expand = sum(
+        1 for name, i in calls
+        if name == str(exp.get("expand_target", "")) and 0 <= expand_idx > i)
+
+    return [
+        Check("run_replies_respecting_disclosure",
+              res.stop_reason == exp.get("stop_reason")
+              and res.steps == int(exp.get("steps", 0))
+              and res.reply == exp.get("reply"),
+              f"{res.stop_reason} steps={res.steps}"),
+        Check("turn_zero_visibility_journaled",
+              discloses and discloses[0].get("disclosed") == list(exp.get("first_disclosed", []))
+              and discloses[0].get("added") == [],
+              str(discloses[0] if discloses else "no tool_disclose")),
+        Check("hidden_calls_journaled",
+              [p.get("tool") for p in hiddens] == list(exp.get("hidden_tools", []))
+              and all(p.get("reason") == "not disclosed" for p in hiddens),
+              str([p.get("tool") for p in hiddens])),
+        Check("hidden_calls_never_execute",
+              calc_calls_before_expand == 0
+              and all(name != t for name, _ in calls
+                      for t in exp.get("hidden_tools", []) if t != exp.get("expand_target")),
+              f"calc before expand: {calc_calls_before_expand}"),
+        Check("expand_request_journaled_ok",
+              any(name == "tools_expand" for name, _ in calls)
+              and results.get("tools_expand", {}).get("ok") is True
+              and results["tools_expand"].get("result", {}).get("name")
+              == exp.get("expand_target")
+              and "schema" in results["tools_expand"].get("result", {}),
+              str(results.get("tools_expand", {}).get("result", {}))[:80]),
+        Check("expansion_growth_journaled",
+              len(discloses) == int(exp.get("disclose_events", 0))
+              and discloses[-1].get("added") == [exp.get("expand_target")]
+              and discloses[-1].get("disclosed") == list(exp.get("post_expand_disclosed", [])),
+              str(discloses[-1] if discloses else "none")),
+        Check("calc_executes_after_disclosure",
+              sum(1 for name, _ in calls if name == exp.get("expand_target"))
+              == int(exp.get("calc_tool_calls", 0))
+              and results.get("calc", {}).get("result", {}).get("value")
+              == exp.get("calc_value"),
+              str(results.get("calc", {}).get("result", {}))[:60]),
+        Check("unrevealed_groups_stay_hidden",
+              all(t not in {n for p in discloses for n in p.get("disclosed", [])}
+                  for t in exp.get("never_visible", [])),
+              str(exp.get("never_visible", []))),
+        Check("rerun_identical_event_sequence",
+              seq == seq2 and res2.stop_reason == res.stop_reason,
+              f"{len(seq)} vs {len(seq2)} events"),
+        Check("keyword_match_case_insensitive",
+              exp.get("expand_target") in case_added,
+              str(case_added)),
+        Check("cap_truncates_sorted_without_control_loss",
+              cap_added == list(exp.get("cap_added", []))
+              and all(t not in probe.visible_names()
+                      for t in exp.get("cap_absent", []))
+              and "tools_expand" in probe.visible_names(),
+              f"added={cap_added} visible={probe.visible_names()}"),
+        Check("unknown_expand_names_itself",
+              unknown_err.startswith(f"unknown tool '{exp.get('unknown_tool', '')}'"),
+              unknown_err[:60]),
+        Check("rule_with_unknown_tool_rejected",
+              str(exp.get("bad_rule_tool", "")) in bad_err,
+              bad_err[:60]),
+        Check("hidden_tools_absent_from_visibility",
+              all(t not in visible_now for t in exp.get("never_visible", []))
+              and exp.get("expand_target") in visible_now,
+              str(visible_now)),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -1770,6 +1926,7 @@ DRILLS = {
     "planner": _planner_drill,
     "snapshot": _snapshot_drill,
     "prompt": _prompt_drill,
+    "jit": _jit_drill,
 }
 
 

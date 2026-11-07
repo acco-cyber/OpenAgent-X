@@ -1,0 +1,42 @@
+{
+  "id": "23-tools-jit",
+  "title": "JIT tool disclosure: the model only sees what the policy revealed — undisclosed calls are refused without side effects, expansion requests land and are journaled, and every visibility change is a journaled event",
+  "drill": "jit",
+  "task": "begin quietly",
+  "always": ["think"],
+  "max_visible": 0,
+  "rules": [
+    {"keywords": ["arithmetic", "sum"], "tools": ["calc"]},
+    {"keywords": ["vault"], "tools": ["vault_read", "vault_bundle"]}
+  ],
+  "script": [
+    {"thought": "calc should still be hidden", "action": {"tool": "calc", "args": {"expr": "2+3"}}},
+    {"thought": "request the schema through the control plane", "action": {"tool": "tools_expand", "args": {"tool": "calc"}}},
+    {"thought": "calc is visible now", "action": {"tool": "calc", "args": {"expr": "2+3"}}},
+    {"thought": "vault keywords never surfaced, so vault_read must stay hidden", "action": {"tool": "vault_read", "args": {"key": "github"}}},
+    {"reply": "disclosure respected"}
+  ],
+  "expect": {
+    "stop_reason": "reply",
+    "steps": 5,
+    "reply": "disclosure respected",
+    "task_text": "begin quietly",
+    "first_disclosed": ["think", "tools_expand"],
+    "hidden_tools": ["calc", "vault_read"],
+    "expand_target": "calc",
+    "calc_value": 5,
+    "post_expand_disclosed": ["calc", "think", "tools_expand"],
+    "disclose_events": 2,
+    "calc_tool_calls": 1,
+    "case_probe": "ARITHMETIC SUM",
+    "cap_always": ["echo"],
+    "cap_keywords": ["math"],
+    "cap_tools": ["calc", "echo", "now", "list_dir"],
+    "cap_max": 2,
+    "cap_added": ["calc"],
+    "cap_absent": ["now", "list_dir"],
+    "unknown_tool": "ghost_tool",
+    "bad_rule_tool": "no_such_tool",
+    "never_visible": ["vault_read", "vault_bundle"]
+  }
+}

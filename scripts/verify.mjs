@@ -17,9 +17,9 @@ for (const f of req) {
 const drills = new Set(['loop', 'redact', 'trace', 'team', 'router', 'budget', 'stop',
                         'redact_nested', 'audit', 'pack', 'sbom', 'memory', 'compact',
                         'cache', 'hooks', 'fanout', 'structured', 'retry', 'breaker',
-                        'planner', 'snapshot', 'prompt']);
+                        'planner', 'snapshot', 'prompt', 'jit']);
 const runnerDrills = new Set(['loop', 'redact', 'trace', 'budget', 'stop', 'redact_nested',
-                              'cache', 'retry', 'breaker']); // need script[]
+                              'cache', 'retry', 'breaker', 'jit']); // need script[]
 const teamDrills = new Set(['team']);    // need lead_script[] + specialist_script[]
 const routerDrills = new Set(['router']); // need fallback_script[]
 const memoryDrills = new Set(['memory']); // need runs[] (each with script[]) + queries[]
