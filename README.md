@@ -412,6 +412,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 |---|---|
 | [`docs/tutorial.md`](docs/tutorial.md) | zero-to-hero in ten steps; every snippet executed before it was committed |
 | [`docs/modules.md`](docs/modules.md) | guides to all 40 modules with real entry points and per-module invariants |
+| [`docs/explainers.md`](docs/explainers.md) | one explainer per golden task: the run, the checks it grades, how it fails loudly |
 | [`docs/adr/`](docs/adr/) | ten decision records with Status / Context / Decision / Consequences — costs admitted |
 | [`docs/glossary.md`](docs/glossary.md) | thirty terms, each grounded in the module that owns it |
 | [`docs/faq.md`](docs/faq.md) | seventeen real questions answered honestly |

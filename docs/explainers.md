@@ -366,3 +366,70 @@ through the generic path, re-renders are byte-identical, and torn tails
 diagram the dense prefix only. **Loud failure:** a node that escaped its
 label or a diagram that imagined an event.
 
+## Search & replay
+
+### 37-grep-journal — searchable truth whose search view cannot leak
+**The run:** matchers (substring over the type+payload JSON projection,
+exact event type, exact payload tool name covering call+result pairs, a
+seq floor, a seq-ordered limit cap) are fired at real journals — including
+one with a hand-written raw token. **The checks grade (12):** matchers
+AND together, the empty result is honest (matched 0 with the scanned
+total named), torn tails are isolated and never searched while the dense
+prefix searches identically, the raw token matches on disk (the disk is
+the truth) yet prints only `[REDACTED:github_token]` — even when the
+pattern *is* the raw token — output is byte-deterministic with no
+wall-clock, and the CLI exits 0 matched / 1 none / 1 missing with
+redacted stdout. **Loud failure:** a search that printed what the
+boundary exists to hide.
+
+### 38-replay-from — the journal folds from the middle, honestly
+**The run:** a real run is replayed from seq 0, from the second action's
+step_start, and from max seq; bounds, gaps and torn tails are probed.
+**The checks grade (12):** from 0 is the whole run, every monotone
+counter of a mid-run suffix equals whole minus prefix (11 counters), the
+non-additive fields — clamped `runs_open`, window-local
+`last_reply`/`final_stop` — describe only their own window, from max seq
+folds exactly one event, out-of-bounds raises `ValueError` (never
+silently clamped), a gapped journal is an integrity failure that raises
+instead of folding, a torn tail is invisible to the fold and reported,
+the render names its window and is byte-deterministic, a raw token inside
+a reply never leaves the state view, and the CLI exits 0 folded / 1
+missing / 2 bad bounds. **Loud failure:** a fold that claimed additivity
+where it is false — the honest-refusal contract is the feature.
+
+## The meta-drills
+
+### 35-budget-gallery — the gallery's story graded end-to-end
+**The run:** example 18's budget story — cap 3, two writes planned — is
+re-run and graded as a golden task, not just watched. **The checks grade
+(10):** think/calc/first-write execute as exactly the pre-budget prefix,
+the second `write_file` attempt is refused before the registry with the
+budget event naming it (used=cap=3, rejected_tool `write_file`), the cap
+is recorded at `run_start`, `run_end` carries `stop_reason: budget`, no
+reply is fabricated, the capped attempt still counts as a step, the
+scripted tail stays unconsumed, and journals reopen dense. **Loud
+failure:** any divergence between the example's narrative and what the
+run actually did.
+
+### 36-release-sweep — the release regression sweep on one real run
+**The run:** one real run is folded, rendered, diffed, chained, audited
+and doctor-checked in a single sweep. **The checks grade (12):** stats
+and dashboard counters agree with each other and with the raw stream,
+report/trace/dashboard/mermaid re-render byte-identically, the planned
+tool profile matches, the self-diff is the zero diff, a runtime
+hand-written raw token is re-redacted by both views, a chained journal
+verifies + seals + verifies, the repo audits to 0 findings, doctor passes
+6/6, and `__version__` equals the top CHANGELOG entry. **Loud failure:**
+any single invariant slipping — this task exists so a release cannot go
+out while one of them is quietly broken.
+
+## Adding a task
+
+New tasks follow the rules in
+[`golden_tasks/README.md`](../golden_tasks/README.md): spec JSON with
+`id` + `drill` + the shape required by that drill family, fixture secrets
+assembled at runtime by concatenation, checks that observe real behavior
+from *this* run, and an explainer entry on this page. The explainer gate
+in `scripts/verify.mjs` fails the build for any golden task without its
+`###` entry here — and for any entry here that does not name a real
+task. The matrix only grows, and so does its prose.

@@ -307,7 +307,9 @@ layers and names cycles instead of hiding them.
 The eval matrix is the repository's spine: JSON specs in `golden_tasks/`,
 graded by `oax eval` against real runs in fresh temp workspaces. A drill
 never trusts its harness: exceptions fold into failing checks, and the
-check count only moves forward.
+check count only moves forward. Every task's prose — what the run does,
+what the checks grade, how it fails loudly — lives in
+`docs/explainers.md`.
 
 ```sh
 python3 -m openagentx eval          # 38 tasks, all green or exit 1
