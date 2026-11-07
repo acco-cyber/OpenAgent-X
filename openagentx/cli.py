@@ -1,7 +1,7 @@
 """oax — the OpenAgent-X command line.
 
 Subcommands: eval | doctor | audit | examples | trace | report | run | pack |
-sbom | recall | compact | diff | stats | bench. Every subcommand is
+sbom | recall | compact | diff | stats | bench | fuzz. Every subcommand is
 offline and stdlib-only; exit codes are contracts (0 = green, 1 = anything
 else).
 """
@@ -214,6 +214,22 @@ def _cmd_bench(args) -> int:
     return 0 if b["events"] == b["planned_events"] and b["dense"] else 1
 
 
+def _cmd_fuzz(args) -> int:
+    """Seeded fuzz over the journal contract; exit 0 iff zero violations."""
+    from .fuzz import render_fuzz, run_fuzz_suite
+
+    seeds = [int(s) for s in str(args.seeds).split(",") if s.strip()]
+    reports = run_fuzz_suite(seeds=seeds, n_ops=args.ops)
+    for r in reports:
+        print(render_fuzz(r))
+        for v in r["violations"]:
+            print(f"   VIOLATION {v}")
+    bad = sum(len(r["violations"]) for r in reports)
+    print(f"fuzz: {'OK' if not bad else 'FAILING'} "
+          f"({len(reports)} seed(s), {bad} violation(s))")
+    return 0 if not bad else 1
+
+
 def _tools_for(wd: str):
     from .tools import builtin_tools
 
@@ -297,6 +313,12 @@ def build_parser() -> argparse.ArgumentParser:
     bn.add_argument("--events", type=int, default=2000,
                     help="synthetic events to append (default 2000)")
     bn.set_defaults(fn=_cmd_bench)
+
+    fz = sub.add_parser("fuzz", help="seeded fuzz over the journal contract")
+    fz.add_argument("--seeds", default="0,1,2", help="comma-separated seeds")
+    fz.add_argument("--ops", type=int, default=200,
+                    help="events per seed (default 200)")
+    fz.set_defaults(fn=_cmd_fuzz)
 
     return p
 
