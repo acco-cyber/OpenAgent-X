@@ -337,7 +337,10 @@ def main() -> int:
                         "date": run_git(toplevel, "show", "-s", f"--format=%{fmt}I", sha),
                     }
 
-                message = run_git_raw(toplevel, "show", "-s", "--format=%B", sha)
+                # git show appends one extra newline after %B; the stored
+                # object's message ends with exactly one \n — normalize so
+                # the API-built commit reproduces the original sha
+                message = run_git_raw(toplevel, "show", "-s", "--format=%B", sha).rstrip("\n") + "\n"
                 remote_sha = api.create_commit(sha, tree_remote, remote_parents,
                                                who("a"), who("c"), message)
                 sha_map[sha] = remote_sha
