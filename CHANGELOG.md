@@ -6,6 +6,19 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — views (explain)
+
+- `oax explain <NN-slug|path>`: the matrix explains itself from the CLI —
+  one golden task's machine-readable spec (drill, task text, script
+  turns, sorted expect keys, max_steps) joined with its prose explainer
+  from `docs/explainers.md` in one byte-deterministic, wall-clock-free
+  render; a spec without prose is reported loudly (naming the verify
+  gate that forbids it), a missing spec raises, the CLI exits 0 found /
+  1 missing; graded by golden task 39 (12 checks) — including the
+  two-directional coverage cross-check — and demonstrated by example 28;
+  modules.md, the CLI table, the tutorial and the explainer page
+  document it; matrix 39 tasks / 447 checks; manifest 144 files.
+
 ### Added — examples
 
 - Two gallery demos the stretch list still owed: example 26

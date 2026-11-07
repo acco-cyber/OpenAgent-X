@@ -381,6 +381,17 @@ pad with empty commits.
   manifest 141 → 143; examples suite all OK, eval 38/435 unchanged,
   audit 0, doctor 6/6
 
-- [ ] S31-E3 — `oax explain`: the matrix explains itself from the CLI —
+- [x] S31-E3 — `oax explain`: the matrix explains itself from the CLI —
   one task's spec and its prose joined, deterministic render, honest
   when prose is missing, graded by a new drill (task 39)
+  ✅ `explain.py` (explain_task / load_explainers / render_explain) +
+  CLI subcommand (0 found / 1 missing, id or path form) + modules.md
+  section; drill explain grades 12 checks — real-task explain, fields
+  vs the JSON read independently, sorted expect keys, both-halves
+  render, byte-determinism, no wall-clock, two-directional prose
+  coverage cross-check, loud no-prose ghost, missing-spec raises, CLI
+  contract; task 39 lands with its explainers entry (gate 8 satisfied
+  same-commit), eval floor 38 → 39, matrix 39 tasks / 447 checks green;
+  README badge/inline/CLI-table/comparison synced (demo alt text stays
+  38 — it describes the recording), tutorial counts 39, example 28 +
+  manifest 144, CHANGELOG [Unreleased] entry; audit 0, doctor 6/6
