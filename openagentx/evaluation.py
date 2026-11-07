@@ -3530,6 +3530,122 @@ def _replay_from_drill(task: dict) -> list:
     ]
 
 
+def _explain_drill(task: dict) -> list:
+    """The explainer view: the matrix explains itself from the CLI.
+
+    Honest contract: one task's spec and its prose join in a report whose
+    render is byte-deterministic with no wall-clock; a spec without prose
+    is reported loudly (never papered over); a missing spec raises; the
+    CLI exits 0 found / 1 missing; and the prose map itself is
+    cross-checked against the golden matrix in both directions — every
+    task has an entry, every entry names a task.
+    """
+    from .explain import explain_task, load_explainers, render_explain
+
+    checks: list = []
+    gdir = "golden_tasks"
+    real = sorted(
+        f[:-5] for f in os.listdir(gdir) if f.endswith(".json")
+    )
+
+    # 1) a real task explains: spec fields join the prose section
+    first = os.path.join(gdir, "01-loop-stop.json")
+    with open(first, encoding="utf-8") as fh:
+        spec = json.load(fh)
+    r = explain_task(first)
+    checks.append(Check(
+        "explains_real_task",
+        (r["id"] == "01-loop-stop" and r["drill"] == "loop"
+         and r["has_prose"] is True),
+        f"id={r['id']} drill={r['drill']} prose={r['has_prose']}"))
+    # 2) the report's fields match the JSON file read independently
+    checks.append(Check(
+        "spec_fields_match",
+        (r["task_text"] == str(spec.get("task_text"))
+         and r["max_steps"] == int(spec.get("max_steps", 0))
+         and r["script_turns"] == len(spec.get("script", []))),
+        f"turns={r['script_turns']} max_steps={r['max_steps']}"))
+    # 3) expect keys come back sorted, matching the spec
+    checks.append(Check(
+        "expect_keys_sorted",
+        r["expect_keys"] == sorted(str(k) for k in spec.get("expect", {})),
+        ",".join(r["expect_keys"])))
+    # 4) the render carries both halves: contract and prose
+    out = render_explain(r)
+    checks.append(Check(
+        "render_joins_both",
+        ("drill: loop" in out and str(spec.get("task_text")) in out
+         and "The run:" in out and "The checks grade" in out),
+        "spec line + prose body present"))
+    # 5) byte-deterministic render
+    checks.append(Check(
+        "render_deterministic",
+        out == render_explain(r),
+        "two renders byte-identical"))
+    # 6) no wall-clock anywhere in the render
+    checks.append(Check(
+        "no_wall_clock",
+        re.search(r"\d{10,}", out) is None,
+        "no 10+-digit number in the render"))
+    # 7) prose coverage: every golden task stem has an explainer entry
+    prose = load_explainers()
+    missing = [s for s in real if s not in prose]
+    checks.append(Check(
+        "every_task_has_prose",
+        not missing and len(prose) >= len(real),
+        f"{len(real)} tasks, missing: {missing or 'none'}"))
+    # 8) reverse: every prose heading names a real task
+    heads = re.findall(r"^### (\d{2}-[a-z0-9-]+)", open(
+        "docs/explainers.md", encoding="utf-8").read(), re.M)
+    unknown = [h for h in heads if h not in set(real)]
+    checks.append(Check(
+        "every_prose_names_task",
+        not unknown,
+        f"{len(heads)} headings, unknown: {unknown or 'none'}"))
+    # 9) honest no-prose: a foreign spec reports loudly, never fabricated
+    wd = _fresh_wd("explain")
+    ghost_path = os.path.join(wd, "ghost.json")
+    with open(ghost_path, "w", encoding="utf-8") as fh:
+        json.dump({"id": "99-ghost-task", "drill": "loop",
+                   "task_text": "no prose for me"}, fh)
+    g = explain_task(ghost_path)
+    gout = render_explain(g)
+    checks.append(Check(
+        "no_prose_reported_loudly",
+        (g["has_prose"] is False
+         and "no prose entry for 99-ghost-task" in gout
+         and "verify gate" in gout),
+        "loud line, no fabricated prose"))
+    # 10) the ghost's render stays deterministic too
+    checks.append(Check(
+        "ghost_render_deterministic",
+        gout == render_explain(g),
+        "two renders byte-identical"))
+    # 11) a missing spec raises (never an empty report)
+    gone = os.path.join(wd, "gone.json")
+    try:
+        explain_task(gone)
+        checks.append(Check("missing_spec_raises", False, "no exception"))
+    except (OSError, ValueError):
+        checks.append(Check("missing_spec_raises", True,
+                            "FileNotFoundError raised"))
+    # 12) the CLI agrees: exit 0 found / 1 missing, stdout deterministic
+    import io
+    from contextlib import redirect_stdout
+    from .cli import main as cli_main
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        rc0 = cli_main(["explain", "01-loop-stop"])
+        rc1 = cli_main(["explain", "no-such-task"])
+    so = buf.getvalue()
+    checks.append(Check(
+        "cli_exit_contract",
+        rc0 == 0 and rc1 == 1 and "explain 01-loop-stop" in so
+        and "no task 'no-such-task'" in so,
+        f"exit {rc0} found / {rc1} missing"))
+    return checks
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -3568,6 +3684,7 @@ DRILLS = {
     "sweep": _sweep_drill,
     "grep": _grep_drill,
     "replay_from": _replay_from_drill,
+    "explain": _explain_drill,
 }
 
 

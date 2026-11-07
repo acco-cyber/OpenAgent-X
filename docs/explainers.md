@@ -1,12 +1,13 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (38 tasks, 435 checks) is the repo's contract with
+The golden matrix (39 tasks, 447 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
 workspace, graded by a drill of named checks; exceptions fold into a
 failing `harness_error` check — never a skipped one. Run the whole matrix
-with `python3 -m openagentx eval` (all green or exit 1).
+with `python3 -m openagentx eval` (all green or exit 1), and read any
+task's spec + prose from the CLI with `oax explain <NN-slug>`.
 
 This page is the prose map of that matrix. For every task: **the run** —
 what actually happens when the drill executes; **the checks grade** — the
@@ -422,6 +423,20 @@ verifies + seals + verifies, the repo audits to 0 findings, doctor passes
 6/6, and `__version__` equals the top CHANGELOG entry. **Loud failure:**
 any single invariant slipping — this task exists so a release cannot go
 out while one of them is quietly broken.
+
+### 39-explain — the explainer view: the matrix explains itself from the CLI
+**The run:** no agent runs here; the drill grades the join between a
+task's machine-readable spec and its prose on this page. **The checks
+grade (12):** a real task explains (id, drill and prose all present), the
+report's fields match the JSON file read independently, expect keys come
+back sorted, the render carries both halves (spec line + prose body) and
+is byte-deterministic with no wall-clock, prose coverage is
+cross-checked in both directions (every golden task has an entry here,
+every entry names a real task), a foreign spec without prose is reported
+loudly (`has_prose: False` naming the verify gate — never fabricated
+prose), a missing spec raises instead of an empty report, and the CLI
+agrees (exit 0 found / 1 missing). **Loud failure:** a task added
+without its prose, or an explain render that drifted between calls.
 
 ## Adding a task
 
