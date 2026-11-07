@@ -1,9 +1,10 @@
 """oax — the OpenAgent-X command line.
 
 Subcommands: eval | doctor | audit | examples | trace | report | run | pack |
-sbom | recall | compact | diff | stats | bench | fuzz | property | pack2 |
-graph | dashboard | mermaid. Every subcommand is offline and stdlib-only;
-exit codes are contracts (0 = green, 1 = anything else).
+sbom | recall | compact | diff | stats | grep | replay | bench | fuzz |
+property | pack2 | graph | dashboard | mermaid. Every subcommand is offline
+and stdlib-only; exit codes are contracts (0 = green, 1 = anything else,
+2 = bad bounds where a window is involved).
 """
 
 from __future__ import annotations
@@ -292,6 +293,22 @@ def _cmd_grep(args) -> int:
     return 0 if r["matched"] else 1
 
 
+def _cmd_replay(args) -> int:
+    """Fold a journal suffix into state, from any seq (exit 2 = bad bounds)."""
+    from .replay import replay_from, render_replay
+
+    if not os.path.exists(args.journal):
+        print(f"replay: journal {args.journal} does not exist")
+        return 1
+    try:
+        r = replay_from(args.journal, from_seq=args.from_seq)
+    except ValueError as e:
+        print(f"replay: {e}")
+        return 2
+    print(render_replay(r))
+    return 0
+
+
 def _cmd_bench(args) -> int:
     """Journal throughput microbench (wall-clock, reported not graded)."""
     from .bench import render_bench, run_bench
@@ -458,6 +475,14 @@ def build_parser() -> argparse.ArgumentParser:
     gp.add_argument("--limit", type=int, default=0,
                     help="cap matches at N in seq order (0 = uncapped)")
     gp.set_defaults(fn=_cmd_grep)
+
+    rp = sub.add_parser("replay",
+                        help="fold a journal suffix into state, from any seq "
+                             "(exit 2 = bad bounds)")
+    rp.add_argument("journal")
+    rp.add_argument("--from", dest="from_seq", type=int, default=0,
+                    help="fold only events with seq >= N (default 0 = whole)")
+    rp.set_defaults(fn=_cmd_replay)
 
     bn = sub.add_parser("bench", help="journal throughput microbench (synthetic, timed)")
     bn.add_argument("--events", type=int, default=2000,

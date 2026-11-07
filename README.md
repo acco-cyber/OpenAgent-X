@@ -135,6 +135,7 @@ oax compact   # fold a journal into a denser copy; original never touched
 oax diff      # event-level journal diff: 0 = semantically same, 1 = different
 oax stats     # deterministic run analytics — replay's own counters, plus tools/type counts
 oax grep      # search one journal — matches render redacted (exit 1 = no matches)
+oax replay    # fold a journal suffix into state from any seq (exit 2 = bad bounds)
 oax bench     # journal throughput microbench — honest wall-clock, never graded
 oax fuzz      # seeded fuzz over the journal contract (torn tails, middle tears)
 oax property  # property suite — invariants re-checked after every random trace step
@@ -333,7 +334,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | Doc | What's inside |
 |---|---|
 | [`docs/tutorial.md`](docs/tutorial.md) | zero-to-hero in ten steps; every snippet executed before it was committed |
-| [`docs/modules.md`](docs/modules.md) | guides to all 39 modules with real entry points and per-module invariants |
+| [`docs/modules.md`](docs/modules.md) | guides to all 40 modules with real entry points and per-module invariants |
 | [`docs/adr/`](docs/adr/) | ten decision records with Status / Context / Decision / Consequences — costs admitted |
 | [`docs/glossary.md`](docs/glossary.md) | thirty terms, each grounded in the module that owns it |
 | [`docs/faq.md`](docs/faq.md) | sixteen real questions answered honestly |

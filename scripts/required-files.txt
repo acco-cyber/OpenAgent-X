@@ -132,3 +132,4 @@ docs/retrospective.md
 openagentx/grep.py
 golden_tasks/37-grep-journal.json
 examples/24_grep_journal.py
+openagentx/replay.py

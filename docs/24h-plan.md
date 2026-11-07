@@ -318,3 +318,6 @@ pad with empty commits.
   sweep drill and example 23 fixed at the root); eval floor 36 → 37;
   manifest 134 files; task 37's write_file now uses the real signature
   (path+text) so its expectations are truly observed
+
+- [ ] S27-E3 — `oax replay --from`: the journal folds from the middle,
+  honestly

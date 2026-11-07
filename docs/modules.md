@@ -137,6 +137,21 @@ snapshots are pure prefix folds — no state is stored, everything is
 recomputed from events; bounds errors are loud; torn tails limit how far
 you may travel; `monotone` proves checkpoints only move forward.
 
+### replay
+Replay from any point — the journal folds from the middle, honestly.
+`replay_from(path, from_seq)`, `render_replay(report)`. Invariants: the
+suffix fold starts from zero at `from_seq` and folds every event with
+`seq >= from_seq`; bounds are honest (0..max seq, an empty journal
+exposes only the zero state at 0, out-of-bounds raises `ValueError`,
+never silent clamping); density is required — a gapped journal is an
+integrity failure, not a state to fold; additivity is claimed only where
+it is true (every monotone counter equals whole minus prefix) and never
+where it is false (`runs_open` is clamped, `last_reply`/`final_stop`
+describe only their own window); a torn tail is invisible to the fold
+and reported; the state is the view, and the view renders through the
+redaction engine — a raw secret on disk never leaves it, even inside
+`last_reply`; the render names its window and carries no timestamps.
+
 ## Reliability
 
 ### retry
@@ -322,8 +337,9 @@ audit scans the repo including its own documentation.
 
 ### cli
 `oax` — the command line: `eval doctor audit examples trace report pack
-pack2 sbom graph dashboard mermaid run recall compact diff stats bench fuzz
-property`. Invariants: every subcommand has an honest exit contract
-(0 = rendered/same/green, 1 = missing/different/failed) and prints
+pack2 sbom graph dashboard mermaid run recall compact diff stats grep
+replay bench fuzz property`. Invariants: every subcommand has an honest
+exit contract (0 = rendered/same/green/folded, 1 = missing/different/
+failed, 2 = bad bounds where a window is involved) and prints
 deterministic output — the CLI is a thin, scriptable skin over the modules
 above.
