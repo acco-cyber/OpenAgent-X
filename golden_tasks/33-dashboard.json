@@ -1,0 +1,19 @@
+{
+  "id": "33-dashboard",
+  "title": "Report v2 dashboard: the HTML dashboard's counters are replay's own numbers (taken from run_stats, so dashboard/stats/replay can never disagree), type counts match the raw stream and sum to the event total, the planned tool profile (4 calls, 1 planned failure) lands in the per-tool table with read_file's failure named, the render is byte-identical across two runs with a stable sha256 fingerprint, the file is self-contained (doctype, inline <style>, zero http(s) URLs, zero <script> tags, closes </html>), a raw token hand-written into a journal is re-redacted at render time (defense in depth — the secret never reaches the view), the empty journal renders the honest zero state, a torn tail is reported with the dense prefix still counted, the canonical JSON round-trips, and the CLI contract holds (0 = wrote, 1 = missing journal)",
+  "drill": "dashboard",
+  "task_text": "produce a journal worth visualizing",
+  "max_steps": 8,
+  "script": [
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"render me\"}}, \"thought\": \"plan the run\"}",
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"6*7\"}}, \"thought\": \"compute\"}",
+    "{\"action\": {\"tool\": \"write_file\", \"args\": {\"path\": \"note.txt\", \"text\": \"dashboard\"}}, \"thought\": \"persist\"}",
+    "{\"action\": {\"tool\": \"read_file\", \"args\": {\"path\": \"missing.txt\"}}, \"thought\": \"planned failure\"}",
+    "{\"reply\": \"measured and rendered\"}"
+  ],
+  "expect": {
+    "reply": "measured and rendered",
+    "tool_calls": 4,
+    "tool_fails": 1
+  }
+}

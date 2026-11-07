@@ -1,0 +1,18 @@
+{
+  "id": "34-mermaid",
+  "title": "Mermaid trace export: the export is a deterministic flowchart TD whose first line is exactly 'flowchart TD', one node per event with zero-padded seq ids and a quote-escaped, newline-stripped, truncated label (exactly two raw double quotes per node line), one spine edge per consecutive pair (n events -> n-1 edges, 0 for the empty journal), the planned tool failure carries the fail class and replies/run_end carry say, an extension event type appended to the real journal (hook) renders through the generic path, re-renders are byte-identical, a torn tail renders the dense prefix only, the empty journal renders header + honest zero-event comment with no edges, and the CLI contract holds (0 = rendered to stdout or --out, 1 = missing journal)",
+  "drill": "mermaid",
+  "task_text": "produce a journal worth diagramming",
+  "max_steps": 8,
+  "script": [
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"diagram me\"}}, \"thought\": \"plan\"}",
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"2+2\"}}, \"thought\": \"compute\"}",
+    "{\"action\": {\"tool\": \"read_file\", \"args\": {\"path\": \"gone.txt\"}}, \"thought\": \"planned failure\"}",
+    "{\"reply\": \"diagrammed\"}"
+  ],
+  "expect": {
+    "reply": "diagrammed",
+    "tool_calls": 3,
+    "tool_fails": 1
+  }
+}

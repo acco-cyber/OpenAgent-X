@@ -93,3 +93,7 @@ openagentx/depgraph.py
 golden_tasks/31-pack-signed.json
 golden_tasks/32-depgraph.json
 examples/16_pack_graph.py
+openagentx/dashboard.py
+openagentx/mermaid.py
+golden_tasks/33-dashboard.json
+golden_tasks/34-mermaid.json

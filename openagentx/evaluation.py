@@ -2855,6 +2855,235 @@ def _graph_drill(task: dict) -> list:
     ]
 
 
+def _dashboard_drill(task: dict) -> list:
+    """Report v2 dashboard: replay's numbers, rendered deterministically.
+
+    Honest contract: the dashboard takes its counters from run_stats
+    (which takes replay's), so the three views can never disagree; type
+    counts match the raw stream; the planned tool profile lands in the
+    per-tool table with the failure named; renders are byte-identical
+    with a stable sha256; the HTML is self-contained (inline CSS, no
+    external URLs, no scripts); a raw token hand-written into a journal
+    is re-redacted at render time (defense in depth); the empty journal
+    renders the zero state; a torn tail is reported with the prefix
+    counted; the canonical JSON round-trips; and the CLI contract holds.
+    """
+    from .cli import main as cli_main
+    from .dashboard import (dashboard_data, dashboard_json, dashboard_sha256,
+                            render_dashboard)
+    from .trace import replay
+
+    wd = _fresh_wd("dashboard")
+    events, result = _run_offline(task, wd)
+    jp = os.path.join(wd, "journal.jsonl")
+    exp = _expect(task)
+    d = dashboard_data(jp)
+    st = replay(events)
+    h1 = render_dashboard(jp)
+    h2 = render_dashboard(jp)
+
+    # defense in depth: a raw secret hand-written into a journal at runtime
+    raw = "ghp_" + "A1b2C3d4E5" * 3 + "F9ab12"
+    leak = os.path.join(wd, "leak.jsonl")
+    lj = Journal(leak)
+    lj.start_run("leak-run")
+    lj.append("thought", {"text": "token " + raw})
+    h_leak = render_dashboard(leak)
+
+    empty_path = os.path.join(wd, "empty.jsonl")
+    open(empty_path, "w", encoding="utf-8").close()
+    d_empty = dashboard_data(empty_path)
+    h_empty = render_dashboard(empty_path)
+
+    torn_path = os.path.join(wd, "torn.jsonl")
+    with open(torn_path, "wb") as fh:
+        fh.write(open(jp, "rb").read() + b'{"seq": 99, "tu')
+    d_torn = dashboard_data(torn_path)
+    h_torn = render_dashboard(torn_path)
+
+    out = os.path.join(wd, "dash.html")
+    cli_ok = cli_main(["dashboard", jp, "--out", out]) == 0
+    with open(out, "rb") as fh:
+        out_bytes = fh.read()
+
+    counts: dict = {}
+    for e in events:
+        counts[e.type] = counts.get(e.type, 0) + 1
+    failed_tool = next(
+        (str((e.payload or {}).get("tool")) for e in events
+         if e.type == "tool_result" and (e.payload or {}).get("ok") is False),
+        "",
+    )
+
+    return [
+        Check("run_stops_as_planned",
+              result.stop_reason == exp.get("stop_reason", "reply")
+              and result.reply == str(exp.get("reply", "")),
+              f"stop={result.stop_reason}"),
+        Check("counters_are_replays",
+              d["steps"] == st["steps"] and d["thoughts"] == st["thoughts"]
+              and d["tool_calls"] == st["tool_calls"]
+              and d["tool_results"] == st["tool_results"]
+              and d["tool_fails"] == st["tool_fails"]
+              and d["replies"] == st["replies"] and d["errors"] == st["errors"]
+              and d["redactions"] == st["redactions"]
+              and d["runs_opened"] == st["runs_opened"]
+              and d["runs_closed"] == st["runs_closed"]
+              and d["events"] == len(events),
+              "dashboard/stats/replay: one source of truth"),
+        Check("type_counts_match_stream",
+              d["type_counts"] == counts and sum(counts.values()) == d["events"],
+              str(counts)[:70]),
+        Check("tool_profile_and_pairing",
+              d["tool_calls"] == int(exp.get("tool_calls", d["tool_calls"]))
+              and d["tool_fails"] == int(exp.get("tool_fails", d["tool_fails"]))
+              and all(t["calls"] == t["ok"] + t["failed"]
+                      for t in d["tools"].values()),
+              f"calls={d['tool_calls']} fails={d['tool_fails']}"),
+        Check("planned_failure_visible",
+              bool(failed_tool) and failed_tool in h1
+              and d["tools"][failed_tool]["failed"] >= 1,
+              f"{failed_tool} named in the tools table"),
+        Check("html_deterministic",
+              h1 == h2 and dashboard_sha256(jp) == dashboard_sha256(jp)
+              and len(h1) > 1000,
+              f"byte-identical, sha256 {dashboard_sha256(jp)[:16]}"),
+        Check("html_self_contained",
+              h1.startswith("<!doctype html>") and "<style>" in h1
+              and "http://" not in h1 and "https://" not in h1
+              and "<script" not in h1 and h1.rstrip().endswith("</html>"),
+              "inline CSS, zero external assets, zero scripts"),
+        Check("redaction_defense_in_depth",
+              raw not in h_leak and f"{REDACTED_PREFIX}github_token]" in h_leak,
+              "the view re-redacts what the journal layer missed"),
+        Check("empty_journal_zero_state",
+              d_empty["events"] == 0 and d_empty["dense"]
+              and not d_empty["torn_tail"] and d_empty["tools"] == {}
+              and "0 events" in h_empty,
+              "the zero state is reported, not faked"),
+        Check("torn_tail_reported_with_prefix",
+              d_torn["torn_tail"] and d_torn["events"] == d["events"]
+              and "torn_tail=True" in h_torn,
+              "garbage tail isolated, prefix rendered"),
+        Check("json_roundtrip",
+              json.loads(dashboard_json(jp)) == d
+              and dashboard_json(jp) == dashboard_json(jp),
+              "canonical JSON stable and faithful"),
+        Check("cli_contract",
+              cli_ok and out_bytes == h1.encode("utf-8")
+              and cli_main(["dashboard",
+                            os.path.join(wd, "gone.jsonl")]) == 1,
+              "0 = wrote, 1 = missing journal"),
+    ]
+
+
+def _mermaid_drill(task: dict) -> list:
+    """Mermaid export: the causal spine, escaped and deterministic.
+
+    Honest contract: the first line is exactly 'flowchart TD', one node
+    per event with zero-padded seq ids and labels carrying exactly two
+    raw double quotes (payloads quote-escaped), one spine edge per
+    consecutive pair, the planned failure carries the fail class and
+    replies/run_end the say class, an extension event type appended to
+    the real journal renders through the generic path, re-renders are
+    byte-identical, torn tails render the dense prefix only, the empty
+    journal renders header + honest zero-event comment, and the CLI
+    contract holds (0 = rendered, 1 = missing journal).
+    """
+    from .cli import main as cli_main
+    from .mermaid import render_mermaid, trace_mermaid
+
+    wd = _fresh_wd("mermaid")
+    events, result = _run_offline(task, wd)
+    jp = os.path.join(wd, "journal.jsonl")
+    exp = _expect(task)
+
+    # an extension event type appended to the real journal (resumes dense)
+    ext = Journal(jp)
+    ext.start_run("mermaid-ext")
+    ext.append("hook", {"decision": "allow", "tool": "calc"})
+    events = _reopen(jp)
+
+    m1 = trace_mermaid(jp)
+    m2 = trace_mermaid(jp)
+    lines = m1.splitlines()
+    nodes = [l for l in lines if l.lstrip().startswith("E") and '["' in l]
+    edges = [l for l in lines if " --> " in l]
+
+    fail_ids = [f"E{e.seq:03d}" for e in events
+                if e.type == "tool_result" and (e.payload or {}).get("ok") is False]
+    fail_line = next((l for l in lines
+                      if l.strip().startswith("class ") and " fail" in l
+                      and any(fid in l for fid in fail_ids)), "")
+    say_line = next((l for l in lines
+                     if l.strip().startswith("class ") and " say" in l
+                     and any(f"E{e.seq:03d}" in l for e in events
+                             if e.type in ("reply", "run_end"))), "")
+
+    out = os.path.join(wd, "trace.mmd")
+    cli_out = cli_main(["mermaid", jp, "--out", out]) == 0
+    with open(out, encoding="utf-8") as fh:
+        out_text = fh.read()
+    cli_stdout = cli_main(["mermaid", jp]) == 0
+
+    empty_path = os.path.join(wd, "empty.jsonl")
+    open(empty_path, "w", encoding="utf-8").close()
+    m_empty = trace_mermaid(empty_path)
+    torn_path = os.path.join(wd, "torn.jsonl")
+    with open(torn_path, "wb") as fh:
+        fh.write(open(jp, "rb").read() + b'{"seq": 99, "tu')
+    m_torn = trace_mermaid(torn_path)
+
+    spine_ok = all(
+        f"E{i:03d} --> E{i + 1:03d}" in m1
+        for i in range(len(events) - 1)
+    )
+    return [
+        Check("run_stops_as_planned",
+              result.stop_reason == exp.get("stop_reason", "reply")
+              and result.reply == str(exp.get("reply", "")),
+              f"stop={result.stop_reason}"),
+        Check("first_line_is_flowchart",
+              lines[0] == "flowchart TD" and m1.endswith("\n"),
+              "the export is valid Mermaid by construction"),
+        Check("nodes_match_events",
+              len(nodes) == len(events)
+              and all(nodes[i].lstrip().startswith(f"E{i:03d}[")
+                      for i in range(len(events))),
+              f"{len(nodes)} nodes for {len(events)} events"),
+        Check("labels_escaped",
+              all(l.count('"') == 2 for l in nodes)
+              and all("&quot;" in l for l in nodes)
+              and all("\n" not in l.strip() for l in nodes),
+              "exactly two raw quotes per node; payloads escaped"),
+        Check("spine_edges_chain",
+              len(edges) == len(events) - 1 and spine_ok,
+              f"{len(edges)} edges chain the causal spine"),
+        Check("extension_type_renders",
+              "hook" in m1 and "allow" in m1,
+              "extension events render through the generic path"),
+        Check("planned_failure_classed",
+              fail_line != "" and say_line != "",
+              "fail class on the failure, say on reply/run_end"),
+        Check("deterministic_render",
+              m1 == m2 and trace_mermaid(jp) == m1 and render_mermaid(events) == m1,
+              "byte-identical re-renders, view and function agree"),
+        Check("torn_tail_prefix_rendered",
+              sum(1 for l in m_torn.splitlines()
+                  if l.lstrip().startswith("E") and '["' in l) == len(events),
+              "garbage tail isolated, dense prefix diagrammed"),
+        Check("empty_journal_zero_state",
+              m_empty.startswith("flowchart TD") and " --> " not in m_empty
+              and "0 events" in m_empty and '["' not in m_empty,
+              "the zero state is honest, not fabricated"),
+        Check("cli_contract",
+              cli_out and out_text == m1 and cli_stdout
+              and cli_main(["mermaid",
+                            os.path.join(wd, "gone.jsonl")]) == 1,
+              "0 = rendered (stdout or --out), 1 = missing"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -2888,6 +3117,8 @@ DRILLS = {
     "property": _property_drill,
     "pack2": _pack2_drill,
     "graph": _graph_drill,
+    "dashboard": _dashboard_drill,
+    "mermaid": _mermaid_drill,
 }
 
 
