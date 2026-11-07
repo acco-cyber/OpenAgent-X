@@ -63,7 +63,7 @@ What to look for in the video:
 git clone https://github.com/acco-cyber/OpenAgent-X.git && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # twenty-seven runnable end-to-end demos
+python3 -m openagentx examples # twenty-eight runnable end-to-end demos
 ```
 
 No model keys, no SDKs, no services. The default adapter is `ScriptedLLM`:
@@ -396,6 +396,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | `examples/25_replay_from.py` | replay from any point | the journal folds from the middle, honestly: from 0 is the whole run, every monotone counter of a mid-run suffix fold equals whole minus prefix, non-additive fields describe only their own window, bounds and gaps raise ValueError instead of clamping, a torn tail is invisible and reported, and a runtime-assembled raw token inside a reply never leaves the state view — the CLI agrees (0 folded / 1 missing / 2 bad bounds, stdout redacted) |
 | `examples/26_author_your_own_drill.py` | grade your own agent | the hero capstone as runnable code: author a task spec from scratch, grade a real run through the same `run_golden_task` path the matrix uses, then watch honesty work — a wrong expectation fails loudly by name, a crashing drill folds into `harness_error` with the real exception, an unknown drill reports `unknown_drill`, and the repaired spec goes green again |
 | `examples/27_views_tour.py` | the flight-recorder tour | one real run walked through every read-only view — timeline, report, stats, grep, self-diff, replay-from-the-middle, dashboard, mermaid — with every render byte-identical twice, every counter from the same replay fold, and a tour-wide leak sweep proving the raw fixture token appears in none of the eight views |
+| `examples/28_explain.py` | the matrix explains itself | one golden task's spec and its prose joined in one deterministic render — fields checked against the JSON, byte-identical re-renders with no wall-clock, a ghost spec without prose reported loudly, a missing spec raising, and the prose map cross-checked against the matrix in both directions |
 | `examples/01`–`17` | foundations | hello-loop, redaction, team handoff, pack+sbom, memory+compact, cache+hooks, fanout+structured, retry+breaker, planner+snapshot, prompt layers, JIT tools, chaos+chain, diff+stats, bench+fuzz, property, pack2+graph, dashboard+mermaid |
 
 ## Why it matters
