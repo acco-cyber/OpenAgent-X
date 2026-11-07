@@ -74,3 +74,4 @@ openagentx/chaos.py
 openagentx/chain.py
 golden_tasks/24-chaos.json
 golden_tasks/25-hash-chain.json
+examples/12_chaos_chain.py
