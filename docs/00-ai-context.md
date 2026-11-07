@@ -45,7 +45,7 @@ evaluation.py  golden-task harness: JSON specs → drills of named Checks;
                exceptions fold into failing harness_error; DRILLS registry
                (loop, redact, trace, team, router, budget, stop,
                redact_nested, audit, pack, sbom, memory, compact, cache,
-               hooks, fanout, structured)
+               hooks, fanout, structured, retry, breaker)
 doctor.py      python>=3.10, stdlib purity (AST import scan vs sys.stdlib_module_names),
                offline purity (no net modules), required files, task contracts
 audit.py       secret-scan of the whole tree; must be 0 findings on this repo
@@ -76,6 +76,14 @@ structured.py  parse_json_loose: ordered repair pipeline (smart quotes,
                extraction) with honest notes, loud ValueError on hopeless
                input; validate_schema: lite JSON-Schema subset, bool is
                never integer/number
+retry.py       RetryLLM + BackoffPolicy: deterministic exponential backoff
+               around any adapter, per-attempt log (outcome/error/delay),
+               loud RetryExhausted, non-retryable plan bugs propagate,
+               retries invisible to the journal
+breaker.py     CircuitBreaker: closed/open/half-open with deterministic
+               tick clock; threshold trips surface the original fault, open
+               fast-fails without touching the inner, one probe closes or
+               re-opens; honest snapshot
 cli.py         oax eval|doctor|audit|examples|trace|report|run|pack|sbom|recall|compact
 ```
 

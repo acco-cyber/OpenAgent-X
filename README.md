@@ -7,7 +7,7 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (17 tasks / 177 checks)
+oax eval      # run every golden task drill, all green or exit 1   (19 tasks / 201 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
@@ -23,7 +23,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # seven runnable end-to-end demos
+python3 -m openagentx examples # eight runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -59,6 +59,14 @@ python3 -m openagentx examples # seven runnable end-to-end demos
   commas, Python literals, smart quotes and prose-wrapped JSON with honest
   repair notes; hopeless input raises loudly, and `validate_schema` catches
   wrong types (including `True` masquerading as an integer).
+- **Retry with backoff** — `RetryLLM` recovers transient adapter failures on
+  a deterministic exponential schedule; every attempt is logged, give-up
+  raises loudly, plan bugs are never retried, and retries stay invisible to
+  the journal.
+- **Circuit breaker** — `CircuitBreaker` trips after consecutive real
+  failures (surfacing the original fault), fast-fails without touching the
+  dead dependency, cools down call-by-call, and one probe closes or re-opens
+  it with an honest snapshot.
 
 ## Why it matters
 

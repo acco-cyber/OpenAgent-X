@@ -23,8 +23,10 @@ failing `harness_error` check. The matrix only grows.
 | 15 | hooks-deny | hooks (11) | deny policy fires before the registry: denied tool never executes, every decision journaled as `hook`, first match wins, agent observes and still replies |
 | 16 | parallel-fanout | fanout (14) | one task → N real branch runs on their own journals: dispatch order kept, failures recorded as data (`script_error` + empty reply in fanin), parent run_id references verified in child journals, structural determinism on re-run |
 | 17 | structured-output | structured (11) | messy replies repaired with exact note lists (fences, literals, trailing commas, smart quotes, extraction), hopeless input raises, schema rejects missing keys, wrong types and bool-as-integer |
+| 18 | retry-backoff | retry (12) | transient faults recovered on a deterministic exponential schedule, every attempt logged, give-up raises loudly, plan bugs never retried, retried runs journal exactly like healthy ones |
+| 19 | circuit-breaker | breaker (12) | consecutive real failures trip the circuit (original fault surfaced), open fast-fails without consulting the inner, exact cooldown rejections then one probe that closes or re-opens, runner stops `model_unavailable` without fabricating a reply |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **17 tasks, 177 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **19 tasks, 201 checks**.
 
 ## Adding a task (rules)
 
@@ -37,7 +39,9 @@ Run: `python3 -m openagentx eval` (all green or exit 1). Current: **17 tasks, 17
    the drill itself); `hooks` needs `script[]` + `hooks.rules[]`;
    `fanout` needs `branches{}` (every branch with `script[]`) +
    `coordinator_script[]`; `structured` needs `script[]` + `cases[]` +
-   `schema{}`; `audit` needs `expect.planted_*`; `pack`/`sbom` need no
+   `schema{}`; `retry`/`breaker` need `script[]` (fault doubles are
+   injected by the drills themselves, tuned via `expect`); `audit` needs
+   `expect.planted_*`; `pack`/`sbom` need no
    script at all.
 4. Any fixture secret must be runtime-concatenated inside Python — never in JSON.
 5. Checks must observe real behavior from *this* run; no snapshots/caches.
