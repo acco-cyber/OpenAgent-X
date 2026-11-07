@@ -1,0 +1,19 @@
+{
+  "id": "36-release-sweep",
+  "title": "Release sweep: one real run, every view, one truth, gates green — a dense journal; stats and dashboard counters agree with each other and with the raw event stream (one source of truth); report, trace, dashboard and mermaid re-render byte-identically; the planned tool profile (3 calls incl. think, 1 planned failure, >=1 redaction) matches the run; the self-diff is the zero diff (semantic same + diverged_at -1 + CLI exit 0); a raw token hand-written into a journal at runtime is re-redacted by BOTH views (dashboard and mermaid carry only [REDACTED:github_token]); a chained journal verifies, seals, and still verifies; the repository audits to 0 findings; doctor passes every check (>=6); and __version__ equals the top CHANGELOG entry so release metadata cannot drift from the code",
+  "drill": "sweep",
+  "task_text": "produce one journal worth sweeping",
+  "max_steps": 8,
+  "script": [
+    "{\"action\": {\"tool\": \"vault_read\", \"args\": {\"key\": \"github\"}}, \"thought\": \"read the secret\"}",
+    "{\"action\": {\"tool\": \"think\", \"args\": {\"note\": \"sweep every view\"}}, \"thought\": \"plan\"}",
+    "{\"action\": {\"tool\": \"read_file\", \"args\": {\"path\": \"gone.txt\"}}, \"thought\": \"planned failure\"}",
+    "{\"reply\": \"swept\"}"
+  ],
+  "expect": {
+    "reply": "swept",
+    "tool_calls": 3,
+    "thoughts": 3,
+    "tool_fails": 1
+  }
+}

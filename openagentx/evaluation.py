@@ -3086,6 +3086,151 @@ def _mermaid_drill(task: dict) -> list:
     ]
 
 
+def _sweep_drill(task: dict) -> list:
+    """The release sweep: one run, every view, one truth, gates green.
+
+    Honest contract (final regression before a release): a real offline run
+    lands dense; the stats and dashboard counters agree with each other and
+    with the raw event stream (one source of truth); report, trace,
+    dashboard and mermaid re-render byte-identically; the planned tool
+    profile (calls, thoughts, failures) matches the run; the self-diff is
+    the zero diff (semantic + CLI); a raw token hand-written into a journal
+    at runtime is re-redacted by BOTH views; a chained journal seals and
+    verifies; the repository audits to 0 findings; doctor passes every one
+    of its checks; and ``__version__`` equals the top CHANGELOG entry so
+    release metadata cannot drift from the code.
+    """
+    from .cli import main as cli_main
+    from .stats import run_stats
+    from .dashboard import dashboard_data, render_dashboard
+    from .mermaid import trace_mermaid
+    from .report import render_text, render_html
+    from .jdiff import diff_journals
+    from .chain import ChainedJournal, verify_journal, seal
+    from .doctor import run_doctor
+    from . import __version__
+
+    wd = _fresh_wd("sweep")
+    events, result = _run_offline(task, wd)
+    exp = _expect(task)
+    jp = os.path.join(wd, "journal.jsonl")
+
+    st = run_stats(jp)
+    d = dashboard_data(jp)
+    counts = {}
+    for ev in events:
+        counts[ev.type] = counts.get(ev.type, 0) + 1
+    seqs = [ev.seq for ev in events]
+
+    d1, d2 = render_dashboard(jp), render_dashboard(jp)
+    m1, m2 = trace_mermaid(jp), trace_mermaid(jp)
+    t1, t2 = render_text(events), render_text(events)
+    r1, r2 = render_html(events), render_html(events)
+
+    # defense in depth: a raw secret lands in a journal at runtime only
+    raw = "ghp_" + "A1b2C3d4E5" * 3 + "F9ab12"
+    leak = os.path.join(wd, "leak.jsonl")
+    lj = Journal(leak)
+    lj.start_run("sweep-leak")
+    lj.append("thought", {"text": "token " + raw})
+    d_leak = render_dashboard(leak)
+    m_leak = trace_mermaid(leak)
+
+    # the opt-in chain seals what it can verify
+    chain_path = os.path.join(wd, "chain.jsonl")
+    cj = ChainedJournal(chain_path)
+    cj.start_run("sweep-chain")
+    cj.append("thought", {"text": "chain me"})
+    cj.append("reply", {"text": "sealed"})
+    v1 = verify_journal(chain_path)
+    head = seal(chain_path)
+    v2 = verify_journal(chain_path)
+
+    # the repository gates, re-demanded here
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repo_findings = run_audit(repo_root)
+    doctor_checks = run_doctor(repo_root)
+
+    # release metadata: the top CHANGELOG entry is the version
+    changelog_head = ""
+    cl_path = os.path.join(repo_root, "CHANGELOG.md")
+    if os.path.exists(cl_path):
+        with open(cl_path, encoding="utf-8") as fh:
+            for line in fh:
+                s = line.strip()
+                if s.startswith("## [") and "]" in s:
+                    changelog_head = s[4:s.index("]")]
+                    break
+
+    cli_same = False
+    import io as _io
+    from contextlib import redirect_stdout as _rso
+    with _rso(_io.StringIO()):          # the diff report is CLI noise here;
+        cli_same = cli_main(["diff", jp, jp]) == 0   # the drill grades exit codes
+    return [
+        Check("run_stops_as_planned",
+              result.stop_reason == exp.get("stop_reason", "reply")
+              and result.reply == str(exp.get("reply", "")),
+              f"stop={result.stop_reason}"),
+        Check("journal_dense_no_torn",
+              seqs == list(range(len(events))) and st["dense"]
+              and not st["torn_tail"] and d["dense"],
+              f"{len(events)} events dense 0..{seqs[-1] if seqs else -1}"),
+        Check("counters_one_source_of_truth",
+              d["events"] == st["events"] == len(events)
+              and d["steps"] == st["steps"]
+              and d["tool_calls"] == st["tool_calls"]
+              and d["tool_results"] == st["tool_results"]
+              and d["tool_fails"] == st["tool_fails"]
+              and d["replies"] == st["replies"]
+              and d["thoughts"] == st["thoughts"]
+              and d["redactions"] == st["redactions"]
+              and d["runs_opened"] == st["runs_opened"]
+              and d["runs_closed"] == st["runs_closed"],
+              "stats/dashboard/replay: one source of truth"),
+        Check("type_counts_match_stream",
+              d["type_counts"] == counts
+              and st["type_counts"] == counts
+              and sum(counts.values()) == len(events),
+              str(counts)[:70]),
+        Check("views_deterministic",
+              d1 == d2 and m1 == m2 and t1 == t2 and r1 == r2,
+              "report/trace/dashboard/mermaid render twice identical"),
+        Check("tool_profile_as_planned",
+              st["tool_calls"] == int(exp.get("tool_calls", st["tool_calls"]))
+              and st["thoughts"] == int(exp.get("thoughts", st["thoughts"]))
+              and st["tool_fails"] == int(exp.get("tool_fails", st["tool_fails"]))
+              and st["redactions"] >= 1,
+              f"calls={st['tool_calls']} thinks={st['thoughts']} "
+              f"fails={st['tool_fails']} redactions={st['redactions']}"),
+        Check("self_diff_is_zero",
+              diff_journals(jp, jp).get("same") is True
+              and diff_journals(jp, jp).get("diverged_at") == -1
+              and cli_same,
+              "self diff SAME (semantic + CLI 0)"),
+        Check("raw_token_redacted_both_views",
+              raw not in d_leak and raw not in m_leak
+              and MARKER + "github_token]" in d_leak
+              and MARKER + "github_token]" in m_leak,
+              "dashboard + mermaid re-redact the runtime secret"),
+        Check("chain_seals_and_verifies",
+              v1.get("ok") is True and v1.get("chained") is True
+              and v2.get("ok") is True and v2.get("head") == head,
+              f"sealed head {str(head)[:12]}..."),
+        Check("repo_audit_clean", repo_findings == [],
+              f"{len(repo_findings)} findings"),
+        Check("doctor_all_green",
+              all(ok for _n, ok, _d in doctor_checks)
+              and len(doctor_checks) >= 6,
+              f"{sum(1 for _n, ok, _d in doctor_checks if ok)}"
+              f"/{len(doctor_checks)} checks pass"),
+        Check("version_matches_changelog",
+              changelog_head == __version__ and bool(changelog_head),
+              f"__version__={__version__} changelog="
+              f"{changelog_head or 'MISSING'}"),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -3121,6 +3266,7 @@ DRILLS = {
     "graph": _graph_drill,
     "dashboard": _dashboard_drill,
     "mermaid": _mermaid_drill,
+    "sweep": _sweep_drill,
 }
 
 
