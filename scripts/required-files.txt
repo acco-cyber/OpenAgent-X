@@ -10,6 +10,7 @@ openagentx/report.py
 openagentx/trace.py
 openagentx/evaluation.py
 openagentx/doctor.py
+openagentx/doctests.py
 openagentx/audit.py
 openagentx/pack.py
 openagentx/sbom.py

@@ -164,6 +164,20 @@ with no wall-clock; a task without prose is reported loudly
 — never papered over; a missing spec is a loud `FileNotFoundError`/exit
 1, not an empty report.
 
+### doctests
+Docstring self-checks — the examples are graded, not decorative.
+`load_package_modules()` / `load_file_modules(dir)` feed one grading
+path; `run_doctests(loaded)`, `render_doctests(report)`,
+`oax doctest [dir]` (exit 0 green / 1 failing). Invariants: every
+module is reported — with examples or without, and a module with no
+examples is counted, never fabricated green; a failing example is loud
+(the doctest log with `Failed example` / `Expected` / `Got` rides in
+the result); an import failure folds into a failing result carrying
+the real exception; one failure poisons the aggregate `ok`; the render
+is byte-deterministic with no wall-clock; probes are graded by the
+same code that grades the real tree, so a poisoned docstring fails
+exactly like a drill fails.
+
 ## Reliability
 
 ### retry

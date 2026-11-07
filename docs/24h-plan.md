@@ -395,3 +395,11 @@ pad with empty commits.
   README badge/inline/CLI-table/comparison synced (demo alt text stays
   38 — it describes the recording), tutorial counts 39, example 28 +
   manifest 144, CHANGELOG [Unreleased] entry; audit 0, doctor 6/6
+
+- [ ] S32-E3 — docstring self-checks: the examples are graded, not
+  decorative — a stdlib-doctest runner over every package module
+  (`oax doctest`), curated `>>>` examples on the core modules
+  (redaction, events, jdiff, memory, cache, breaker, compact, mermaid,
+  structured), loud edges (poisoned docstring → expected/got, import
+  bomb → folded real exception, one failure poisons the aggregate), and
+  a new drill grading it all (task 40)

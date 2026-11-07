@@ -1,7 +1,7 @@
 """oax — the OpenAgent-X command line.
 
-Subcommands: eval | doctor | audit | examples | explain | trace | report | run | pack |
-sbom | recall | compact | diff | stats | grep | replay | bench | fuzz |
+Subcommands: eval | doctor | doctest | audit | examples | explain | trace | report | run |
+pack | sbom | recall | compact | diff | stats | grep | replay | bench | fuzz |
 property | pack2 | graph | dashboard | mermaid. Every subcommand is offline
 and stdlib-only; exit codes are contracts (0 = green, 1 = anything else,
 2 = bad bounds where a window is involved).
@@ -40,6 +40,17 @@ def _cmd_eval(args) -> int:
           f"{'green' if ok else 'FAILING'} (wall-clock {wall:.3f}s, "
           f"workers={args.workers}; timings reported, never graded)")
     return 0 if ok else 1
+
+
+def _cmd_doctest(args) -> int:
+    """Grade every docstring example with the stdlib doctest engine."""
+    from . import doctests as _dt
+
+    loaded = (_dt.load_file_modules(args.dir) if args.dir
+              else _dt.load_package_modules())
+    report = _dt.run_doctests(loaded)
+    print(_dt.render_doctests(report), end="")
+    return 0 if report["ok"] else 1
 
 
 def _cmd_doctor(args) -> int:
@@ -392,6 +403,13 @@ def build_parser() -> argparse.ArgumentParser:
     d = sub.add_parser("doctor", help="purity + integrity gate")
     d.add_argument("root", nargs="?", default=".")
     d.set_defaults(fn=_cmd_doctor)
+
+    dc = sub.add_parser("doctest",
+                        help="grade every docstring example (stdlib doctest)")
+    dc.add_argument("dir", nargs="?", default="",
+                    help="grade plain .py files in this directory instead "
+                         "of the openagentx package")
+    dc.set_defaults(fn=_cmd_doctest)
 
     a = sub.add_parser("audit", help="secret-scan a tree")
     a.add_argument("root", nargs="?", default=".")
