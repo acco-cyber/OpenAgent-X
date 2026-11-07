@@ -186,7 +186,7 @@ openagentx/     the library (events, runner, tools, trace, evaluation, ...)
 golden_tasks/   offline drill specs (JSON) — the grading matrix
 examples/       runnable offline examples (zero API keys)
 scripts/        verify.mjs, required-files.txt
-docs/           AI context, sprint plan
+docs/           AI context, sprint plan, module guides, tutorial
 ```
 
 MIT licensed. Built to be audited.
