@@ -135,6 +135,19 @@ def _cmd_sbom(args) -> int:
     return 0 if s["stdlib_only"] else 1
 
 
+def _cmd_graph(args) -> int:
+    """Import dependency graph: eager/lazy edges, layers, cycles as data."""
+    from .depgraph import build_depgraph, depgraph_json, render_depgraph
+
+    g = build_depgraph(args.root, args.pkg_dir)
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as fh:
+            fh.write(depgraph_json(g))
+        print(f"graph: wrote {args.out}")
+    print(render_depgraph(g), end="")
+    return 0 if g["acyclic"] else 1
+
+
 def _cmd_trace(args) -> int:
     from .trace import text_timeline
 
@@ -324,6 +337,13 @@ def build_parser() -> argparse.ArgumentParser:
     sb.add_argument("--pkg-dir", default="", help="package dir (default: <root>/openagentx)")
     sb.add_argument("--out", default="", help="write canonical BOM JSON here")
     sb.set_defaults(fn=_cmd_sbom)
+
+    gr = sub.add_parser("graph",
+                        help="import dependency graph (eager/lazy, layers, cycles)")
+    gr.add_argument("root", nargs="?", default=".")
+    gr.add_argument("--pkg-dir", default="", help="package dir (default: <root>/openagentx)")
+    gr.add_argument("--out", default="", help="write canonical graph JSON here")
+    gr.set_defaults(fn=_cmd_graph)
 
     rn = sub.add_parser("run", help="run a scripted agent turn-loop offline")
     rn.add_argument("script", help="file of single-line JSON turns")
