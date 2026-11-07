@@ -185,7 +185,29 @@ green.
   journal is re-redacted by BOTH views (defense in depth); `oax
   dashboard` / `oax mermaid` exit-code contracts live (0 rendered /
   1 missing); example 17 live; examples count now seventeen
-- [ ] S19-E3 — examples gallery (budget guard, cache, hooks, replay diff)
+- [x] S19-E3 — examples gallery (budget guard, cache, hooks, replay diff)
+  ✅ 35 tasks, 399 checks green; four deep-dive gallery examples, one per
+  theme, each failing loud: `18_budget_guard.py` (governor stops BEFORE the
+  rejected call — budget event names the refused tool with used/cap, cap
+  recorded at run_start, executed calls are exactly the pre-budget prefix,
+  the rejected write leaves zero side effects while the allowed one
+  persists, no reply fabricated, the capped attempt counts as a step, the
+  scripted tail stays unconsumed, reply/max_steps/budget proven to be
+  three distinct stop reasons, re-run diffs SAME) · `19_cache_hits.py`
+  (one script twice through a shared ResponseCache: all misses then all
+  hits with the inner adapter called 0x — observable proof — journals
+  diff SAME because the cache sits at the LLM layer, key content/order
+  sensitivity, mutation and empty-store honesty) · `20_hooks_deny.py`
+  (every decision journaled as a hook event incl. allows, deny carries
+  its named reason, the refused call leaves zero side effects, the loop
+  adapts, the denied turn still counts as a step, snapshot tamper-proof,
+  first-match wildcard rules) · `21_replay_diff.py` (two real runs SAME
+  with ts ignored, one drifted argument diverges at the derived calc seq
+  with both payloads named, a single edited ts semantic-SAME but
+  strict-DIFFERENT, torn tail isolates per side, self-diff identity,
+  CLI 0 same / 1 different); golden task 35 grades the budget story
+  end-to-end (+10 checks); README gains the Examples-gallery table;
+  examples count now twenty-one
 
 ### Phase 3 — Docs & ecosystem
 - [ ] S20-E3 — docs: module guides + tutorial 0→hero
