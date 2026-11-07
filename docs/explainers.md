@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (40 tasks, 460 checks) is the repo's contract with
+The golden matrix (40 tasks, 462 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -427,7 +427,7 @@ out while one of them is quietly broken.
 ### 39-explain — the explainer view: the matrix explains itself from the CLI
 **The run:** no agent runs here; the drill grades the join between a
 task's machine-readable spec and its prose on this page. **The checks
-grade (12):** a real task explains (id, drill and prose all present), the
+grade (14):** a real task explains (id, drill and prose all present), the
 report's fields match the JSON file read independently, expect keys come
 back sorted, the render carries both halves (spec line + prose body) and
 is byte-deterministic with no wall-clock, prose coverage is
@@ -435,7 +435,10 @@ cross-checked in both directions (every golden task has an entry here,
 every entry names a real task), a foreign spec without prose is reported
 loudly (`has_prose: False` naming the verify gate — never fabricated
 prose), a missing spec raises instead of an empty report, and the CLI
-agrees (exit 0 found / 1 missing). **Loud failure:** a task added
+agrees (exit 0 found / 1 missing), and the matrix index covers
+every task in sorted order (deterministic render, CLI exit 0 covered,
+a ghost spec without prose a loud NO-PROSE row — coverage reported,
+never fabricated). **Loud failure:** a task added
 without its prose, or an explain render that drifted between calls.
 
 ### 40-doctest — docstring self-checks: the examples are graded, not decorative
