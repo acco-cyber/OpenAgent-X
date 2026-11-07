@@ -170,7 +170,21 @@ green.
   without tainting the eager layering; entries/leaves/orphans/fan sums
   derived, sorted, timestamp-free); `oax pack2` / `oax graph` exit-code
   contracts live; example 16 live; examples count now sixteen
-- [ ] S18-E3 — report v2 (dashboard HTML) + mermaid trace export
+- [x] S18-E3 — report v2 (dashboard HTML) + mermaid trace export
+  ✅ 34 tasks, 389 checks green; `dashboard.py` (counters taken from
+  run_stats — which takes replay's — so dashboard/stats/replay never
+  disagree; integrity strip with dense/torn flags and duration reported
+  not graded, summary cards, per-type bars derived from integer counts,
+  per-tool table, redacted+escaped timeline; inline CSS, zero external
+  assets, no timestamps; same file in -> byte-identical HTML/JSON out)
+  + `mermaid.py` (one zero-padded node per event with quote-escaped,
+  newline-stripped truncated labels, one spine edge per consecutive
+  pair, deterministic call/fail/err/say classing, extension event types
+  through the generic path, honest empty state, torn tails diagram the
+  dense prefix only); a runtime-assembled raw token hand-written into a
+  journal is re-redacted by BOTH views (defense in depth); `oax
+  dashboard` / `oax mermaid` exit-code contracts live (0 rendered /
+  1 missing); example 17 live; examples count now seventeen
 - [ ] S19-E3 — examples gallery (budget guard, cache, hooks, replay diff)
 
 ### Phase 3 — Docs & ecosystem
