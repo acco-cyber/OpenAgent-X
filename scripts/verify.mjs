@@ -90,5 +90,31 @@ if (existsSync(gdir)) {
 // 3) eval count only moves forward (honest growth)
 if (nTasks < 35) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 35`); fail++; }
 
+// 4) docs stay in sync with the package (module guides + tutorial)
+if (existsSync(join(root, 'docs/modules.md')) && existsSync(join(root, 'docs/tutorial.md'))) {
+  const guides = readFileSync(join(root, 'docs/modules.md'), 'utf8');
+  const tut = readFileSync(join(root, 'docs/tutorial.md'), 'utf8');
+  const cliSrc = readFileSync(join(root, 'openagentx/cli.py'), 'utf8');
+  for (const f of readdirSync(join(root, 'openagentx'))) {
+    if (!f.endsWith('.py') || f === '__init__.py' || f === '__main__.py') continue;
+    const base = f.slice(0, -3);
+    if (!new RegExp(`\\b${base}\\b`).test(guides)) {
+      console.error('DOCS MISSING module guide for', base); fail++;
+    }
+  }
+  // the tutorial may only name real oax subcommands
+  for (const m of tut.matchAll(/oax ([a-z0-9_]+)/g)) {
+    if (!cliSrc.includes(`add_parser("${m[1]}"`)) {
+      console.error('TUTORIAL names unknown subcommand oax', m[1]); fail++;
+    }
+  }
+  // the tutorial may only reference real example files
+  for (const m of tut.matchAll(/examples\/[0-9A-Za-z_]+\.py/g)) {
+    if (!existsSync(join(root, m[0]))) {
+      console.error('TUTORIAL names missing example', m[0]); fail++;
+    }
+  }
+} else { console.error('MISSING docs/modules.md + docs/tutorial.md'); fail++; }
+
 console.log(fail ? `verify: FAIL (${fail})` : `verify: OK (${nTasks} golden tasks, ${req.length} required files)`);
 process.exit(fail ? 1 : 0);
