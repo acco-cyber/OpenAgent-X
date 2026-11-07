@@ -310,7 +310,9 @@ never trusts its harness: exceptions fold into failing checks, and the
 check count only moves forward. Every task's prose — what the run does,
 what the checks grade, how it fails loudly — lives in
 `docs/explainers.md`; read any task's spec + prose from the CLI with
-`oax explain <NN-slug>`; a runnable version of this capstone — author a
+`oax explain <NN-slug>`, or the whole matrix at a glance with
+`oax explain --all` (exit 1 while any task lacks prose); a runnable
+version of this capstone — author a
 spec, grade a real run, watch the honest failures — lives at
 `examples/26_author_your_own_drill.py`. The docstrings grade themselves too: every `>>>` example in
 the package runs under `oax doctest`, so prose that drifts from

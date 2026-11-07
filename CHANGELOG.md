@@ -41,6 +41,11 @@ run on every commit (and in CI).
   1 missing; graded by golden task 39 (12 checks) — including the
   two-directional coverage cross-check — and demonstrated by example 28;
   modules.md, the CLI table, the tutorial and the explainer page
+  synced. Round two: `oax explain --all` renders the whole matrix index
+  in one deterministic render — sorted rows, honest `[NO-PROSE]` marks,
+  an unreadable spec a loud error row, exit 1 while any task lacks
+  prose; graded by two new explain-drill checks (matrix 40 tasks /
+  462 checks) and demonstrated by example 28 step 8
   document it; matrix 39 tasks / 447 checks; manifest 144 files.
 
 ### Added — examples

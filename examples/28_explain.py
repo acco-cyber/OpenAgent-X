@@ -106,6 +106,23 @@ def main() -> int:
     assert re.search(r"\d{10,}", so) is None
     print("CLI: exit 0 found / 1 missing, stdout redaction-free by design")
 
+    # 8) the matrix index: every task's prose coverage at a glance
+    from openagentx.explain import explain_all, render_explain_index
+    idx = explain_all()
+    assert idx["ok"] is True, "the index found a task without prose"
+    ids = [r["id"] for r in idx["rows"]]
+    assert ids == sorted(ids), "index rows not in matrix order"
+    assert len(idx["rows"]) == len(stems), "index lost a task"
+    iout = render_explain_index(idx)
+    assert iout == render_explain_index(idx), "index render drifted"
+    assert re.search(r"\d{10,}", iout) is None, "wall-clock in index"
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        rc_all = cli_main(["explain", "--all"])
+    assert rc_all == 0 and "explain --all" in buf.getvalue()
+    print(f"index: {idx['tasks']} tasks, {idx['with_prose']} with prose, "
+          "deterministic, CLI exit 0")
+
     print("OK 28_explain (the matrix explains itself, deterministically)")
     return 0
 

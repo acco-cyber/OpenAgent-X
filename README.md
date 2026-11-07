@@ -200,7 +200,7 @@ same events, never from separate bookkeeping.
 
 ```
 oax eval      # run every golden task drill, all green or exit 1   (40 tasks / 462 checks)
-oax explain   # one golden task's spec + its prose explainer (exit 1 = missing)
+oax explain   # one golden task's spec + its prose explainer; --all renders the whole matrix index (exit 1 = prose missing)
 oax doctest   # every docstring example graded by stdlib doctest (exit 1 = rot)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
