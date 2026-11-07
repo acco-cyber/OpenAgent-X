@@ -7,7 +7,7 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (34 tasks / 389 checks)
+oax eval      # run every golden task drill, all green or exit 1   (35 tasks / 399 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
@@ -32,7 +32,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # seventeen runnable end-to-end demos
+python3 -m openagentx examples # twenty-one runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -148,6 +148,19 @@ python3 -m openagentx examples # seventeen runnable end-to-end demos
   mermaid` exports the causal spine as a deterministic flowchart whose
   labels are quote-escaped and re-redacted — even a pre-redaction
   journal cannot leak a secret through a diagram.
+
+## Examples gallery — one deep-dive per guarantee
+
+Every feature ships with a runnable proof. The gallery files each attack
+one theme end-to-end with real assertions (fail loud, exit non-zero):
+
+| Example | Theme | What it proves |
+|---|---|---|
+| `18_budget_guard.py` | budget guard | the governor stops *before* the rejected call: the `budget` event names the refused tool with used/cap, the cap is recorded at `run_start`, the rejected write leaves zero side effects, the capped attempt counts as a step, and reply / `max_steps` / budget are three distinct stop reasons |
+| `19_cache_hits.py` | cache | run one script twice through a shared `ResponseCache`: all misses then all hits with the inner adapter called 0x (observable proof), journals diff SAME because the cache sits at the LLM layer, key content/order sensitivity, mutation and empty-store honesty |
+| `20_hooks_deny.py` | hooks | a deny rule refuses `write_file` before the registry: every decision (allows included) is a journaled `hook` event, the refused call leaves zero side effects, the loop adapts, the denied turn still counts as a step, first-match wildcard rules hold |
+| `21_replay_diff.py` | replay diff | two real runs diff SAME with wall-clock ignored, one drifted argument diverges at the exact seq with both payloads named, a single edited ts is semantic-SAME but strict-DIFFERENT, torn tails isolate per side, exit 0 = same / 1 = different |
+| `01`–`17` | foundations | hello-loop, redaction, team handoff, pack+sbom, memory+compact, cache+hooks, fanout+structured, retry+breaker, planner+snapshot, prompt layers, JIT tools, chaos+chain, diff+stats, bench+fuzz, property, pack2+graph, dashboard+mermaid |
 
 ## Why it matters
 
