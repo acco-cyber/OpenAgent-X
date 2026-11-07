@@ -25,8 +25,10 @@ failing `harness_error` check. The matrix only grows.
 | 17 | structured-output | structured (11) | messy replies repaired with exact note lists (fences, literals, trailing commas, smart quotes, extraction), hopeless input raises, schema rejects missing keys, wrong types and bool-as-integer |
 | 18 | retry-backoff | retry (12) | transient faults recovered on a deterministic exponential schedule, every attempt logged, give-up raises loudly, plan bugs never retried, retried runs journal exactly like healthy ones |
 | 19 | circuit-breaker | breaker (12) | consecutive real failures trip the circuit (original fault surfaced), open fast-fails without consulting the inner, exact cooldown rejections then one probe that closes or re-opens, runner stops `model_unavailable` without fabricating a reply |
+| 20 | planner-executor | planner (14) | one planning turn fans out into real executor runs on their own journals: fenced plans repaired with exact notes and schema-validated before anything executes, plan bugs journal an error (never laundered into empty plans), failing steps are data with dense child journals referenced by the parent, structural determinism on re-run |
+| 21 | snapshot-travel | snapshot (12) | checkpoints are pure prefix folds: later events and torn tails cannot rewrite an earlier checkpoint, travel is deterministic and monotone, bounds/order/density violations raise loudly, empty journal exposes exactly the zero state, reopened journals travel identically |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **19 tasks, 201 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **21 tasks, 227 checks**.
 
 ## Adding a task (rules)
 
@@ -40,7 +42,9 @@ Run: `python3 -m openagentx eval` (all green or exit 1). Current: **19 tasks, 20
    `fanout` needs `branches{}` (every branch with `script[]`) +
    `coordinator_script[]`; `structured` needs `script[]` + `cases[]` +
    `schema{}`; `retry`/`breaker` need `script[]` (fault doubles are
-   injected by the drills themselves, tuned via `expect`); `audit` needs
+   injected by the drills themselves, tuned via `expect`); `planner` needs
+   `planner_script[]` + `step_scripts[][]`; `snapshot` needs `script[]` +
+   `expect.checkpoints[]`; `audit` needs
    `expect.planted_*`; `pack`/`sbom` need no
    script at all.
 4. Any fixture secret must be runtime-concatenated inside Python — never in JSON.

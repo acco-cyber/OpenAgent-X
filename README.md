@@ -7,7 +7,7 @@ Grading is *honest*: golden-task drills execute real behavior offline and never
 report a green check that did not actually run.
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (19 tasks / 201 checks)
+oax eval      # run every golden task drill, all green or exit 1   (21 tasks / 227 checks)
 oax doctor    # environment + pure-stdlib purity gate
 oax audit .   # secret scan of the whole tree (0 findings or exit 1)
 oax pack .    # deterministic tree manifest (build + --check verify)
@@ -23,7 +23,7 @@ Quickstart (no API keys, ever):
 git clone <this repo> && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # eight runnable end-to-end demos
+python3 -m openagentx examples # nine runnable end-to-end demos
 ```
 
 ## What the agent runtime guarantees
@@ -67,6 +67,15 @@ python3 -m openagentx examples # eight runnable end-to-end demos
   failures (surfacing the original fault), fast-fails without touching the
   dead dependency, cools down call-by-call, and one probe closes or re-opens
   it with an honest snapshot.
+- **Planner-executor** — one planning turn produces a schema-validated plan
+  (fenced JSON repaired with notes), every step executes as a real sub-agent
+  run on its own journal, plan bugs journal an error instead of laundering
+  into empty plans, failing steps are data, and the planner closes with a
+  summary on the parent journal.
+- **Snapshot travel** — the state at any checkpoint is a pure prefix fold of
+  the journal: later events and torn tails cannot rewrite history, bounds
+  and density violations raise loudly, and reopened journals travel
+  identically.
 
 ## Why it matters
 
