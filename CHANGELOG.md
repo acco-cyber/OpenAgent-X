@@ -24,6 +24,12 @@ run on every commit (and in CI).
   referencing a name their module never imported — fixed at the root;
   modules.md, the CLI table, the tutorial and the explainer page synced;
   manifest 145 files
+- round two: eight more core modules carry curated `>>>` examples
+  (llm, prompt, retry, jit, hooks, chain, snapshot, tools — 53 examples
+  across 17 modules); the doctest drill's floor pins the grown set; the
+  first run caught doctest's strict exception rule (user-defined
+  exceptions are expected with their module path) and it was fixed at
+  the root, never weakened
 ### Added — views (explain)
 
 - `oax explain <NN-slug|path>`: the matrix explains itself from the CLI —

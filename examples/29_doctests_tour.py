@@ -5,7 +5,7 @@ Docstring examples rot silently: prose claims behavior nothing executes.
 ``>>>`` example in every package module's docstrings is executed and
 graded each run, so a docstring that lies fails exactly like a drill
 fails. This example walks the checker end-to-end: the real tree graded
-green (27 examples across 9 modules), the render proven byte-identical
+green (53 examples across 17 modules), the render proven byte-identical
 twice with no wall-clock, a module without examples counted honestly
 instead of faked green, a poisoned docstring failing loudly with its
 Failed example / Expected / Got log, an import bomb folding into a
@@ -31,8 +31,8 @@ def main() -> int:
     # 1) the real tree grades green: every docstring example passes
     report = dt.run_doctests(dt.load_package_modules())
     assert report["ok"] is True, "real tree has failing docstring examples"
-    assert report["total_examples"] >= 27, "the example floor regressed"
-    assert report["modules_with_examples"] >= 9, "the module floor regressed"
+    assert report["total_examples"] >= 53, "the example floor regressed"
+    assert report["modules_with_examples"] >= 17, "the module floor regressed"
     print(f"[1] real tree green: {report['total_examples']} examples across "
           f"{report['modules_with_examples']} modules, "
           f"{report['total_failed']} failures")

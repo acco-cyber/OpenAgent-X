@@ -423,3 +423,9 @@ pad with empty commits.
   twenty-nine demos, tutorial snippet + capstone line, golden-table row
   40 + no-script shape note, example 29 + manifest 146, CHANGELOG
   [Unreleased] entry; audit 0, doctor 6/6
+
+- [ ] S33-E3 — doctests round two: the second ring — curated `>>>`
+  examples reach eight more core modules (llm, prompt, retry, jit,
+  hooks, chain, snapshot, tools), the drill floor pins the grown set,
+  the CLI gains floor flags so operators demand the same bar, task 40
+  grades it all

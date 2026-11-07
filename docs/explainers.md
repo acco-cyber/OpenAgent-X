@@ -442,8 +442,8 @@ without its prose, or an explain render that drifted between calls.
 **The run:** no agent runs here either; the drill grades the package's
 own docstring examples through the stdlib doctest engine — the same
 loaders that grade the real tree also grade the probe files this drill
-writes. **The checks grade (12):** the real tree is green (27 examples
-across 9 modules, floor pinned so the set cannot quietly shrink), every
+writes. **The checks grade (12):** the real tree is green (53 examples
+across 17 modules, floor pinned so the set cannot quietly shrink), every
 package module is reported in sorted order with none skipped, modules
 without examples are counted honestly and never faked green, a poisoned
 docstring (`add(2, 3)` promised 6, got 5) fails loudly with its log, the

@@ -3683,8 +3683,8 @@ def _doctest_drill(task: dict) -> list:
     # 3) examples exist and are distributed (floor pinned to today's matrix)
     checks.append(Check(
         "examples_exist",
-        (report["modules_with_examples"] >= 9
-         and report["total_examples"] >= 27),
+        (report["modules_with_examples"] >= 17
+         and report["total_examples"] >= 53),
         f"{report['modules_with_examples']} modules, "
         f"{report['total_examples']} examples"))
     # 4) modules without examples are counted honestly, never faked green
