@@ -158,7 +158,18 @@ green.
   replay is a function of events, never of the clock); reports carry no
   timings so the same seed always yields the same verdict; `oax property`
   exit-code contract live; example 15 live; examples count now fifteen
-- [ ] S17-E3 — pack v2 (signed manifest) + sbom v2 (dependency graph)
+- [x] S17-E3 — pack v2 (signed manifest) + sbom v2 (dependency graph)
+  ✅ 32 tasks, 366 checks green; `pack2.py` (HMAC-SHA256 over the canonical
+  sig-stripped manifest bytes, key_id names the key without revealing it,
+  constant-time verify, wrong key / edited entry / tampered file each fail
+  their own named layer while both layers always report, v1 still reads
+  the core) + `depgraph.py` (every local import resolves to an in-package
+  edge with a kind: eager edges build the longest-path layers and Tarjan
+  cycle detection, lazy function-body edges are reported as data — the
+  CLI's real cli/doctor/evaluation/sbom deferral ring is named out loud
+  without tainting the eager layering; entries/leaves/orphans/fan sums
+  derived, sorted, timestamp-free); `oax pack2` / `oax graph` exit-code
+  contracts live; example 16 live; examples count now sixteen
 - [ ] S18-E3 — report v2 (dashboard HTML) + mermaid trace export
 - [ ] S19-E3 — examples gallery (budget guard, cache, hooks, replay diff)
 
