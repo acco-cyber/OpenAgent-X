@@ -114,6 +114,12 @@ def _gate_doctest(root: str) -> dict:
     detail = (f"{report['modules_with_examples']} modules with examples, "
               f"{report['total_examples']} examples, "
               f"{report['total_failed']} failures")
+    if report["total_failed"]:
+        fails = [r for r in report["modules"] if not r["ok"]]
+        named = "; ".join(f"{r['module']}: "
+                          f"{r['log'].strip().splitlines()[0]}"
+                          for r in fails[:3])
+        detail += "; " + named
     counts = {"modules": report["total_modules"],
               "with_examples": report["modules_with_examples"],
               "examples": report["total_examples"],
