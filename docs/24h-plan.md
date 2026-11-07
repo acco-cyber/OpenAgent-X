@@ -300,12 +300,21 @@ pad with empty commits.
 
 ### Phase 5 — Stretch
 
-- [ ] S26-E3 — `oax grep`: the journal is searchable truth, not just
-  replayable truth — a new `grep.py` view (case-sensitive substring over
-  type+payload JSON, exact event type, exact payload tool name, a seq
-  floor, a result cap, all AND-ed; matches render through the redaction
-  engine so raw disk truth can never leak through the search view; torn
-  tails isolated, honest empty result, byte-deterministic output, CLI
-  exit 0 matched / 1 no matches or missing journal) + golden task 37
-  grading it + module guide, CLI table, tutorial and FAQ sync + example
-  24 running the story
+- [x] S26-E3 — `oax grep`: the journal is searchable truth, not just
+  replayable truth
+  ✅ 37 tasks, 423 checks green; `grep.py` filters one journal's events
+  with plain deterministic matchers all AND-ed (case-sensitive substring
+  over the type+payload JSON projection, exact event type, exact payload
+  tool name covering call+result pairs, a `since_seq` floor, a `limit`
+  cap in seq order); every match renders through the redaction engine —
+  raw secrets live on disk, so a verbatim search view would be a leak
+  channel, and grep proves the harder case: searching FOR the raw token
+  matches on disk and still prints only `[REDACTED:github_token]`; torn
+  tails isolated and never searched, honest empty result, no timestamps,
+  CLI 0 matched / 1 none / 1 missing with redacted stdout; golden task 37
+  (12 checks) + example 24 + module guide + CLI-table row + tutorial
+  Step-8 line + FAQ #16; CHANGELOG gains an [Unreleased] section and the
+  version/changelog sync gate now skips non-version headers (both the
+  sweep drill and example 23 fixed at the root); eval floor 36 → 37;
+  manifest 134 files; task 37's write_file now uses the real signature
+  (path+text) so its expectations are truly observed
