@@ -23,6 +23,21 @@ Injection safety by construction: because substitution happens *after*
 include expansion and values are never re-scanned for directives, a
 variable value containing ``[[include ...]]`` stays literal text — data can
 never add structure to the prompt.
+
+Example (include first, substitute after; cycles raise with the full path):
+
+    >>> pl = PromptLayers({"tail": "[[include system]] Bye.",
+    ...                    "system": "Hello {{name}}."})
+    >>> pl.render("tail", {"name": "Ada"})
+    'Hello Ada. Bye.'
+    >>> pl.render("tail", {})
+    Traceback (most recent call last):
+        ...
+    ValueError: unresolved variables in prompt: name
+    >>> PromptLayers({"a": "[[include a]]"}).render("a")
+    Traceback (most recent call last):
+        ...
+    ValueError: include cycle detected: a -> a
 """
 
 from __future__ import annotations

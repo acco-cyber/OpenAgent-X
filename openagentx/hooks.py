@@ -7,6 +7,17 @@ decision as a ``hook`` event, and a denied call never reaches the tool
 registry — no ``tool_call``, no ``tool_result``, no side effects. The loop
 continues after a denial (the agent observes ``DENY ...`` and can adapt);
 a denied attempt still consumed its LLM turn, so it counts as a step.
+
+Example (first matching rule wins; the wildcard denies everything else):
+
+    >>> p = HookPolicy([{"tool": "rm", "reason": "no destructive tools"},
+    ...                 {"tool": "*", "reason": "locked down"}])
+    >>> p.decide("rm")
+    ('deny', 'no destructive tools')
+    >>> p.decide("anything")
+    ('deny', 'locked down')
+    >>> HookPolicy([]).decide("rm")
+    ('allow', '')
 """
 
 from __future__ import annotations

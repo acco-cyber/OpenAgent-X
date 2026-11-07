@@ -8,6 +8,18 @@ single-line-JSON script where each line is either::
 
 Any exhaustion or malformed line raises immediately — drills must observe real
 failures, not improvised behavior.
+
+Example:
+
+    >>> s = ScriptedLLM([{"reply": "hi"}, {"reply": "bye"}])
+    >>> s.complete([])
+    {'reply': 'hi'}
+    >>> s.complete([])
+    {'reply': 'bye'}
+    >>> s.complete([])
+    Traceback (most recent call last):
+        ...
+    openagentx.llm.ScriptExhausted: script exhausted: call 3 beyond 2 lines
 """
 
 from __future__ import annotations

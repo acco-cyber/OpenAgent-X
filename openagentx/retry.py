@@ -16,6 +16,13 @@ Contracts:
   names the attempt count, so runners journal an honest stop.
 - Like the cache, retries are invisible to the journal: the runner sees one
   ``complete()`` and journals exactly what a healthy run would.
+
+Example (the schedule is plain math — deterministic, no jitter):
+
+    >>> BackoffPolicy(max_attempts=4, base_delay=1.0, factor=2.0).delays()
+    [1.0, 2.0, 4.0]
+    >>> BackoffPolicy(max_attempts=3).delays()
+    [0.0, 0.0]
 """
 
 from __future__ import annotations

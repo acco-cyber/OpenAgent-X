@@ -25,6 +25,13 @@ Failure contracts (all raise, never silent): ``always`` tools and rule
 tools must exist in the registry, unknown ``tools_expand`` targets name
 themselves, and ``max_visible`` caps rule-driven additions deterministically
 (sorted order) without ever hiding the control plane.
+
+Example:
+
+    >>> DisclosureRule(keywords=("weather", "forecast"), tools=("web_search",))
+    DisclosureRule(keywords=('weather', 'forecast'), tools=('web_search',))
+    >>> CONTROL_TOOL
+    'tools_expand'
 """
 
 from __future__ import annotations

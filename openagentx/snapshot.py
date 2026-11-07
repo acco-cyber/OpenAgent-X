@@ -22,6 +22,15 @@ Contracts (all enforced, none assumed):
   a gapped journal is an integrity failure, not a state to fold.
 - Everything is a plain dict of ints/strings: snapshots compare with ``==``
   and travel is idempotent.
+
+Example:
+
+    >>> from openagentx.events import Event
+    >>> e = Event(seq=0, run_id="r", ts=1.0, type="run_start", payload={"task": "t"})
+    >>> snapshot_at([e], 0)["state"]["runs_open"]
+    1
+    >>> snapshot_at([], 0)["state"] == ZERO_STATE
+    True
 """
 
 from __future__ import annotations

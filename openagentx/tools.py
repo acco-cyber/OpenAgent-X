@@ -6,6 +6,11 @@ Contracts:
 - Filesystem tools are sandboxed: resolved paths must stay inside ``workdir``.
 - ``vault_read`` exists solely to exercise redaction with a runtime-concatenated
   fixture token (never a real credential, and invisible to ``oax audit .``).
+
+Example (the builtin registry is static and sorted):
+
+    >>> builtin_tools().names()
+    ['calc', 'echo', 'list_dir', 'now', 'read_file', 'think', 'vault_bundle', 'vault_read', 'write_file']
 """
 
 from __future__ import annotations

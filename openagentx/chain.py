@@ -31,6 +31,17 @@ Contracts:
   detectable without stored digests.
 - Pure stdlib: ``hashlib`` + ``json`` only; the stored ``ts`` is covered
   as-is (tampering with it is detectable too).
+
+Example (genesis is 64 zeros; the empty chain has no head):
+
+    >>> from openagentx.events import Event
+    >>> e = Event(seq=0, run_id="r", ts=1.0, type="run_start", payload={})
+    >>> head_of([e]) == head_of([e])
+    True
+    >>> head_of([])
+    ''
+    >>> len(GENESIS)
+    64
 """
 
 from __future__ import annotations
