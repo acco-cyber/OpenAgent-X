@@ -1,0 +1,14 @@
+{
+  "id": "14-cache-replay",
+  "title": "Prompt-hash cache: exact repeats served from the store, inner adapter saved, journals identical",
+  "drill": "cache",
+  "task_text": "compute 6*7 and answer; the exact same task then runs again and its repeat prompts must come from the cache",
+  "max_steps": 6,
+  "script": [
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"6*7\"}}, \"thought\": \"compute\"}",
+    "{\"reply\": \"the answer is 42\"}"
+  ],
+  "expect": {
+    "reply": "the answer is 42"
+  }
+}

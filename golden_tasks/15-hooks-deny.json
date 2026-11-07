@@ -1,0 +1,25 @@
+{
+  "id": "15-hooks-deny",
+  "title": "Hook policy: denied tool never executes, decision journaled, agent observes and still replies",
+  "drill": "hooks",
+  "task_text": "echo, then try calc (denied by policy), then answer anyway",
+  "max_steps": 6,
+  "hooks": {
+    "rules": [
+      {"tool": "calc", "reason": "calc is disabled by policy"},
+      {"tool": "calc", "reason": "duplicate rule must never win"}
+    ]
+  },
+  "script": [
+    "{\"action\": {\"tool\": \"echo\", \"args\": {\"text\": \"hello\"}}, \"thought\": \"echo first\"}",
+    "{\"action\": {\"tool\": \"calc\", \"args\": {\"expr\": \"6*7\"}}, \"thought\": \"try the denied tool\"}",
+    "{\"reply\": \"calc is unavailable, done anyway\"}"
+  ],
+  "expect": {
+    "reply": "calc is unavailable, done anyway",
+    "steps": 3,
+    "denied_tool": "calc",
+    "deny_reason": "calc is disabled by policy",
+    "allowed_tools": 1
+  }
+}

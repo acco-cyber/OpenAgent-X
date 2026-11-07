@@ -787,6 +787,170 @@ def _compact_drill(task: dict) -> list:
     ]
 
 
+def _cache_drill(task: dict) -> list:
+    """Prompt-hash cache: exact repeats come from the store, never invented.
+
+    Honest contract: a hit serves the very turn stored for that exact prompt
+    (the inner adapter is not called), keys are canonical and order-sensitive,
+    counters match observed behavior, mutation of a returned turn cannot
+    poison the store, and a replayed run journals the same event shape as the
+    computed one — the cache is invisible to the journal, by design.
+    """
+    from .cache import CachedLLM, ResponseCache, prompt_key
+
+    wd = _fresh_wd("cache")
+    exp = _expect(task)
+    reply = str(exp.get("reply", "cached answer"))
+    # 1) adapter-level probes on a dedicated tiny inner script
+    inner = ScriptedLLM(['{"reply": "' + reply.replace('"', '\\"') + '"}',
+                         '{"reply": "computed for another prompt"}'])
+    cache = ResponseCache()
+    cached = CachedLLM(inner, cache)
+    msgs = [{"role": "user", "content": "compute 6*7"}]
+    t1 = cached.complete(msgs)
+    inner_calls_after_hit = inner.calls  # t2 must NOT call the inner adapter
+    t2 = cached.complete(msgs)
+    t3 = cached.complete([{"role": "user", "content": "another prompt"}])
+    hit_equals_stored = (t1 == t2 == {"reply": reply})  # captured BEFORE the mutation probe
+    t2["reply"] = "POISON-ATTEMPT"
+    t4 = cached.complete(msgs)
+    key_checks = (
+        prompt_key(msgs) == prompt_key([{"role": "user", "content": "compute 6*7"}])
+        and prompt_key(msgs) != prompt_key([{"role": "user", "content": "compute 6*8"}])
+        and prompt_key(msgs) != prompt_key(msgs + [{"role": "user", "content": "OBS"}])
+    )
+    # 2) runner-level: the same task run twice through one shared cache
+    script = _script(task)
+    shared = ResponseCache()
+    results, type_seqs, inners = [], [], []
+    for i, name in enumerate(("first", "again")):
+        inner_i = ScriptedLLM(list(script))
+        inners.append(inner_i)
+        jp = os.path.join(wd, f"journal-{name}.jsonl")
+        results.append(AgentRunner(
+            CachedLLM(inner_i, shared), builtin_tools(wd), jp,
+            max_steps=int(task.get("max_steps", 6)), workdir=wd,
+            run_id=f"cache-drill-{i}").run(str(task.get("task_text", "cached drill"))))
+        events, _torn = load_trace(jp)
+        type_seqs.append([e.type for e in events])
+    st = shared.stats()
+    return [
+        Check("adapter_hit_serves_same_turn",
+              hit_equals_stored and inner_calls_after_hit == 1,
+              f"hit==stored={hit_equals_stored}, "
+              f"inner calls right after the repeat lookup={inner_calls_after_hit}"),
+        Check("adapter_miss_for_new_prompt",
+              t3 == {"reply": "computed for another prompt"} and inner.calls == 2),
+        Check("mutation_cannot_poison", t4["reply"] == reply,
+              f"after mutating a returned hit: {t4['reply']!r}"),
+        Check("keys_canonical_order_sensitive", key_checks,
+              "same msgs same key; content/order changes change the key"),
+        Check("counters_honest",
+              st == {"hits": 2, "misses": 2, "size": 2} and cached.calls == 2,
+              str(st)),
+        Check("runner_reply_matches",
+              results[0].stop_reason == "reply" and results[0].reply == reply,
+              f"got {results[0].reply!r}"),
+        Check("second_run_served_from_cache",
+              results[1].reply == results[0].reply and shared.hits >= 1
+              and shared.misses >= 2,
+              f"hits={shared.hits} misses={shared.misses}"),
+        Check("inner_calls_saved",
+              sum(c.calls for c in inners) == len(script)
+              and len(inners) * len(script) == 2 * len(script),
+              f"{len(inners) * len(script)} turns served, "
+              f"{sum(c.calls for c in inners)} reached an inner adapter"),
+        Check("cached_journal_shape_identical", type_seqs[0] == type_seqs[1],
+              "a cached run journals exactly like a computed one"),
+        Check("journals_dense_reopen",
+              all(sequence_dense(_reopen(os.path.join(wd, f"journal-{n}.jsonl")))
+                  for n in ("first", "again"))),
+    ]
+
+
+def _hooks_drill(task: dict) -> list:
+    """Hook policy: denied calls never execute; every decision is journaled.
+
+    Honest contract: the deny rule fires before the registry (no tool_call /
+    tool_result for the denied tool), decisions land as ``hook`` events with
+    an exact payload, the first matching rule wins, the denied attempt costs
+    a step, the agent observes the denial and still finishes, and a run
+    without a policy journals zero hook events.
+    """
+    wd = _fresh_wd("hooks")
+    from .hooks import HookPolicy
+
+    exp = _expect(task)
+    rules = [dict(r) for r in (task.get("hooks") or {}).get("rules", [])]
+    policy = HookPolicy(rules)
+    script = _script(task)
+    runner = AgentRunner(
+        ScriptedLLM(list(script)), builtin_tools(wd),
+        os.path.join(wd, "journal.jsonl"),
+        max_steps=int(task.get("max_steps", 6)), workdir=wd,
+        run_id="hooks-drill", hooks=policy,
+    )
+    result = runner.run(str(task.get("task_text", "hooks drill")))
+    events, _torn = load_trace(os.path.join(wd, "journal.jsonl"))
+    hooks = [e for e in events if e.type == "hook"]
+    denied = [h for h in hooks if h.payload.get("decision") == "deny"]
+    allowed = [h for h in hooks if h.payload.get("decision") == "allow"]
+    tool_calls = [e for e in events if e.type == "tool_call"]
+    tool_results = [e for e in events if e.type == "tool_result"]
+    replies = [e for e in events if e.type == "reply"]
+    denied_tool = str(exp.get("denied_tool", ""))
+    # baseline: identical script, no policy -> zero hook events
+    wd2 = os.path.join(wd, "baseline")
+    os.makedirs(wd2, exist_ok=True)
+    base_runner = AgentRunner(
+        ScriptedLLM(list(script)), builtin_tools(wd2),
+        os.path.join(wd2, "journal.jsonl"),
+        max_steps=int(task.get("max_steps", 6)), workdir=wd2, run_id="hooks-base",
+    )
+    base_result = base_runner.run(str(task.get("task_text", "hooks drill")))
+    base_events, _t2 = load_trace(os.path.join(wd2, "journal.jsonl"))
+    return [
+        Check("deny_event_present",
+              len(denied) == 1 and denied[0].payload.get("tool") == denied_tool,
+              str([h.payload for h in denied])[:80]),
+        Check("first_match_wins",
+              denied[0].payload.get("reason") == str(exp.get("deny_reason", ""))
+              if denied else False, "reason comes from the first matching rule"),
+        Check("allow_decisions_journaled",
+              len(allowed) == len(tool_calls)
+              and all(a.payload.get("tool") == t.payload.get("tool")
+                      for a, t in zip(allowed, tool_calls)),
+              f"{len(allowed)} allow events for {len(tool_calls)} calls"),
+        Check("denied_tool_never_executed",
+              not any(e.payload.get("tool") == denied_tool
+                      for e in tool_calls + tool_results),
+              "no tool_call, no tool_result, no side effects"),
+        Check("hook_payload_shape",
+              all(set(h.payload) == {"tool", "decision", "reason"} for h in hooks),
+              "control-plane facts only"),
+        Check("agent_observes_denial_and_adapts",
+              result.stop_reason == "reply" and bool(replies)
+              and (not denied or replies[0].seq > denied[0].seq),
+              f"stop={result.stop_reason}"),
+        Check("denied_attempt_counts_a_step",
+              result.steps == exp.get("steps", len(script)),
+              f"steps={result.steps}"),
+        Check("executed_tools_recorded",
+              len(tool_calls) == int(exp.get("allowed_tools", len(tool_calls))),
+              f"{len(tool_calls)} executed calls"),
+        Check("baseline_without_policy_clean",
+              base_result.stop_reason == "reply"
+              and not any(e.type == "hook" for e in base_events),
+              "no policy -> no hook events, run unaffected"),
+        Check("run_bounds_preserved",
+              events[0].type == "run_start" and events[-1].type == "run_end"
+              and events[-1].payload.get("stop_reason") == "reply"),
+        Check("journal_dense_reopen",
+              sequence_dense(events)
+              and sequence_dense(_reopen(os.path.join(wd, "journal.jsonl")))),
+    ]
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -801,6 +965,8 @@ DRILLS = {
     "sbom": _sbom_drill,
     "memory": _memory_drill,
     "compact": _compact_drill,
+    "cache": _cache_drill,
+    "hooks": _hooks_drill,
 }
 
 

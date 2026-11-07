@@ -44,3 +44,5 @@ golden_tasks/13-compaction.json
 examples/05_memory_compact.py
 openagentx/cache.py
 openagentx/hooks.py
+golden_tasks/14-cache-replay.json
+golden_tasks/15-hooks-deny.json
