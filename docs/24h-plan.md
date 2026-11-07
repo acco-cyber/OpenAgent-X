@@ -84,7 +84,12 @@ green.
   their own journals, failures recorded as data, structural determinism) +
   `structured.py` (`parse_json_loose` repair notes, `validate_schema` lite
   subset where True is never an integer); example 07 live
-- [ ] S09-E3 — task 18 `retry-backoff` + task 19 `circuit-breaker`
+- [x] S09-E3 — task 18 `retry-backoff` + task 19 `circuit-breaker`
+  ✅ 19 tasks, 201 checks green; `RetryLLM`/`BackoffPolicy` (deterministic
+  exponential schedule, per-attempt log, loud give-up, retries invisible to
+  the journal) + `CircuitBreaker` (trip surfaces the original fault,
+  fast-fail without inner calls, tick-clock cooldown, probe closes or
+  re-opens); example 08 live
 - [ ] S10-E3 — task 20 `planner-executor` + task 21 `snapshot-travel`
 - [ ] S11-E3 — task 22 `prompt-layers` (include order, cycles, substitution)
 - [ ] S12-E3 — task 23 `tools-jit` (JIT tool disclosure)
