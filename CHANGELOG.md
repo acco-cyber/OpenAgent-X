@@ -6,6 +6,22 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — examples
+
+- Two gallery demos the stretch list still owed: example 26
+  (`26_author_your_own_drill.py`) makes the tutorial's hero capstone
+  runnable — author a task spec from scratch, grade a real offline run
+  through `run_golden_task`, and watch the honest failures (a wrong
+  expectation red by name, a crashing drill folded into
+  `harness_error`, an unknown drill reported) before the repaired spec
+  goes green; example 27 (`27_views_tour.py`) walks one real run through
+  every read-only view — timeline, report, stats, grep, self-diff,
+  replay-from, dashboard, mermaid — with byte-identical re-renders, one
+  replay fold behind every counter, and a tour-wide sweep proving the
+  raw fixture token appears in no view. README quickstart counts
+  twenty-seven demos; the gallery table carries both rows; manifest 143
+  files.
+
 ### Added — docs
 
 - Per-drill explainers: `docs/explainers.md` gives every golden task its

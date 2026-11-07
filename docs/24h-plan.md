@@ -364,7 +364,19 @@ pad with empty commits.
   manifest 140 → 141; eval 38 tasks / 435 checks unchanged (docs-only
   slot, count cannot regress), audit 0, doctor 6/6
 
-- [ ] S30-E3 — more examples: the gallery grows the two demos the
+- [x] S30-E3 — more examples: the gallery grows the two demos the
   stretch list still owes — grade-your-own-drill (the hero capstone as
   runnable code) and the flight-recorder tour (one run through every
   view)
+  ✅ example 26 (`26_author_your_own_drill.py`): spec authored, real run
+  graded via run_golden_task (9/9 green, check names printed), honesty
+  probed three ways — wrong expect → `reply_text_matches` red,
+  malformed script line → `harness_error` fold (real exception detail),
+  unknown drill → `unknown_drill` — then repaired to green; example 27
+  (`27_views_tour.py`): 16-event run through timeline/report/stats/
+  grep/self-diff/replay-from/dashboard/mermaid, all re-renders
+  byte-identical, counters from one replay fold, bounds loud, tour-wide
+  leak sweep green; README quickstart 25→27 + two gallery rows,
+  tutorial Step-10 capstone link, CHANGELOG [Unreleased] entry,
+  manifest 141 → 143; examples suite all OK, eval 38/435 unchanged,
+  audit 0, doctor 6/6
