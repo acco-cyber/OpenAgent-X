@@ -4,6 +4,37 @@ All notable changes to OpenAgent-X. Dates are ISO-8601; claims are gated —
 the checks named here are the same ones `oax eval` and `scripts/verify.mjs`
 run on every commit (and in CI).
 
+## [1.0.0] — 2026-11-07
+
+Final release of the Epoch 3 rebuild (parts 1–25). Pure stdlib, Python
+3.10+, offline by construction. Golden matrix: **36 tasks, 411 checks, all
+green**; `oax audit .`: **0 findings**; doctor: **6/6**; 23 runnable
+examples; 131 required files, all enforced.
+
+### Added — release engineering
+
+- The release-sweep drill (golden task 36): one real run re-demands the
+  core invariants end-to-end — counters agree with the raw stream (one
+  source of truth), report/trace/dashboard/mermaid re-render
+  byte-identically, the self-diff is the zero diff, a runtime-assembled
+  raw token is re-redacted by both rendered views, a chained journal
+  verifies + seals + verifies, the repo audits to 0 findings, doctor
+  passes 6/6.
+- Release metadata is mechanically consistent: `__version__` must equal
+  the top `CHANGELOG.md` entry, checked on every eval run by the sweep —
+  a version bump that forgets the changelog (or the reverse) is a red
+  drill.
+- `examples/23_release_sweep.py` performs the sweep's story on a real run
+  and grades the real drill 12/12 green.
+- `docs/retrospective.md` reviews the 24-hour sprint honestly: three
+  epochs, what was built, what the deliberate costs bought, what surprised
+  us — with the gate that proves every number.
+
+### Changed
+
+- `__version__` 1.0.0-rc1 → 1.0.0. The candidate's promises are the
+  release's promises — the same gates, the same matrix, one drill bigger.
+
 ## [1.0.0-rc1] — 2026-11-07
 
 First release candidate of the Epoch 3 rebuild (parts 1–24). Pure stdlib,
