@@ -475,7 +475,7 @@ pad with empty commits.
   doctor 6/6, audit 0, eval 40 tasks / 462 checks green; no history
   rewritten, the correction is the commit)
 
-- [ ] S35-E3 — the release attestation: `oax attest` — one command, one
+- [x] S35-E3 — the release attestation: `oax attest` — one command, one
   artifact, every gate: doctor (purity + integrity), audit (0
   findings), doctests (docstring examples green), manifest (the tree
   hashes deterministically twice) and the matrix (specs + prose
@@ -484,3 +484,30 @@ pad with empty commits.
   crashes is a red gate carrying the real exception, a planted secret
   turns the verdict red, exit 0 green / 1 any gate red; graded by a new
   drill (task 41) in a child interpreter and demonstrated by example 30
+  ✅ attest.py (collect_gates / aggregate / render / artifact_json, five
+  gates in fixed order) + CLI `oax attest [root] [--json PATH]` (exit 0
+  green / 1 any red, both probed); a crashing gate folds red with the
+  real exception (IsADirectoryError probe), an empty gate list is never
+  green, the render is counters-only (no hash, no path, no wall-clock,
+  byte-identical twice) while the sort_keys artifact carries root + the
+  64-hex tree hash; gates root-parametric (package-mode doctest imports
+  when the root is the running package, bare-file mode otherwise, no
+  package = loud red); attest.py carries six curated `>>>` examples
+  (doctest floor 18 modules / 59 examples); the drill's first run
+  caught the import bomb's real exception never reaching the gate
+  detail (counts only) — root-fixed: failing gates now carry each
+  failure's first log line; drill attest grades 12 checks in a fresh
+  child interpreter (the doctest drill's stdout discipline, inherited):
+  real tree green, doctest floor pinned 53/17, matrix gate covers
+  prose + 137 expect keys, manifest hash matches an independent build,
+  synthetic tree green, import bomb loud, planted secret red with the
+  file named and the secret never echoed, crash fold, render +
+  artifact determinism, CLI contract; task 41 lands with its
+  explainers entry same-commit (gate 8 satisfied), eval floor 40 → 41,
+  matrix 41 tasks / 474 checks green; README badge/inline/eval-line/
+  quickstart/CLI-table/comparison/doc-map, tutorial capstone +
+  snippet, CHANGELOG release-attestation section, modules.md attest
+  section, golden row 41 + no-script shape note, example 30 + manifest
+  148; the README count gate rode red for exactly one commit ((c)
+  landed the matrix growth before the prose cascade — recorded in the
+  (d) message, verify green again there); audit 0, doctor 6/6
