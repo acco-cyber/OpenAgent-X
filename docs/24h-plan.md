@@ -578,10 +578,34 @@ pad with empty commits.
   growth before the docs cascade — recorded in the (b) message); audit
   0, doctor 6/6
 
-- [ ] S38-E3 — tamper evidence from the CLI: `oax chain <journal>`
+- [x] S38-E3 — tamper evidence from the CLI: `oax chain <journal>`
   verifies the hash chain (exit 0 intact / 1 broken, torn or missing,
   the break index named) and `--seal` prints the 64-hex head of a fully
   intact chain-written journal (exit 1 unsealable with the reason
   named), graded by a new drill (task 44) that tampers with real
   journals in fresh temp workspaces — edits, deletions and reorders
   localized, seal refusals loud, plain journals honest
+  ✅ `_cmd_chain` + parser: verify mode prints chain_report's
+  deterministic one-line verdict, exit 0 intact / 1 broken-torn-missing
+  (a torn tail is an incomplete file — the intact prefix still reports
+  ok but the CLI refuses exit 0 with the `+torn_tail` mark named;
+  read_events_safe would otherwise bless an absent file as ok — the CLI
+  names the missing path); --seal prints exactly seal()'s 64-hex head,
+  every ChainError refusal (torn, broken, empty, not chain-written) a
+  named one-line rejection, never a traceback; chain_report grew an
+  optional precomputed report (verify once, render once); drill
+  chain_cli grades 12 checks on real journal copies in a fresh temp
+  workspace — the fixture written by the module's own line writer over
+  fixed canonical Events (deterministic head, no 10-digit-run flake in
+  the render), stored head == independent recomputation, genesis on
+  disk, CLI render byte-identical to the module's, edited payload byte
+  localized at index 1, deleted line at its first mislink, reordered
+  pair at index 0, torn-tail exit contract, seal matches head, three
+  refusals named, plain honest, missing named, no wall-clock; task 44
+  lands with its explainers entry same-commit (gate 8 satisfied), eval
+  floor 43 → 44, matrix 44 tasks / 510 checks green; README
+  badge/inline/eval-line/CLI-glance + gallery row 33 + thirty-three
+  demos, modules.md chain section (chain_report + operator contract +
+  task-44 grading), tutorial verification-stack chain line, golden row
+  44 + Current line, CHANGELOG section naming the blessing-hole closed,
+  example 33 + manifest 155; audit 0, doctor 6/6
