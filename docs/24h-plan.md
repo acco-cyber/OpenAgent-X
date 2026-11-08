@@ -610,7 +610,7 @@ pad with empty commits.
   44 + Current line, CHANGELOG section naming the blessing-hole closed,
   example 33 + manifest 155; audit 0, doctor 6/6
 
-- [ ] S39-E3 — redaction species round three: the boundary learns six
+- [x] S39-E3 — redaction species round three: the boundary learns six
   more high-confidence credential shapes (Google `AIza…` API keys,
   GitLab personal access tokens, Stripe live/test secret keys, npm
   tokens, JSON web tokens, PEM private key blocks) and every consumer
@@ -622,3 +622,29 @@ pad with empty commits.
   a JWT missing its signature, a CERTIFICATE block) left alone, the
   five legacy species still caught, a planted tree found kind-by-kind
   with every snippet redacted, and the repo itself still 0 findings
+  ✅ PATTERNS grows the six round-three species (google_api_key with a
+  35-char tail where length is the confidence, gitlab_pat, stripe_secret
+  live+test, npm_token, jwt with the signature segment required so
+  alg=none headers stay prose, private_key_block covering RSA/OPENSSH/
+  PGP BLOCK) and every consumer hardened at once — audit.py, the
+  runner's journal boundary, every re-redacting view and oax grep all
+  walk the same table, zero new code paths; vault_value grows the six
+  runtime-concatenated fixture keys so the repo still audits to 0
+  findings; a google_api_key docstring example joins the graded
+  doctests; drill species grades 13 checks in fresh temp workspaces —
+  each species caught kind-by-kind, Stripe test mode, all three private
+  key variants, six near-misses left alone (short tails, unsigned JWT,
+  CERTIFICATE block), the five legacy species still caught, a mixed
+  line reporting exactly three redactions, the planted tree found with
+  snippets redacted and two scans byte-identical, the repo itself 0
+  findings, the grep render redacted and byte-identical twice with no
+  wall-clock, the table pinned at eleven species; task 45 lands with
+  its explainers entry same-commit (gate 8 satisfied), eval floor
+  44 → 45, matrix 45 tasks / 523 checks green; README
+  badge/inline/eval-line + gallery row 34 + thirty-four demos,
+  modules.md redact + audit sections (one-table-many-consumers +
+  near-miss contract), tutorial secrets step round-three paragraph,
+  golden row 45 + Current line, CHANGELOG species section, example 34
+  + manifest 157; verify rode red for exactly one commit ((c)
+  referenced example 34 one commit before (d) landed it — recorded in
+  the (c) message); audit 0, doctor 6/6

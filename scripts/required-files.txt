@@ -153,3 +153,5 @@ golden_tasks/43-doctor.json
 examples/32_doctor_gates_tour.py
 golden_tasks/44-chain-cli.json
 examples/33_chain_cli_tour.py
+golden_tasks/45-species.json
+examples/34_species_tour.py
