@@ -349,6 +349,26 @@ def _cmd_runs(args) -> int:
     return 0 if idx["ok"] else 1
 
 
+def _cmd_chain(args) -> int:
+    """Tamper evidence from the CLI: verify (0 intact / 1 damaged) or
+    seal (--seal: 0 sealed / 1 unsealable, the reason named)."""
+    from .chain import ChainError, chain_report, seal, verify_journal
+
+    if not os.path.exists(args.path):
+        print(f"chain: no journal {args.path}")
+        return 1
+    if args.seal:
+        try:
+            print(seal(args.path))
+        except ChainError as e:
+            print(f"chain: seal refused: {e}")
+            return 1
+        return 0
+    report = verify_journal(args.path)
+    print(chain_report(args.path, report))
+    return 0 if (report["ok"] and not report["torn_tail"]) else 1
+
+
 def _cmd_explain(args) -> int:
     """One golden task's spec + its prose explainer (exit 1 = missing)."""
     from .explain import explain_all, explain_task, render_explain, \
@@ -466,6 +486,16 @@ def build_parser() -> argparse.ArgumentParser:
     rn.add_argument("dir", nargs="?", default=".",
                     help="directory to scan for *.jsonl journals")
     rn.set_defaults(fn=_cmd_runs)
+
+    ch = sub.add_parser("chain",
+                        help="tamper evidence over a journal: verify the "
+                             "hash chain (exit 1 = broken/torn) or seal it")
+    ch.add_argument("path", help="journal to verify or seal")
+    ch.add_argument("--seal", action="store_true",
+                    help="print the 64-hex head of a fully intact "
+                         "chain-written journal instead of verifying "
+                         "(exit 1 = unsealable, the reason named)")
+    ch.set_defaults(fn=_cmd_chain)
 
     a = sub.add_parser("audit", help="secret-scan a tree")
     a.add_argument("root", nargs="?", default=".")

@@ -577,3 +577,11 @@ pad with empty commits.
   README counts rode red for exactly one commit ((b) landed the matrix
   growth before the docs cascade — recorded in the (b) message); audit
   0, doctor 6/6
+
+- [ ] S38-E3 — tamper evidence from the CLI: `oax chain <journal>`
+  verifies the hash chain (exit 0 intact / 1 broken, torn or missing,
+  the break index named) and `--seal` prints the 64-hex head of a fully
+  intact chain-written journal (exit 1 unsealable with the reason
+  named), graded by a new drill (task 44) that tampers with real
+  journals in fresh temp workspaces — edits, deletions and reorders
+  localized, seal refusals loud, plain journals honest

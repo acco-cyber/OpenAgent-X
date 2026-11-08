@@ -201,9 +201,13 @@ def seal(path) -> str:
     return report["head"]
 
 
-def chain_report(path) -> str:
-    """One-line human summary of :func:`verify_journal` (deterministic)."""
-    r = verify_journal(path)
+def chain_report(path, report=None) -> str:
+    """One-line human summary of :func:`verify_journal` (deterministic).
+
+    The report may be passed in (the CLI verifies once and reuses it);
+    it is computed from disk when omitted.
+    """
+    r = report if report is not None else verify_journal(path)
     state = "ok" if r["ok"] else f"BROKEN at index {r['broken_at']}"
     torn = " +torn_tail" if r["torn_tail"] else ""
     chained = "chained" if r["chained"] else "plain"
