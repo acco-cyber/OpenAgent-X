@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (45 tasks, 523 checks) is the repo's contract with
+The golden matrix (46 tasks, 537 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -587,6 +587,31 @@ table is pinned at eleven species so it cannot silently shrink.
 A weakened table would fail `six_new_species_caught`; a
 false-positive-prone one would fail `near_misses_invisible` and
 `repo_self_audit_clean`.
+
+### 46-eval-only — the matrix is addressable: --list and --only
+**The run:** no agent runs here either; the drill drives `oax eval`
+over the real matrix and over a poisoned temp matrix (one green audit
+spec, one red ghost spec) in fresh temp workspaces, probing the
+selection surface the way an operator would: listing, naming,
+deduping, misspelling, and running subsets.
+**The checks grade (14):** `--list` prints one row per task — all 46
+present, sorted, the count named in the summary, byte-identical twice
+with no wall-clock — and composes with `--only` (one row for the
+species selection); `--only species` runs exactly one green report
+with the summary naming `only=species`; two drill names run exactly
+two reports in task order (25-hash-chain then 45-species); a task id
+(`45-species`) and its drill name (`species`) resolve to the same
+single report; duplicate names dedupe to one row; an unknown name and
+a blank name are each rejected loudly before anything runs — no task
+lines, no summary, no traceback; on the poisoned matrix the red task
+is named with its `unknown_drill` check and a mixed subset still
+reports both tasks (green OK, red FAIL, exit 1); a subset run grades
+through the same `run_selected` core as the full run — its 13 checks
+are the full run's checks; an empty directory is honest emptiness
+(exit 1) in list mode.
+A subset that silently ran the rest would fail
+`unknown_named_nothing_runs`; a listing that drifted from the spec
+directory would fail `list_inventory_complete`.
 
 ## Adding a task
 

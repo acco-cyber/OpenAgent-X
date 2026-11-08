@@ -1,0 +1,5 @@
+{
+  "id": "46-eval-only",
+  "title": "the matrix is addressable: eval --list prints the honest inventory and --only runs a named subset — ids and drill names resolve, duplicates dedupe, unknown and blank names are rejected before anything runs",
+  "drill": "eval_only"
+}

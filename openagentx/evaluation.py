@@ -4660,6 +4660,170 @@ def _species_drill(task: dict) -> list:
         f"{len(PATTERNS)} species in the table"))
     return checks
 
+
+def _eval_only_drill(task: dict) -> list:
+    """The matrix is addressable: eval --list and --only graded at their
+    failure edges.
+
+    Honest contract: --list prints the real inventory (one row per task,
+    sorted, the count named, byte-identical twice, no wall-clock) and
+    composes with --only; --only resolves task ids and drill names to
+    the same task, dedupes, and runs exactly the named subset in task
+    order with the exit contract unchanged; unknown and blank names are
+    rejected loudly before anything runs — no task lines, no summary, no
+    traceback; on a poisoned temp matrix the red task is named with its
+    failing check and a mixed subset still reports both tasks; a subset
+    run grades through the same run_selected core as the full run, so
+    its checks are the full run's checks; an empty dir is honest
+    emptiness.
+    """
+    import subprocess
+
+    checks: list = []
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    gold = os.path.join(repo_root, "golden_tasks")
+
+    def cli(*argv: str, cwd: str = repo_root) -> subprocess.CompletedProcess:
+        return subprocess.run([sys.executable, "-m", "openagentx", *argv],
+                              capture_output=True, text=True, cwd=cwd)
+
+    def task_rows(stdout: str) -> list:
+        # rows look like "<id>  <drill>" between nothing and the summary
+        return [ln for ln in stdout.splitlines()
+                if ln and not ln.startswith("eval:")
+                and not ln.startswith("   FAIL")
+                and not ln.startswith("eval --list")]
+
+    n_files = len(list_golden_tasks(gold))
+
+    # 1-3) --list: the real inventory, complete, sorted, counted
+    l1 = cli("eval", "--list")
+    l2 = cli("eval", "--list")
+    rows1 = task_rows(l1.stdout)
+    ids = [ln.split()[0] for ln in rows1 if ln.split()]
+    specs = {task_brief(p)[0] for p in list_golden_tasks(gold)}
+    checks.append(Check(
+        "list_inventory_complete",
+        l1.returncode == 0 and len(rows1) == n_files
+        and set(ids) == specs,
+        f"{len(rows1)}/{n_files} rows, {len(set(ids) & specs)} ids matched"))
+    checks.append(Check(
+        "list_sorted_deterministic",
+        l1.stdout == l2.stdout and ids == sorted(ids)
+        and re.search(r"\d{10,}", l1.stdout) is None,
+        "byte-identical twice, sorted, no wall-clock"))
+    checks.append(Check(
+        "list_exit_zero_count_named",
+        l1.returncode == 0
+        and f"eval --list: {n_files} tasks in golden_tasks" in l1.stdout,
+        l1.stdout.strip().splitlines()[-1]))
+
+    # 4) --list composes with --only
+    lc = cli("eval", "--only", "species", "--list")
+    checks.append(Check(
+        "list_composes_with_only",
+        lc.returncode == 0 and len(task_rows(lc.stdout)) == 1
+        and task_rows(lc.stdout)[0].startswith("45-species"),
+        lc.stdout.strip().replace("\n", " | ")[:60]))
+
+    # 5) --only single drill: green, exactly one report, summary names it
+    s1 = cli("eval", "--only", "species")
+    single_rows = [ln for ln in s1.stdout.splitlines()
+                   if ln and not ln.startswith("eval:")]
+    checks.append(Check(
+        "only_single_green",
+        s1.returncode == 0 and len(single_rows) == 1
+        and single_rows[0].startswith("45-species") and "OK" in single_rows[0]
+        and "only=species" in s1.stdout,
+        s1.stdout.strip().splitlines()[-1][:80]))
+
+    # 6) --only two drills: exactly two reports in task order, exit 0
+    s2 = cli("eval", "--only", "species,chain")
+    rows2 = [ln for ln in s2.stdout.splitlines()
+             if ln and not ln.startswith("eval:") and not ln.startswith("eval --list")]
+    checks.append(Check(
+        "only_subset_two_task_order",
+        s2.returncode == 0 and len(rows2) == 2
+        and rows2[0].startswith("25-hash-chain")
+        and rows2[1].startswith("45-species"),
+        " -> ".join(r.split()[0] for r in rows2)))
+
+    # 7) a task id and its drill name resolve to the same task
+    sid = cli("eval", "--only", "45-species")
+    id_rows = [ln for ln in sid.stdout.splitlines()
+               if ln and not ln.startswith("eval:")]
+    drill_rows = [ln for ln in s1.stdout.splitlines()
+                  if ln and not ln.startswith("eval:")]
+    checks.append(Check(
+        "id_and_drill_resolve_same",
+        sid.returncode == 0 and id_rows == drill_rows,
+        "same single report either way"))
+
+    # 8) duplicate names dedupe — the matrix never runs twice
+    ld = cli("eval", "--only", "species,species,45-species", "--list")
+    checks.append(Check(
+        "dedupe_names",
+        ld.returncode == 0 and len(task_rows(ld.stdout)) == 1,
+        f"{len(task_rows(ld.stdout))} row for three names"))
+
+    # 9-10) unknown and blank names rejected loudly before anything runs
+    u1 = cli("eval", "--only", "ghost")
+    checks.append(Check(
+        "unknown_named_nothing_runs",
+        u1.returncode == 1 and "unknown --only name 'ghost'" in u1.stdout
+        and not task_rows(u1.stdout) and "traceback" not in u1.stderr.lower(),
+        u1.stdout.strip()[:70]))
+    u2 = cli("eval", "--only", "species,")
+    checks.append(Check(
+        "blank_name_named",
+        u2.returncode == 1 and "unknown --only name ''" in u2.stdout,
+        u2.stdout.strip()[:70]))
+
+    # 11-12) a poisoned temp matrix: red named, mixed subset honest
+    wd = _fresh_wd("eval_only")
+    with open(os.path.join(wd, "01-green.json"), "w", encoding="utf-8") as fh:
+        json.dump({"id": "green-audit", "drill": "audit"}, fh)
+    with open(os.path.join(wd, "02-red.json"), "w", encoding="utf-8") as fh:
+        json.dump({"id": "red-ghost", "drill": "ghost"}, fh)
+    r1 = cli("eval", wd, "--only", "red-ghost")
+    checks.append(Check(
+        "temp_matrix_red_named",
+        r1.returncode == 1 and "red-ghost" in r1.stdout
+        and "FAIL unknown_drill" in r1.stdout
+        and "traceback" not in r1.stderr.lower(),
+        r1.stdout.strip().splitlines()[1][:70] if len(
+            r1.stdout.strip().splitlines()) > 1 else r1.stdout.strip()[:70]))
+    r2 = cli("eval", wd, "--only", "green-audit,red-ghost")
+    mixed_rows = [ln for ln in r2.stdout.splitlines()
+                  if ln and not ln.startswith("eval:") and not ln.startswith("   FAIL")]
+    checks.append(Check(
+        "temp_matrix_mixed_two_reports",
+        r2.returncode == 1 and len(mixed_rows) == 2
+        and "OK" in mixed_rows[0] and "FAIL" in mixed_rows[1],
+        " -> ".join(m.split()[0] for m in mixed_rows)))
+
+    # 13) one grading path: a subset run IS the full run's slice
+    sel, unk = resolve_only(list_golden_tasks(gold), ["species"])
+    sub_reports, sub_ok = run_selected(sel)
+    direct = run_golden_task(sel[0])
+    checks.append(Check(
+        "subset_matches_full_slice",
+        sub_ok and unk == [] and len(sub_reports) == 1
+        and sub_reports[0].task_id == direct.task_id
+        and [c.name for c in sub_reports[0].checks]
+        == [c.name for c in direct.checks]
+        and sub_reports[0].ok == direct.ok is True,
+        f"{len(sub_reports[0].checks)} checks identical either way"))
+
+    # 14) an empty dir is honest emptiness, both modes
+    empty = _fresh_wd("eval_only_empty")
+    le = cli("eval", empty, "--list")
+    checks.append(Check(
+        "list_empty_dir_honest",
+        le.returncode == 1 and f"no tasks in {empty}" in le.stdout,
+        le.stdout.strip()[:70]))
+    return checks
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -4705,6 +4869,7 @@ DRILLS = {
     "doctor": _doctor_drill,
     "chain_cli": _chain_cli_drill,
     "species": _species_drill,
+    "eval_only": _eval_only_drill,
 }
 
 
