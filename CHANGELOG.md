@@ -6,6 +6,37 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — the design blueprint lands, and §5 becomes code (blueprint + lifecycle)
+
+- [`docs/blueprint/`](blueprint/) is a faithful, full port of the
+  HYDRION ONE Complete Product, Research and Engineering Blueprint (v1.0,
+  36 pages, 2026-11-05) — six files covering all 24 sections: product
+  definition and reference-repository strategy, the seven-layer
+  architecture with the §5 durable task lifecycle, the model gateway and
+  capability-aware routing, the agent workforce contracts, memory with
+  provenance, the P0–P4 permission model and ten-threat security model,
+  the data model and event contracts, the UX and stack tables, the
+  24-week roadmap with release gates, the evaluation targets, the research
+  contributions, release governance, the fourteen-risk register, the
+  definition of done with eight runbooks, and the appendices (environment
+  config, the T-001..T-012 acceptance suite, ten ADRs to record, and 21
+  external references). The blueprint's own status line is preserved on
+  every page — *proposed plan, not a claim of implemented capability* —
+  and the index names exactly what OpenAgent-X has already built versus
+  what stays design input.
+- `openagentx/lifecycle.py` ports §5 to checked code: eleven canonical
+  states with the exact legal-transition table (pinned verbatim by golden
+  task 47 — drift from the documented table is a failing check), frozen
+  terminals that still record cleanup, approval bound to the exact plan
+  hash (`plan_hash` = SHA-256 over canonical JSON; a drifted plan raises
+  `ApprovalMismatch` and appends nothing), the low-risk pre-approved path
+  recorded honestly, illegal moves refused with zero appends, reasons and
+  notes crossing the redaction boundary, replay a pure fold rendering
+  byte-identically with no wall-clock. Graded by task 47 (13 checks) and
+  walked by example 36; matrix 47 tasks / 550 checks; README reaches
+  dev-star grade with the state diagram, the blueprint section, a
+  consumption table and honest re-counts.
+
 ### Added — the matrix becomes addressable (eval-only)
 
 - `oax eval --list` prints the honest inventory (id + drill rows in

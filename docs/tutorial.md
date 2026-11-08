@@ -255,6 +255,18 @@ journals), `MemoryLite` (TF-IDF recall over past *redacted* journals —
 `parse_json_loose` + `validate_schema` (repair with notes, honest type
 checks).
 
+One more orchestration primitive, and it comes from the design blueprint:
+`openagentx/lifecycle.py` ports §5 of [`docs/blueprint/`](blueprint/) —
+the durable task lifecycle — as a small deterministic machine. Eleven
+canonical states, the legal-transition table enforced exactly as
+documented (golden task 47 pins it verbatim), terminals frozen yet still
+recording cleanup, approval bound to the exact plan hash (`approve()`
+records `plan_hash(plan)`; `start()` refuses any drifted plan with zero
+appends), and replay from a durable journal that renders byte-identically.
+Run `python3 examples/36_lifecycle_tour.py` to walk every edge, and note
+the habit it teaches: when a documented state table matters, the table in
+code and the table in prose are checked to be the *same table*.
+
 ## Step 8 — prove it
 
 The verification stack, all offline and deterministic:
