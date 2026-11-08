@@ -399,7 +399,15 @@ checks: `python>=3.10`, `stdlib_purity`, `offline_purity`,
 `required_files`, `golden_tasks_valid`, `workspace_writable`. Invariants:
 the doctor refuses third-party imports and network modules; it validates
 the file manifest and the golden-task contracts structurally; it is itself
-pure stdlib and offline.
+pure stdlib and offline. `render_doctor` renders the verdict as a pure
+function of the gate list — byte-deterministic, no wall-clock, a failing
+gate a loud FAIL line naming its offender (the CLI prints exactly that
+render). The gates are graded at their failure edges by golden task 43:
+a clean synthetic workspace is green, a planted `numpy`/`socket` import
+is caught with `file:module` named (probes are parsed, never executed),
+a missing required file is named, a truncated spec folds into the gate
+with the real exception, an unknown drill is named, and one poisoned
+tree turns exactly the planted gates red — the gates are independent.
 
 ### audit
 Secret scanner — the repo audits itself. `run_audit`. Invariants:

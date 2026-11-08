@@ -326,8 +326,9 @@ matrix's prose coverage, prints a counters-only verdict, and exits 1
 the moment one gate is red.
 
 ```sh
-python3 -m openagentx eval          # 41 tasks, all green or exit 1
+python3 -m openagentx eval          # 43 tasks, all green or exit 1
 python3 -m openagentx doctest       # every docstring example, graded
+python3 -m openagentx doctor        # six gates, 6/6 — the gates themselves are graded by task 43
 python3 -m openagentx attest        # one artifact binding every gate
 python3 -m openagentx examples      # every offline demo, all OK
 ```

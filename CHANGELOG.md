@@ -6,6 +6,25 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — the auditor audits itself (doctor)
+
+- the doctor's gates are now graded at their failure edges: golden task 43
+  drives `openagentx/doctor.py` over the real tree (6/6) and over fresh
+  temp workspaces planted with the defects the gates exist to catch — a
+  third-party import caught by `stdlib_purity` with `foreign.py:numpy`
+  named, a `socket` import caught by `offline_purity`, a missing
+  required file named, a truncated spec folded into
+  `golden_tasks_valid` carrying the real exception without crashing the
+  doctor, an unknown drill named, and the gates proven independent (one
+  poisoned tree turns exactly the four planted gates red); the verdict
+  render moved into `render_doctor` as a pure function of the gate list
+  (byte-identical output, docstring examples graded — floor now 20
+  modules / 71 examples); the drill's first run caught `sys` missing
+  from evaluation's imports and was root-fixed, and its docstring
+  example on `render_doctor` caught an expected FAIL line one space
+  short — both fixed at the root, not loosened; matrix 43 tasks / 498
+  checks, demonstrated by example 32.
+
 ### Added — the multi-run index (runs)
 
 - `oax runs [dir]`: a directory of journals becomes one honest table —
