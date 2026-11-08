@@ -735,7 +735,7 @@ pad with empty commits.
   examples OK, doctests green, compileall clean; verify rode red for
   exactly one commit on two known edges ((d)'s README badge/inline still
   claimed 46 until (f)'s rewrite — recorded in the (d) message)
-- [ ] S42-E1 (stretch, announced at slot open): agent workforce contracts —
+- [x] S42-E1 (stretch, announced at slot open): agent workforce contracts —
   blueprint §7/§11/§6 as code: `openagentx/workforce.py` (module 46) with
   the eight frozen specialist profiles under P0–P4 permission ceilings, the
   two-gate invocation-time permission check with no prompt/override
@@ -744,3 +744,21 @@ pad with empty commits.
   accept/reject reasons, structured handoffs and the independent-verifier
   rule; task 48 grades it at its edges; example 37 assembles all eight
   agents on one objective, each in a small bounded portion.
+
+  ✅ the slot landed the workforce stretch in full: (a) module 46 —
+  openagentx/workforce.py, blueprint §7/§11/§6 as one deterministic
+  contract layer (eight frozen specialist profiles, the two-gate
+  invocation-time permission check with no prompt/override parameter, the
+  fail-closed budget ledger, contract-capped task budgets, evidence-gated
+  results, the routing pipeline with named hard filters and an
+  eligible-only fallback, structured handoffs, the independent verifier,
+  the canonical event vocabulary; 31 doctests), modules.md guide
+  same-commit; (b) drill workforce (task 48, 14 checks) with explainers
+  entry same-commit (gate 8), floor 47 -> 48, golden row 48, manifest 168;
+  (c) README synced everywhere (48/564, 46 modules, thirty-seven demos, a
+  workforce section, the blueprint consumption table naming §7/§11/§6 as
+  checked code), CHANGELOG section; (d) example 37 assembles all eight
+  agents on one objective with every edge observed, manifest 169; matrix
+  48 tasks / 564 checks green (was 550); verify rode red for one commit
+  on two known README-count edges after (b) and one known example edge
+  after (c), all closed by (d) and recorded in the respective messages.
