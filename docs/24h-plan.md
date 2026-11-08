@@ -649,7 +649,7 @@ pad with empty commits.
   referenced example 34 one commit before (d) landed it — recorded in
   the (c) message); audit 0, doctor 6/6
 
-- [ ] S40-E3 — the matrix becomes addressable: `oax eval --list` prints
+- [x] S40-E3 — the matrix becomes addressable: `oax eval --list` prints
   the honest inventory (id + drill rows sorted, the count named, exit 1
   on emptiness) and `--only <names>` runs a named subset instead of all
   45 drills — every name matches a task id exactly or a drill name (a
@@ -662,3 +662,28 @@ pad with empty commits.
   red); graded by a new drill (task 46) on the real matrix and on a
   poisoned temp matrix — red tasks named, unknown named, empty names
   named
+  ✅ _cmd_eval rebuilt over resolve_only / run_selected / task_brief in
+  evaluation.py: --list prints the honest inventory (rows in task
+  order, count named, exit 1 on missing/empty dir) and composes with
+  --only; --only resolves task ids and drill names (budget's two tasks
+  prove the drill-name semantics), dedupes, and rejects unknown and
+  blank names loudly before anything runs — no task lines, no summary,
+  no traceback; run_eval's timed core factored into run_selected so
+  full and subset runs share one grading path while run_eval keeps its
+  two-tuple contract; the summary line names the selection (only=…);
+  drill eval_only grades 14 checks — inventory complete/sorted/
+  counted/byte-identical twice, composition, single green subset, two
+  reports in task order, id==drill-name resolution (wall-clock column
+  normalized away — the first live comparison flaked on seconds and
+  was root-fixed), dedupe, unknown/blank named, poisoned temp matrix
+  red named with unknown_drill, mixed subset honest, one-grading-path
+  proof, empty dir honest; task 46 lands with its explainers entry
+  same-commit (gate 8 satisfied), eval floor 45 → 46, matrix 46 tasks
+  / 537 checks green; README badge/inline/eval-line + CLI-glance
+  --only/--list rows + gallery row 35 + thirty-five demos, modules.md
+  evaluation section (resolve_only/run_selected + reject-don't-skip),
+  tutorial hero step addressable-matrix paragraph, golden row 46 +
+  Current line, CHANGELOG eval-only section, example 35 + manifest
+  159; verify rode red for exactly one commit ((c) referenced example
+  35 one commit before (d) landed it — recorded in the (c) message);
+  audit 0, doctor 6/6
