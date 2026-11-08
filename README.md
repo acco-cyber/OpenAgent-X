@@ -75,7 +75,7 @@ Python runs — CI, air-gapped, your laptop.
 **1. A working reference for patterns you keep reinventing.** Agent loop,
 event sourcing, budget governors, deny-policy hooks, retry with backoff,
 circuit breakers, chaos injection, hash-chained tamper evidence — each one is
-a small, readable module (43 modules total) with its invariants written down
+a small, readable module (44 modules total) with its invariants written down
 in [docs/modules.md](docs/modules.md) and its design rationale in one of ten
 [ADRs](docs/adr/). Copy the ideas or copy the code — MIT.
 
@@ -213,6 +213,7 @@ oax recall    # TF-IDF memory over past-run journals (read-only, deterministic)
 oax compact   # fold a journal into a denser copy; original never touched
 oax diff      # event-level journal diff: 0 = semantically same, 1 = different
 oax stats     # deterministic run analytics — replay's own counters, plus tools/type counts
+oax runs      # index every *.jsonl journal in a directory — one honest table (exit 1 = nothing to index)
 oax grep      # search one journal — matches render redacted (exit 1 = no matches)
 oax replay    # fold a journal suffix into state from any seq (exit 2 = bad bounds)
 oax bench     # journal throughput microbench — honest wall-clock, never graded
@@ -419,7 +420,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | Doc | What's inside |
 |---|---|
 | [`docs/tutorial.md`](docs/tutorial.md) | zero-to-hero in ten steps; every snippet executed before it was committed |
-| [`docs/modules.md`](docs/modules.md) | guides to all 43 modules with real entry points and per-module invariants |
+| [`docs/modules.md`](docs/modules.md) | guides to all 44 modules with real entry points and per-module invariants |
 | [`docs/explainers.md`](docs/explainers.md) | one explainer per golden task: the run, the checks it grades, how it fails loudly |
 | [`docs/adr/`](docs/adr/) | ten decision records with Status / Context / Decision / Consequences — costs admitted |
 | [`docs/glossary.md`](docs/glossary.md) | thirty terms, each grounded in the module that owns it |

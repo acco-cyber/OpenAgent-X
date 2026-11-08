@@ -258,6 +258,7 @@ The verification stack, all offline and deterministic:
 ```sh
 python3 -m openagentx diff a.jsonl b.jsonl      # semantic diff, exit 0 same / 1 different
 python3 -m openagentx stats a.jsonl             # the numeric fingerprint
+python3 -m openagentx runs runs/                # index a whole directory of journals, one table (exit 1 = nothing to index)
 python3 -m openagentx grep a.jsonl --tool write_file   # search the journal, matches redacted
 python3 -m openagentx replay a.jsonl --from 5   # fold the suffix from seq 5, bounds honest (exit 2 = bad bounds)
 python3 -m openagentx property --seed 7         # journal invariants after every step
@@ -283,7 +284,9 @@ print(verify_journal(jp)["ok"], torn)   # True False
 `ChainedJournal` commits `{prev, digest}` per line — `verify_journal`
 localizes any edit, deletion, or reorder. `snapshot_at` / `travel` recompute
 state at any checkpoint as a pure prefix fold. `oax dashboard` / `oax
-mermaid` export the run; both re-redact whatever they render.
+mermaid` export the run; both re-redact whatever they render. `oax runs`
+crosses journals: one directory becomes one table whose rows reuse the
+same counters `oax stats` prints, torn tails flagged, middle tears loud.
 
 ## Step 9 — ship it
 

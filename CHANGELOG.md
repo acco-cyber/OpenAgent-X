@@ -6,6 +6,26 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — the multi-run index (runs)
+
+- `oax runs [dir]`: a directory of journals becomes one honest table —
+  `index_runs(dir)` scans `*.jsonl` sorted by file name and every row's
+  counters come from the same `run_stats` the single-journal view uses
+  (one grading path — the index can never disagree with `oax stats`);
+  counters and flags only, never payload text (a journal is raw secrets
+  on disk) and no path beyond the file name; torn tails are flags, not
+  filters — the intact prefix counts and the row says `torn`, while a
+  journal torn in the middle folds into a loud error row carrying the
+  real exception with the redundant directory prefix stripped; additivity
+  claimed only where true (events and tool counters sum across journals,
+  durations never — spans overlap); zero journals is honest emptiness
+  (`ok` False, exit 1 through the CLI); rows render byte-identically,
+  the machine artifact carries the per-row counters under `sort_keys`
+  with no directory path; graded by golden task 42 (12 checks — its
+  first run caught the drill's own totals assertion saying 11 events
+  where the real sum was 10, corrected against the sum) and demonstrated
+  by example 31; matrix 42 tasks / 486 checks.
+
 ### Added — release attestation (attest)
 
 - `oax attest [root] [--json PATH]`: one command, one artifact, every
