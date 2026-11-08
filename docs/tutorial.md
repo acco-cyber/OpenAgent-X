@@ -315,7 +315,11 @@ layers and names cycles instead of hiding them.
 The eval matrix is the repository's spine: JSON specs in `golden_tasks/`,
 graded by `oax eval` against real runs in fresh temp workspaces. A drill
 never trusts its harness: exceptions fold into failing checks, and the
-check count only moves forward. Every task's prose — what the run does,
+check count only moves forward. The matrix is addressable: `oax eval
+--list` prints the honest inventory (id + drill, the count named) and
+`oax eval --only species,chain` runs a named subset — task ids or drill
+names, duplicates deduped, unknown names rejected loudly before anything
+runs (`examples/35_eval_only_tour.py` walks it). Every task's prose — what the run does,
 what the checks grade, how it fails loudly — lives in
 `docs/explainers.md`; read any task's spec + prose from the CLI with
 `oax explain <NN-slug>`, or the whole matrix at a glance with

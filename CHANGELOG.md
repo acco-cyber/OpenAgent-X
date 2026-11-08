@@ -6,6 +6,25 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — the matrix becomes addressable (eval-only)
+
+- `oax eval --list` prints the honest inventory (id + drill rows in
+  task order, the count named, exit 1 on a missing or empty dir) and
+  `oax eval --only <names>` runs a named subset instead of all 46
+  drills: every name matches a task id exactly (`45-species`) or a
+  drill name (`species` — every task carrying that drill, so a drill
+  shared by several tasks selects all of them), duplicates dedupe,
+  `--list` composes with `--only`, and unknown or blank names are
+  rejected loudly before anything runs — a subset you can't name is
+  not a subset, and silently running the rest would bless the typo.
+  The timed core is factored into `run_selected(paths)` so full runs
+  and subset runs share one grading path (a subset grades identically
+  to the corresponding slice of the full run) while `run_eval` keeps
+  its contract; the summary line names the selection (`only=…`).
+  Graded by golden task 46 (14 checks) over the real matrix and a
+  poisoned temp matrix — red tasks named with their failing check —
+  and demonstrated by example 35; matrix 46 tasks / 537 checks.
+
 ### Added — redaction species round three (species)
 
 - the boundary learns six more high-confidence credential shapes:

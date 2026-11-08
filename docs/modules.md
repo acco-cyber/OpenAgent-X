@@ -402,11 +402,14 @@ orphans and fan sums are derived, sorted, timestamp-free.
 
 ### evaluation
 Golden-task evaluation — honest, offline, deterministic drills. `Check`,
-`DrillReport`, the `DRILLS` registry. Invariants: drills execute real
+`DrillReport`, the `DRILLS` registry, `resolve_only` / `run_selected`.
+Invariants: drills execute real
 behavior from this run (fresh temp workspaces, real journals, real
 exceptions); a harness error folds into a failing check — never a skipped
-test; the check count only moves forward. Golden tasks are JSON specs in
-`golden_tasks/`, graded by `oax eval`.
+test; the check count only moves forward; a subset selected by `oax eval
+--only` grades through the same core as the full run (unknown names are
+rejected before anything runs, never silently skipped). Golden tasks are
+JSON specs in `golden_tasks/`, graded by `oax eval`.
 
 ### doctor
 Environment doctor — the purity and integrity gate. `run_doctor`. Six
