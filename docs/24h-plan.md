@@ -549,7 +549,7 @@ pad with empty commits.
   lost its part suffix — recorded here, no history rewritten; audit 0,
   doctor 6/6
 
-- [ ] S37-E3 — the auditor audits itself: golden task 43 grades the
+- [x] S37-E3 — the auditor audits itself: golden task 43 grades the
   doctor's gates at their failure edges — a planted third-party import
   caught by name, a network import caught, a missing required file
   named, a malformed spec folded loudly, an unknown drill named, gates
@@ -557,3 +557,23 @@ pad with empty commits.
   with no wall-clock, the CLI's 0/1 contract probed both ways — every
   probe in a fresh temp workspace, plus the render_doctor extraction
   the drill grades
+  ✅ render_doctor extracted from the CLI into doctor.py as a pure
+  function of the gate list (byte-identical output, docstring examples
+  graded — floor 20 modules / 71 examples; the first run caught the
+  expected FAIL line one space short, fixed at the root); drill doctor
+  grades 12 checks in fresh temp workspaces — real tree 6/6, render
+  deterministic + no wall-clock, clean synthetic workspace green,
+  foreign.py:numpy caught by stdlib_purity, netty.py:socket by
+  offline_purity, gone.txt named, truncated bad.json folded with the
+  real exception, ghost.json named, one poisoned tree turns exactly the
+  four planted gates red (the drill's first run caught sys missing from
+  evaluation's imports — root-fixed), CLI 0 green / 1 red both probed;
+  task 43 lands with its explainers entry same-commit (gate 8
+  satisfied), eval floor 42 → 43, matrix 43 tasks / 498 checks green;
+  README badge/inline/eval-line/CLI-glance + gallery row 32 + thirty-two
+  demos, modules.md doctor section (render + failure-edge contract),
+  tutorial doctor line + stale 41-tasks comment corrected to 43, golden
+  row 43 + Current line, CHANGELOG section, example 32 + manifest 153;
+  README counts rode red for exactly one commit ((b) landed the matrix
+  growth before the docs cascade — recorded in the (b) message); audit
+  0, doctor 6/6
