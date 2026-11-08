@@ -93,6 +93,9 @@ authorization engine.
 | §5 durable task lifecycle | **ported to code** — [`openagentx/lifecycle.py`](../../openagentx/lifecycle.py), graded by golden task 47 (`drill lifecycle`) |
 | §5 approval bound to the exact plan hash | **ported to code** — same module (`ApprovalMismatch`) |
 | §5 canonical task states | **ported to code** — the eleven-state table lives in `lifecycle.TRANSITIONS`, pinned by the drill |
+| §7 agent workforce contracts | **ported to code** — [`openagentx/workforce.py`](../../openagentx/workforce.py), graded by golden task 48 (`drill workforce`): the eight specialist profiles, structured handoffs, the independent verifier |
+| §11 permission tiers P0–P4 | **ported to code** — same module: the two-gate invocation-time check with no prompt/override parameter, task budgets capped fail-closed, evidence-gated results |
+| §6 capability-aware routing | **ported to code** — same module (`route`): hard capability + data-policy filters before scoring, an eligible-only fallback, a persisted reason per candidate |
 | §11 append-only audit, redaction at boundaries | **already built** — the journal boundary, `redact.py` (11 species), `oax audit` |
 | §19 evaluation discipline | **already built** — the golden matrix, honest grading, counts that only move forward |
 | Everything else | design input only — see the per-file status lines above |

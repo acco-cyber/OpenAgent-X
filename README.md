@@ -7,7 +7,7 @@
 [![CI](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml/badge.svg)](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](docs/tutorial.md)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-8A2BE2)](docs/adr/0002-stdlib-only-offline.md)
-[![Eval](https://img.shields.io/badge/eval-47_tasks_550_checks-brightgreen)](golden_tasks)
+[![Eval](https://img.shields.io/badge/eval-48_tasks_564_checks-brightgreen)](golden_tasks)
 [![Secret audit](https://img.shields.io/badge/secret_audit-0_findings-success)](docs/faq.md)
 [![Network](https://img.shields.io/badge/network-offline_first-orange)](docs/adr/0004-scripted-adapters.md)
 [![Blueprint](https://img.shields.io/badge/design_blueprint-24_sections_ported-0F766E)](docs/blueprint/)
@@ -25,7 +25,7 @@ that lives in [docs/blueprint/](docs/blueprint/).
 Three pillars hold everything up: **the journal is the truth** (event-sourced,
 append-only, dense sequences), **redaction by default** (secrets die at the
 journal boundary and every view re-applies the mask), and **honest grading**
-(47 golden drills, 550 checks, harness errors fold into failing checks — never
+(48 golden drills, 564 checks, harness errors fold into failing checks — never
 silent passes). Ten ADRs in `docs/adr/` record why, with the costs admitted.
 
 | Navigate | | | |
@@ -68,7 +68,7 @@ What to look for in the video:
 git clone https://github.com/acco-cyber/OpenAgent-X.git && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # thirty-six runnable end-to-end demos
+python3 -m openagentx examples # thirty-seven runnable end-to-end demos
 ```
 
 No model keys, no SDKs, no services. The default adapter is `ScriptedLLM`:
@@ -80,7 +80,7 @@ Python runs — CI, air-gapped, your laptop.
 **1. A working reference for patterns you keep reinventing.** Agent loop,
 event sourcing, budget governors, deny-policy hooks, retry with backoff,
 circuit breakers, chaos injection, hash-chained tamper evidence — each one is
-a small, readable module (45 modules total) with its invariants written down
+a small, readable module (46 modules total) with its invariants written down
 in [docs/modules.md](docs/modules.md) and its design rationale in one of ten
 [ADRs](docs/adr/). Copy the ideas or copy the code — MIT.
 
@@ -204,7 +204,7 @@ same events, never from separate bookkeeping.
 ## The CLI at a glance
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (47 tasks / 550 checks)
+oax eval      # run every golden task drill, all green or exit 1   (48 tasks / 564 checks)
 #            --only species,chain   run a named subset (task ids or drill names; unknown = exit 1)
 #            --list                 print the inventory (id + drill), composes with --only
 oax chain     # verify a hash-chained journal (exit 1 = broken/torn/missing) or --seal the 64-hex head
@@ -451,11 +451,38 @@ evaluation discipline and a risk register.
 The port keeps the blueprint's own claims discipline on every page:
 *proposed plan, not a claim of implemented capability*. The index table in
 [`docs/blueprint/README.md`](docs/blueprint/README.md) names exactly what
-OpenAgent-X has already built (§5 lifecycle → checked code; §11-style
-redaction at the boundary → the journal; §19-style honest evaluation → the
-golden matrix) and what stays design input. References are citations, not
-forks — the blueprint itself says upstream material is never a
-fork-and-merge, and this repo agrees.
+OpenAgent-X has already built (§5 lifecycle → checked code; §7/§11/§6
+workforce, permission tiers and capability routing → checked code;
+§11-style redaction at the boundary → the journal; §19-style honest
+evaluation → the golden matrix) and what stays design input. References
+are citations, not forks — the blueprint itself says upstream material is
+never a fork-and-merge, and this repo agrees.
+
+## The agent workforce (blueprint §7, §11, §6 — as code)
+
+[`openagentx/workforce.py`](openagentx/workforce.py) makes the blueprint's
+specialist agents concrete: eight frozen profiles — **research** (P0,
+read-only), **writing** and **memory** (P1, reversible local), **coding**,
+**data**, **math**, **browser** and **qa** (P2, sandboxed) — each a
+versioned `AgentDefinition` with an allowlist, a permission ceiling and a
+hard budget. The rules that matter, enforced rather than suggested:
+
+- **Permissions live outside prompts.** `check_permission(agent, tool)`
+  takes exactly `(agent, tool)` — there is no override parameter to beg
+  through. Allowlist gate first, ceiling gate second; both refusals name
+  their gate.
+- **Budgets fail closed.** A task may ask for *less* than the contract
+  cap, never more; the ledger refuses the call that would exceed it.
+- **Evidence before claims.** A `completed` result with zero evidence
+  refs is a contract violation.
+- **Routing never trades a required capability.** Hard capability and
+  data-policy filters run before scoring; the fallback must also pass the
+  hard filters; every candidate's accept/reject reason is persisted.
+- **Verifiers are independent.** The producer cannot verify itself; every
+  handoff carries acceptance criteria — a handoff that cannot be verified
+  is a chat, not a handoff.
+
+Graded by golden task 48 (`drill workforce`, 14 checks).
 
 ## How OpenAgent-X compares
 
@@ -466,7 +493,7 @@ not a strawman of any specific project:
 |---|---|---|
 | Source of truth | in-memory agent state; logs are best-effort | append-only JSONL journal; replay is a pure fold of it |
 | Secrets | flow into logs and prompts verbatim | redacted at the journal boundary, re-masked by every view; `oax audit .` scans the tree itself |
-| Grading | mocked calls or "it should pass" scripts | 47 golden drills execute real behavior; exceptions fold into a failing `harness_error` check |
+| Grading | mocked calls or "it should pass" scripts | 48 golden drills execute real behavior; exceptions fold into a failing `harness_error` check |
 | Dependencies | SDK + runtime + keys before hello-world | pure stdlib; the full matrix runs offline, zero keys |
 | Determinism | wall-clock and network inside the loop | same events → same replay state; semantic diff ignores the clock, `--strict` doesn't |
 | Tamper evidence | usually none | opt-in hash chains; edits localize to the exact seq |
@@ -498,6 +525,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | `examples/34_species_tour.py` | redaction species round three | the eleven-species tour: each new shape (Google `AIza` key, GitLab PAT, Stripe secret, npm token, JWT, PEM private key block) planted at runtime and caught kind-by-kind through `redact()`, `oax audit` and `oax grep`'s rendered matches, near-misses left alone (short tails, an unsigned JWT, a CERTIFICATE block), the five legacy species still caught, a mixed line reporting exactly three redactions, the repo still auditing to 0 findings |
 | `examples/35_eval_only_tour.py` | the matrix is addressable | the eval selection tour: `--list` printing the honest inventory (id + drill rows sorted, the count named, byte-identical twice) and composing with `--only`, a named subset running exactly its reports in task order green, a task id and its drill name resolving to the same report, duplicate names deduping, unknown and blank names rejected loudly before anything runs, a poisoned temp matrix naming its red task with the failing check, a mixed subset honest (exit 1, both reports), the subset report grading through the same `run_selected` core as the full run, and the CLI agreeing on every exit |
 | `examples/36_lifecycle_tour.py` | the blueprint's task lifecycle | the §5 machine walked end-to-end: the eleven states with the three zero-out terminals printed, the happy path through real dense events with the deterministic render shown line-by-line, five illegal moves refused from their true source states with zero appends asserted, a drifted plan refused at `start()` while the exact plan passes and the journal hash matches an independent `plan_hash` recomputation, the pre-approved low-risk path recorded honestly, waiting/blocked/recovery side paths (re-approval re-binds the hash; RECOVERY never shortcuts to COMPLETED), cancellation terminal with cleanup still journaled, a durable journal replayed byte-identically, a fixture token typed into a reason surviving only as `[REDACTED:github_token]`, and a plan hash canonical and content-sensitive |
+| `examples/37_workforce_assembly.py` | the blueprint's agent workforce | all eight specialist profiles assembled on one objective, each in a small bounded portion: the roster printed with ceilings and allowlists, the least-privilege refusal shown (research cannot even ask about shell), the capability router choosing between three deployments for a private-data task (the standard-policy candidates rejected with named reasons), a research task dispatched with its budget capped by the contract and a permission denial observed, the structured handoff research→writing carrying acceptance criteria, the independent qa verifier refusing self-verification, and the whole assembly's event trail validated against the canonical vocabulary |
 | `examples/01`–`17` | foundations | hello-loop, redaction, team handoff, pack+sbom, memory+compact, cache+hooks, fanout+structured, retry+breaker, planner+snapshot, prompt layers, JIT tools, chaos+chain, diff+stats, bench+fuzz, property, pack2+graph, dashboard+mermaid |
 
 ## Why it matters
@@ -516,7 +544,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | Doc | What's inside |
 |---|---|
 | [`docs/tutorial.md`](docs/tutorial.md) | zero-to-hero in ten steps; every snippet executed before it was committed |
-| [`docs/modules.md`](docs/modules.md) | guides to all 45 modules with real entry points and per-module invariants |
+| [`docs/modules.md`](docs/modules.md) | guides to all 46 modules with real entry points and per-module invariants |
 | [`docs/explainers.md`](docs/explainers.md) | one explainer per golden task: the run, the checks it grades, how it fails loudly |
 | [`docs/adr/`](docs/adr/) | ten decision records with Status / Context / Decision / Consequences — costs admitted |
 | [`docs/blueprint/`](docs/blueprint/) | the 24-section HYDRION ONE design blueprint, ported in full as design input; §5 is already checked code |

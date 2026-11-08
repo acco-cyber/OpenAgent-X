@@ -6,6 +6,25 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — the agent workforce, permission tiers and capability routing as code (workforce)
+
+- [`openagentx/workforce.py`](../openagentx/workforce.py) (module 46) ports
+  blueprint §7/§11/§6: eight frozen specialist profiles under P0–P4
+  permission ceilings (research P0, writing/memory P1, six sandbox
+  specialists P2 — no profile reaches P3/P4), the two-gate invocation-time
+  permission check with deliberately no prompt/override parameter, a hard
+  budget ledger that fails closed, task budgets capped by the contract,
+  evidence-gated results, the capability-aware routing pipeline with hard
+  filters before scoring and a persisted reason per candidate, structured
+  handoffs with mandatory acceptance criteria, the independent-verifier
+  rule, and the canonical workforce event vocabulary (31 doctests).
+- Golden task 48 (`drill workforce`, 14 checks) pins the roster, the
+  ceiling table, both permission gates, the prompt-immune signature, the
+  fail-closed budgets, the evidence rule, the router's named reasons and
+  eligible fallback, and the handoff/verifier edges.
+- Example 37 assembles all eight agents on one objective, each in a small
+  bounded portion. Matrix: 48 tasks / 564 checks.
+
 ### Added — the design blueprint lands, and §5 becomes code (blueprint + lifecycle)
 
 - [`docs/blueprint/`](blueprint/) is a faithful, full port of the
