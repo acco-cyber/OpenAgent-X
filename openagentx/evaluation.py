@@ -4512,6 +4512,154 @@ def _chain_cli_drill(task: dict) -> list:
         "no 10+-digit number in the render"))
     return checks
 
+
+def _species_drill(task: dict) -> list:
+    """Redaction species round three: six more credential shapes, graded
+    at their failure edges.
+
+    Honest contract: each new species (google_api_key, gitlab_pat,
+    stripe_secret, npm_token, jwt, private_key_block) is caught by the
+    module engine with its kind named and the raw value gone; the
+    near-misses (short tails, a JWT missing its signature, a
+    CERTIFICATE block) stay invisible — the table is high-confidence,
+    not a spell-checker; the five legacy species still caught; a line
+    carrying three species at once reports exactly three redactions;
+    audit on a planted temp tree finds each species kind-by-kind with
+    the snippets themselves redacted and re-scans byte-identically;
+    the repository itself still audits to 0 findings; a journal whose
+    tool_result carries a runtime-assembled secret renders through
+    grep only in redacted form, byte-identically twice, with no
+    wall-clock anywhere.
+    """
+    from .grep import grep_journal, render_grep
+    from .redact import PATTERNS, redact
+    from .events import Event
+    from .tools import vault_value as vv
+
+    checks: list = []
+    wd = _fresh_wd("species")
+    secrets = {k: vv(key) for key, k in [
+        ("google", "google_api_key"), ("gitlab", "gitlab_pat"),
+        ("stripe", "stripe_secret"), ("npm", "npm_token"),
+        ("jwt", "jwt"), ("private_key", "private_key_block")]}
+
+    # 1) each new species caught, kind named, raw gone
+    caught = []
+    for kind, raw in secrets.items():
+        out, n = redact("field=" + raw)
+        caught.append((n == 1 and raw not in out
+                       and f"{MARKER}{kind}]" in out))
+    checks.append(Check("six_new_species_caught", all(caught),
+                        f"{sum(bool(c) for c in caught)}/6 kinds named"))
+
+    # 2) stripe test mode caught like live mode
+    out, n = redact("sk_" + "test_" + "Z9Y8x7W6v5U4t3S2r")
+    checks.append(Check("stripe_test_mode_caught",
+                        n == 1 and f"{MARKER}stripe_secret]" in out,
+                        f"{n} redaction"))
+
+    # 3) private key variants: RSA / OPENSSH / PGP BLOCK
+    variants = ["-----BEGIN " + "RSA " + "PRIVATE KEY-----",
+                "-----BEGIN " + "OPENSSH " + "PRIVATE KEY-----",
+                "-----BEGIN " + "PGP " + "PRIVATE KEY" + " BLOCK-----"]
+    hits = [redact(v)[0] == f"{MARKER}private_key_block]" for v in variants]
+    checks.append(Check("private_key_variants_caught", all(hits),
+                        f"{sum(hits)}/3 variants"))
+
+    # 4) near-misses stay invisible — high-confidence, not a spell-checker
+    near = ["AIza" + "a" * 34,            # tail one short of 35
+            "glpat-" + "a" * 19,          # tail one short of 20
+            "sk_live_" + "a" * 15,        # body one short of 16
+            "npm_" + "a" * 35,            # body one short of 36
+            "eyJabcdefgh.ijklmnop.qr",    # signature segment missing
+            "-----BEGIN CERTIFICATE-----"]  # not a private key
+    misses = [redact(s)[1] == 0 for s in near]
+    checks.append(Check("near_misses_invisible", all(misses),
+                        f"{sum(misses)}/{len(near)} left alone"))
+
+    # 5) the five legacy species still caught after the table grew
+    legacy = [("github", "github_token"), ("aws", "aws_key"),
+              ("slack", "slack_token"), ("anthropic", "anthropic_key"),
+              ("openai", "openai_key")]
+    legacy_hits = 0
+    for key, kind in legacy:
+        raw = vv(key) if key in ("github", "aws") else {
+            "slack": "xoxb-" + "ab12CD34ef56" + "-x",
+            "anthropic": "sk-ant-" + "api03-longstring_value_123456",
+            "openai": "sk-proj-" + "aVeryLongKeyString_1234567890",
+        }[key]
+        out, n = redact("v=" + raw)
+        if n == 1 and f"{MARKER}{kind}]" in out and raw not in out:
+            legacy_hits += 1
+    checks.append(Check("legacy_five_still_caught", legacy_hits == 5,
+                        f"{legacy_hits}/5 legacy kinds"))
+
+    # 6) one line, three species, exactly three redactions
+    mixed = ("ghp=" + vv("github") + " ai=" + vv("google") +
+             " token=" + vv("jwt"))
+    out, n = redact(mixed)
+    checks.append(Check("mixed_line_counts_honest",
+                        n == 3 and out.count(MARKER) == 3
+                        and not any(s in out for s in secrets.values())
+                        and vv("github") not in out,
+                        f"count {n}, marks {out.count(MARKER)}"))
+
+    # 7-10) audit over a planted temp tree; the repo itself still clean
+    planted = {}
+    for i, (kind, raw) in enumerate(secrets.items()):
+        path = os.path.join(wd, f"planted_{i}.py")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("N = 1\n" + f'key = "{raw}"\n')
+        planted[f"planted_{i}.py"] = kind
+    f1 = run_audit(wd)
+    f2 = run_audit(wd)
+    kind_hits = sum(
+        1 for name, kind in planted.items()
+        if any(f["file"] == name and f["kind"] == kind for f in f1))
+    checks.append(Check("audit_planted_tree_all_species",
+                        len(f1) == 6 and kind_hits == 6,
+                        f"{len(f1)} findings, {kind_hits}/6 kinds matched"))
+    snippets_safe = (all(f"{MARKER}{planted[f['file']]}]" in f["snippet"]
+                         for f in f1)
+                     and not any(s in f["snippet"] for f in f1
+                                 for s in secrets.values()))
+    checks.append(Check("audit_snippets_redacted", snippets_safe,
+                        f"{len(f1)} snippets redacted"))
+    checks.append(Check("audit_deterministic", f1 == f2,
+                        "two scans byte-identical"))
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repo = run_audit(repo_root)
+    checks.append(Check("repo_self_audit_clean", repo == [],
+                        f"{len(repo)} findings in the repository itself"))
+
+    # 11-12) a journal carrying a raw secret renders only redacted
+    jp = os.path.join(wd, "journal.jsonl")
+    raw = vv("google")
+    with open(jp, "w", encoding="utf-8") as fh:
+        for i, (t, pay) in enumerate([
+                ("run_start", {"run_id": "species"}),
+                ("tool_result", {"tool": "write_file",
+                                 "text": "cfg=" + raw})]):
+            fh.write(Event(seq=i, run_id="species", ts=1000.0 + i,
+                           type=t, payload=pay).to_json() + "\n")
+    rep = grep_journal(jp, etype="tool_result")
+    render1 = render_grep(rep)
+    render2 = render_grep(grep_journal(jp, etype="tool_result"))
+    checks.append(Check(
+        "grep_render_redacts_species",
+        rep["redactions"] >= 1 and raw not in render1
+        and f"{MARKER}google_api_key]" in render1,
+        f"{rep['redactions']} redaction(s) in {rep['matched']} match"))
+    checks.append(Check(
+        "grep_render_deterministic",
+        render1 == render2 and re.search(r"\d{10,}", render1) is None,
+        "byte-identical twice, no 10+-digit number"))
+    checks.append(Check(
+        "table_still_eleven_species",
+        len(PATTERNS) == 11,
+        f"{len(PATTERNS)} species in the table"))
+    return checks
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -4556,6 +4704,7 @@ DRILLS = {
     "runs": _runs_drill,
     "doctor": _doctor_drill,
     "chain_cli": _chain_cli_drill,
+    "species": _species_drill,
 }
 
 

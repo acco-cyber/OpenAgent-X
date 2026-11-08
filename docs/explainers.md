@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (44 tasks, 510 checks) is the repo's contract with
+The golden matrix (45 tasks, 523 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -564,6 +564,29 @@ absent path would fail `tampered_payload_localized` /
 `torn_tail_exit_one` / `missing_journal_named`; a seal over
 unverifiable bytes would fail `seal_refusals_named`.
 
+### 45-species — redaction species round three: the table learns six more shapes
+**The run:** no agent runs here either; the drill exercises the
+redaction engine and the audit scanner directly over runtime-assembled
+fixtures in a fresh temp workspace — each new species planted in a
+real file, one journal carrying a raw secret through `oax grep`'s
+view, and the repository itself re-scanned.
+**The checks grade (13):** each of the six new species (google_api_key,
+gitlab_pat, stripe_secret, npm_token, jwt, private_key_block) caught
+with its kind named and the raw value gone; Stripe's test mode caught
+like live mode; the RSA, OPENSSH and PGP-BLOCK private key variants
+all caught; the near-misses left alone — an AIza tail one char short,
+a 19-char GitLab token, a 15-char Stripe body, a 35-char npm token, a
+JWT missing its signature, a CERTIFICATE block (high-confidence, not
+a spell-checker); the five legacy species still caught after the
+table grew; one line carrying three species reports exactly three
+redactions; audit over the planted tree finds all six kind-by-kind
+with every snippet itself redacted and two scans byte-identical; the
+repository still audits to 0 findings; the grep render shows only the
+redacted form, byte-identically twice with no wall-clock; and the
+table is pinned at eleven species so it cannot silently shrink.
+A weakened table would fail `six_new_species_caught`; a
+false-positive-prone one would fail `near_misses_invisible` and
+`repo_self_audit_clean`.
 
 ## Adding a task
 
