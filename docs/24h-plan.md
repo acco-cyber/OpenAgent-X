@@ -512,9 +512,39 @@ pad with empty commits.
   landed the matrix growth before the prose cascade — recorded in the
   (d) message, verify green again there); audit 0, doctor 6/6
 
-- [ ] S36-E3 — the multi-run index: `oax runs [dir]` — a directory of
+- [x] S36-E3 — the multi-run index: `oax runs [dir]` — a directory of
   journals becomes one deterministic table (rows sorted by file name,
   torn tails flagged but never filtered, middle-torn journals loud error
   rows carrying the real exception, totals additive only where true,
   counters never payloads), graded by a new drill (task 42) and
   demonstrated by example 31
+  ✅ `runs.py` (index_runs / totals_of / render_runs / artifact_json) +
+  CLI `oax runs [dir]` (exit 0 indexed / 1 nothing to index, probed both
+  ways plus missing-dir) + modules.md runs section; every row's counters
+  come from the same run_stats the single-journal view uses (one grading
+  path — the index can never disagree with `oax stats`); the smoke probe
+  caught the folded TornMiddleError carrying the full temp path into the
+  render — root-fixed: the real exception text with the redundant
+  directory prefix stripped, folded not hidden; torn tails are flags
+  (intact prefix counts, row says torn), a middle-torn journal is a loud
+  error row, additivity claimed only where true (events + tool counters
+  sum, durations never — spans overlap), zero journals honest emptiness
+  (ok False); nine docstring examples on runs.py graded by the doctest
+  engine (floor 19 modules / 68 examples); drill runs grades 12 checks
+  in a fresh temp workspace of four canonical-Event journals (clean,
+  torn-tail, middle-torn, payload-secret) — rows_sorted_deterministic,
+  counters_match_stats, totals_additive_where_true (the drill's first
+  run caught its own assertion saying 11 events where the real sum was
+  10 — corrected against the sum, never against a wish),
+  torn_tail_flagged_not_filtered, middle_torn_loud_error_row,
+  no_payload_leak, empty_dir_loud, non_jsonl_ignored,
+  artifact_deterministic (byte-identical twice, sort_keys, no directory
+  path), render_no_wall_clock, missing_dir_raises, cli_exit_contract;
+  task 42 lands with its explainers entry same-commit (gate 8
+  satisfied), eval floor 41 → 42, matrix 42 tasks / 486 checks green;
+  README badge/inline/eval-line/CLI-glance/comparison/module-count 44,
+  tutorial verification-stack line + one-grading-path paragraph,
+  CHANGELOG multi-run index section, golden row 42 + Current line +
+  no-script shape note, example 31 + manifest 151; commit (d)'s subject
+  lost its part suffix — recorded here, no history rewritten; audit 0,
+  doctor 6/6
