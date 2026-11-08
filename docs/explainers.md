@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (47 tasks, 550 checks) is the repo's contract with
+The golden matrix (48 tasks, 564 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -645,6 +645,38 @@ Loud failure: a drift between `TRANSITIONS` and the documented table fails
 fails `approval_hash_binding`; a replay that reorders or launders history
 fails `replay_rebuilds_identically`; a raw secret surviving the boundary
 fails `reasons_redacted_at_boundary`.
+
+### 48-workforce — the blueprint's agent workforce, as code
+
+The §7/§11/§6 contracts graded at their edges. The eight specialist
+profiles are registered and the least-privilege ceiling table is pinned
+(research P0, writing/memory P1, the six sandbox specialists P2 — no
+profile's allowlist reaches P3/P4); a contract that would grant itself
+more power is refused at construction (bad agent_id, non-semver version,
+an unknown ceiling, a tool outside the tier table, a zero budget); the
+two-gate permission check refuses at invocation time — research cannot
+even *ask* about shell (allowlist gate), a P2 tool under a P1 ceiling is
+refused by tier (ceiling gate) — and the check is prompt-immune: its
+signature accepts only `(agent, tool)`, so "denied actions do not become
+allowed through prompting" is enforced by the type system, not by hope.
+Dispatch is fail-closed both ways: a task budget above the contract cap
+raises (a task may ask for less, never for more), a permission scope
+outside the allowlist raises, and a dispatch without acceptance criteria
+raises (an unverifiable task cannot be graded). Results are
+evidence-gated: `completed` with zero evidence refs is a contract
+violation while `failed` may report empty evidence. The budget ledger
+fails closed at its cap with the remaining count honest (2 → 0 → the
+named refusal). The §6 router applies hard filters before scoring: a
+candidate missing a required capability is rejected *with the named
+reason*, private data keeps standard-policy deployments out, the fallback
+must also pass the hard filters, and routing twice yields an identical
+decision with a verdict per candidate. A handoff without acceptance
+criteria is a chat, not a handoff; the producer cannot verify itself; and
+the workforce event vocabulary rejects invented names while accepting the
+canonical set.
+A roster that let one agent reach P3 would fail
+`least_privilege_table_pinned`; a permission check that grew an override
+parameter would fail `permission_prompt_immune`.
 
 ## Adding a task
 

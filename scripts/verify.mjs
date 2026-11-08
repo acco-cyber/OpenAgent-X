@@ -21,7 +21,8 @@ const drills = new Set(['loop', 'redact', 'trace', 'team', 'router', 'budget', '
                         'diff', 'stats', 'bench', 'fuzz', 'property', 'pack2',
                         'graph', 'dashboard', 'mermaid', 'sweep', 'grep',
                         'replay_from', 'explain', 'doctest', 'attest', 'runs',
-                        'doctor', 'chain_cli', 'species', 'eval_only', 'lifecycle']);
+                        'doctor', 'chain_cli', 'species', 'eval_only', 'lifecycle',
+                        'workforce']);
 const runnerDrills = new Set(['loop', 'redact', 'trace', 'budget', 'stop', 'redact_nested',
                               'cache', 'retry', 'breaker', 'jit', 'chaos', 'chain',
                               'diff', 'stats', 'sweep', 'grep',
@@ -91,7 +92,7 @@ if (existsSync(gdir)) {
 } else { console.error('MISSING golden_tasks/'); fail++; }
 
 // 3) eval count only moves forward (honest growth)
-if (nTasks < 47) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 47`); fail++; }
+if (nTasks < 48) { console.error(`GOLDEN TASKS REGRESSED: ${nTasks} < 48`); fail++; }
 
 // 4) docs stay in sync with the package (module guides + tutorial)
 if (existsSync(join(root, 'docs/modules.md')) && existsSync(join(root, 'docs/tutorial.md'))) {

@@ -164,4 +164,5 @@ docs/blueprint/03-platform.md
 docs/blueprint/04-delivery.md
 docs/blueprint/05-evidence.md
 golden_tasks/47-lifecycle.json
+golden_tasks/48-workforce.json
 examples/36_lifecycle_tour.py

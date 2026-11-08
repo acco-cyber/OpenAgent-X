@@ -5093,6 +5093,275 @@ def _lifecycle_drill(task: dict) -> list:
         "key order irrelevant, any content change changes the 64-hex hash"))
     return checks
 
+
+def _workforce_drill(task: dict) -> list:
+    """The blueprint's agent workforce contracts, graded at their edges.
+
+    Honest contract: the eight-profile roster and its least-privilege
+    ceiling table match blueprint §7 exactly; contracts that would grant
+    themselves more power are refused at construction; the permission
+    check has no prompt/override parameter (the signature is the boundary)
+    and both gates name their refusal; task budgets fail closed against
+    the contract cap; 'completed' results demand evidence; the budget
+    ledger exhausts loudly; the router's hard filters name their reasons,
+    its fallback is always eligible, and the decision is deterministic;
+    handoffs demand acceptance criteria and the verifier is independent.
+    """
+    import inspect
+
+    from .workforce import (AgentDefinition, BudgetExhausted, BudgetLedger,
+                            ContractError, HandoffError, ModelCandidate,
+                            PROFILES, TOOL_TIERS, TIERS, check_event_name,
+                            check_permission, profiles, require,
+                            require_independent_verifier, route,
+                            validate_handoff, validate_result, validate_task)
+
+    checks: list = []
+
+    # 1) the roster is the §7 table, complete and uniquely identified
+    got = tuple(p.agent_id for p in profiles())
+    want = ("browser", "coding", "data", "math", "memory", "qa",
+            "research", "writing")
+    checks.append(Check(
+        "eight_profiles_registered",
+        got == want and len(set(got)) == 8,
+        "the eight §7 specialist profiles are registered, unique, sorted"))
+
+    # 2) the least-privilege ceiling table is pinned, and every profile's
+    #    allowlist stays within its ceiling
+    ceilings = {p.agent_id: p.permission_ceiling for p in profiles()}
+    table_ok = (ceilings == {"research": "P0", "writing": "P1",
+                             "memory": "P1", "coding": "P2", "data": "P2",
+                             "math": "P2", "browser": "P2", "qa": "P2"})
+    within = all(
+        all(TIERS[TOOL_TIERS[t]] <= TIERS[p.permission_ceiling]
+            for t in p.allowed_tools) for p in profiles())
+    no_p3p4 = all(
+        TOOL_TIERS[t] in ("P0", "P1", "P2")
+        for p in profiles() for t in p.allowed_tools)
+    checks.append(Check(
+        "least_privilege_table_pinned",
+        table_ok and within and no_p3p4,
+        "research P0, writing/memory P1, the rest P2; every allowlisted "
+        "tool sits within its ceiling and no profile reaches P3/P4"))
+
+    # 3) contracts that would grant themselves more power are refused
+    base = dict(
+        agent_id="probe", version="1.0.0", supported_task_types=("ops",),
+        required_capabilities=("code",), allowed_tools=("read_file",),
+        permission_ceiling="P1", max_tool_calls=5, max_tokens=4000,
+        verification_policy=("tests",), runtime_adapter="builtin")
+    refusals = 0
+    for kwargs in (dict(base, agent_id="Bad_ID"),
+                   dict(base, version="1.0"),
+                   dict(base, permission_ceiling="P9"),
+                   dict(base, allowed_tools=("read_file", "sql_exec")),
+                   dict(base, max_tool_calls=0)):
+        try:
+            AgentDefinition(**kwargs)
+        except ContractError:
+            refusals += 1
+    checks.append(Check(
+        "contract_validation_refuses",
+        refusals == 5,
+        "bad agent_id, non-semver version, unknown ceiling, tool outside "
+        "the tier table and a zero budget all raise ContractError"))
+
+    # 4) gate 1 — the allowlist
+    d1 = check_permission(PROFILES["research"], "shell")
+    d2 = check_permission(PROFILES["research"], "search")
+    checks.append(Check(
+        "permission_allowlist_gate",
+        (not d1.allowed) and d2.allowed
+        and "allowlist" in d1.reason and d1.tool == "shell",
+        "research cannot even ask about shell; the refusal names the gate"))
+
+    # 5) gate 2 — the ceiling (a contract that lists a P2 tool while
+    #    capped at P1 is refused at invocation, drift or not)
+    escalator = AgentDefinition(
+        agent_id="escalator", version="1.0.0",
+        supported_task_types=("ops",), required_capabilities=("code",),
+        allowed_tools=("read_file", "shell"), permission_ceiling="P1",
+        max_tool_calls=5, max_tokens=4000,
+        verification_policy=("tests",), runtime_adapter="builtin")
+    d3 = check_permission(escalator, "shell")
+    checks.append(Check(
+        "permission_ceiling_gate",
+        (not d3.allowed) and "P2" in d3.reason and "P1" in d3.reason,
+        "shell requires tier P2; the escalator's ceiling is P1 — refused"))
+
+    # 6) the signature is the security boundary: no prompt/override param
+    params = set(inspect.signature(check_permission).parameters)
+    require_params = set(inspect.signature(require).parameters)
+    checks.append(Check(
+        "permission_prompt_immune",
+        params == {"agent", "tool"} and require_params == {"agent", "tool"},
+        "check_permission/require accept only (agent, tool) — denied "
+        "actions cannot become allowed through prompting"))
+
+    # 7) task budgets fail closed against the contract cap; scope is
+    #    capped by the allowlist
+    t_ok = {"task_id": "t-1", "objective": "sourced survey",
+            "agent_id": "research",
+            "budget": {"max_tool_calls": 5, "max_tokens": 1000},
+            "acceptance_criteria": ["at least 8 primary sources"],
+            "permission_scope": ["search", "fetch"]}
+    ok = True
+    try:
+        validate_task(t_ok, PROFILES["research"])
+        validate_task(dict(t_ok, budget={"max_tool_calls": 500,
+                                         "max_tokens": 1000}),
+                      PROFILES["research"])
+        ok = False
+    except ContractError as e:
+        ok = "contract cap" in str(e)
+    try:
+        validate_task(dict(t_ok, permission_scope=["search", "shell"]),
+                      PROFILES["research"])
+        ok = False
+    except ContractError:
+        pass
+    checks.append(Check(
+        "task_budget_fail_closed",
+        ok,
+        "a task budget above the contract cap raises; a permission scope "
+        "outside the allowlist raises"))
+
+    # 8) no acceptance criteria, no dispatch
+    try:
+        validate_task(dict(t_ok, acceptance_criteria=[]),
+                      PROFILES["research"])
+        criteria_ok = False
+    except ContractError:
+        criteria_ok = True
+    checks.append(Check(
+        "task_acceptance_criteria_required",
+        criteria_ok,
+        "a dispatch without acceptance criteria cannot be verified and is "
+        "refused"))
+
+    # 9) evidence before claims — only 'completed' demands evidence
+    r_ok = {"task_id": "t-1", "agent_id": "research", "status": "completed",
+            "summary": "8 primary sources",
+            "evidence_refs": ["source:1", "source:2"]}
+    ev_ok = True
+    try:
+        validate_result(r_ok, PROFILES["research"])
+        validate_result(dict(r_ok, status="failed", evidence_refs=[]),
+                        PROFILES["research"])
+        validate_result(dict(r_ok, evidence_refs=[]),
+                        PROFILES["research"])
+        ev_ok = False
+    except ContractError as e:
+        ev_ok = "evidence before claims" in str(e)
+    checks.append(Check(
+        "result_evidence_before_claims",
+        ev_ok,
+        "a 'completed' result with zero evidence refs is a contract "
+        "violation; failed results may report empty evidence"))
+
+    # 10) the budget ledger fails closed at the cap
+    led = BudgetLedger("research", 3)
+    spent_ok = True
+    try:
+        r1, r2 = led.spend(), led.spend(2)
+        led.spend()
+        spent_ok = False
+    except BudgetExhausted as e:
+        spent_ok = (r1 == 2 and r2 == 0 and led.spent == 3
+                    and "3 of 3" in str(e))
+    checks.append(Check(
+        "budget_ledger_exhausts_fail_closed",
+        spent_ok,
+        "cap 3: two spends leave remaining 2 then 0; the next spend raises "
+        "BudgetExhausted naming the cap"))
+
+    # 11) the router's hard filter names its reason
+    cloud = ModelCandidate("cloud/frontier",
+                           frozenset({"vision", "tool_calling"}),
+                           0.95, 0.99, 3.0, "standard")
+    cheap = ModelCandidate("cloud/cheap", frozenset({"tool_calling"}),
+                           0.70, 0.98, 0.2, "standard")
+    local = ModelCandidate("local/vllm",
+                           frozenset({"vision", "tool_calling"}),
+                           0.62, 0.90, 0.4, "restricted")
+    dec = route(("vision", "tool_calling"), "standard",
+                [cloud, cheap, local])
+    cheap_reason = next(r for r in dec.reasons
+                        if r[0] == "cloud/cheap")
+    checks.append(Check(
+        "router_hard_filter_names_reason",
+        dec.chosen == "cloud/frontier" and dec.fallback == "local/vllm"
+        and cheap_reason[1] == "rejected"
+        and cheap_reason[2] == "missing hard capability: vision",
+        "the candidate missing vision is rejected with the named reason; "
+        "the chosen model and fallback both pass the hard filters"))
+
+    # 12) the data-policy filter keeps private data on restricted
+    #     deployments
+    dec_p = route(("vision", "tool_calling"), "private",
+                  [cloud, cheap, local])
+    cloud_reason = next(r for r in dec_p.reasons if r[0] == "cloud/frontier")
+    checks.append(Check(
+        "router_privacy_filter",
+        dec_p.chosen == "local/vllm" and dec_p.fallback == ""
+        and cloud_reason[1] == "rejected"
+        and "restricted-policy" in cloud_reason[2],
+        "private data drops every standard-policy candidate; only the "
+        "restricted deployment is eligible"))
+
+    # 13) the decision is deterministic and the fallback is eligible
+    dec_b = route(("vision", "tool_calling"), "standard",
+                  [cloud, cheap, local])
+    reasons_ok = all(
+        any(r[0] == m and r[1] in ("accepted", "rejected")
+            for r in dec.reasons)
+        for m in ("cloud/frontier", "cloud/cheap", "local/vllm"))
+    checks.append(Check(
+        "router_fallback_eligible_and_deterministic",
+        dec == dec_b and reasons_ok
+        and all(r[1] == "accepted" for r in dec.reasons
+                if r[0] in (dec.chosen, dec.fallback)),
+        "route twice -> identical decision; every candidate carries a "
+        "verdict; chosen and fallback are both accepted"))
+
+    # 14) structured handoffs and the independent verifier
+    h_ok = {"from_agent": "research", "to_agent": "writing",
+            "objective": "turn 8 sources into a sourced report",
+            "acceptance_criteria": ["every claim carries a citation"],
+            "artifact_refs": ["artifact:report-draft"]}
+    hand_ok = True
+    try:
+        validate_handoff(h_ok, PROFILES["research"], PROFILES["writing"])
+        validate_handoff(dict(h_ok, acceptance_criteria=[]),
+                         PROFILES["research"], PROFILES["writing"])
+        hand_ok = False
+    except ContractError:
+        pass
+    indep_ok = True
+    try:
+        require_independent_verifier("writing", "writing")
+        indep_ok = False
+    except HandoffError as e:
+        indep_ok = "independently" in str(e)
+    require_independent_verifier("writing", "qa")
+    try:
+        check_event_name("agent.did_stuff")
+        vocab_ok = False
+    except ContractError:
+        vocab_ok = True
+    vocab_ok = vocab_ok and check_event_name("agent.tool_call.completed") \
+        == "agent.tool_call.completed"
+    checks.append(Check(
+        "handoff_verifier_and_event_vocabulary",
+        hand_ok and indep_ok and vocab_ok,
+        "a handoff without acceptance criteria is a chat, not a handoff; "
+        "the producer cannot verify itself; the event vocabulary rejects "
+        "invented names and accepts the canonical set"))
+
+    return checks
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -5140,6 +5409,7 @@ DRILLS = {
     "species": _species_drill,
     "eval_only": _eval_only_drill,
     "lifecycle": _lifecycle_drill,
+    "workforce": _workforce_drill,
 }
 
 
