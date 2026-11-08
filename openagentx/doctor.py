@@ -8,6 +8,10 @@ Guarantees checked:
 - required files present
 - golden tasks parse and reference known drills
 - workspace writable
+
+The render is byte-deterministic: the same gate list always renders to
+the same bytes (no wall-clock, no environment detail beyond the root
+that was actually probed) — an auditor's verdict must be replayable.
 """
 
 from __future__ import annotations
@@ -89,3 +93,28 @@ def run_doctor(root: str = ".") -> list:
     checks.append(("workspace_writable", writable, root))
 
     return checks
+
+
+def render_doctor(checks: list) -> str:
+    """Byte-deterministic render of a doctor verdict.
+
+    The same gate list always renders to the same bytes — no
+    wall-clock, no paths beyond the root the verdict itself names. A
+    gate that failed is a loud FAIL line carrying the offender in its
+    detail, and the summary counts passing gates honestly (never
+    fabricated green).
+
+    >>> render_doctor([("python>=3.10", True, "3.11.4")]).splitlines()[-1]
+    'doctor: OK (1/1)'
+    >>> render_doctor([("stdlib_purity", False, "evil.py:numpy")]).splitlines()[0]
+    'FAIL  stdlib_purity          evil.py:numpy'
+    >>> render_doctor([("offline_purity", False, "socket"), ("workspace_writable", True, ".")]).splitlines()[-1]
+    'doctor: FAIL (1/2)'
+    """
+    lines = []
+    for name, ok, detail in checks:
+        lines.append(f"{'PASS' if ok else 'FAIL':<5} {name:<22} {detail}")
+    bad = [c for c in checks if not c[1]]
+    lines.append(f"doctor: {'OK' if not bad else 'FAIL'} "
+                 f"({len(checks) - len(bad)}/{len(checks)})")
+    return "\n".join(lines)

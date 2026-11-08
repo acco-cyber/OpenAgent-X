@@ -548,3 +548,12 @@ pad with empty commits.
   no-script shape note, example 31 + manifest 151; commit (d)'s subject
   lost its part suffix — recorded here, no history rewritten; audit 0,
   doctor 6/6
+
+- [ ] S37-E3 — the auditor audits itself: golden task 43 grades the
+  doctor's gates at their failure edges — a planted third-party import
+  caught by name, a network import caught, a missing required file
+  named, a malformed spec folded loudly, an unknown drill named, gates
+  proven independent in one poisoned tree, the render byte-deterministic
+  with no wall-clock, the CLI's 0/1 contract probed both ways — every
+  probe in a fresh temp workspace, plus the render_doctor extraction
+  the drill grades

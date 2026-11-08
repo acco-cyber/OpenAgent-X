@@ -59,12 +59,11 @@ def _cmd_doctest(args) -> int:
 
 
 def _cmd_doctor(args) -> int:
+    from .doctor import render_doctor
+
     checks = run_doctor(args.root)
-    for name, ok, detail in checks:
-        print(f"{'PASS' if ok else 'FAIL':<5} {name:<22} {detail}")
-    bad = [c for c in checks if not c[1]]
-    print(f"doctor: {'OK' if not bad else 'FAIL'} ({len(checks) - len(bad)}/{len(checks)})")
-    return 0 if not bad else 1
+    print(render_doctor(checks))
+    return 0 if all(ok for _, ok, _ in checks) else 1
 
 
 def _cmd_audit(args) -> int:
