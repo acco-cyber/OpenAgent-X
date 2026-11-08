@@ -347,12 +347,22 @@ state.
 
 ### chain
 Hash-chained traces — tamper evidence over the journal. `ChainedJournal`,
-`compute_chain`, `verify_journal`, `seal`, `event_digest`, `ChainError`.
-Invariants: each line commits `{prev, digest}` so any edit, deletion, or
+`compute_chain`, `verify_journal`, `seal`, `event_digest`, `ChainError`,
+`chain_report`. Invariants: each line commits `{prev, digest}` so any edit, deletion, or
 reorder is localized by `verify_journal`; chained fields are invisible to
 old readers (plain journals still verify, reported as `chained: false`);
 torn tails isolate exactly where sealing stopped; `seal` refuses what it
-cannot verify.
+cannot verify. The operator surface is the CLI: `oax chain <journal>`
+prints the deterministic one-line verdict and exits 0 intact / 1 when
+the chain is broken, the tail is torn or the path is missing (a torn
+tail is an incomplete file — the intact prefix still reports ok but the
+CLI refuses exit 0, the `+torn_tail` mark named); `oax chain <journal>
+--seal` prints the 64-hex head of a fully intact chain-written journal
+and every refusal (torn, broken, empty, not chain-written) is a named
+one-line rejection, never a traceback. The surface is graded at its
+edges by golden task 44, which tampers with real journal copies —
+edits, deletions, reorders localized, refusals loud, missing paths
+named.
 
 ### pack
 Deterministic pack manifests. `build_manifest`, `manifest_json`,

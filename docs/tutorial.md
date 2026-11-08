@@ -258,6 +258,7 @@ The verification stack, all offline and deterministic:
 ```sh
 python3 -m openagentx diff a.jsonl b.jsonl      # semantic diff, exit 0 same / 1 different
 python3 -m openagentx stats a.jsonl             # the numeric fingerprint
+python3 -m openagentx chain a.jsonl             # verify the hash chain (exit 1 = broken/torn/missing)
 python3 -m openagentx runs runs/                # index a whole directory of journals, one table (exit 1 = nothing to index)
 python3 -m openagentx grep a.jsonl --tool write_file   # search the journal, matches redacted
 python3 -m openagentx replay a.jsonl --from 5   # fold the suffix from seq 5, bounds honest (exit 2 = bad bounds)

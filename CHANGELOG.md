@@ -6,6 +6,25 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — tamper evidence from the CLI (chain)
+
+- `oax chain <journal>`: the hash chain's module API (seal /
+  verify_journal / chain_report) was reachable only from Python; the
+  operator surface now matches the guarantee. Verify mode prints the
+  deterministic one-line verdict and exits 0 intact / 1 when the chain
+  is broken, the tail is torn or the path is missing — a torn tail is
+  an incomplete file: the intact prefix still reports ok but the CLI
+  refuses exit 0 with the `+torn_tail` mark, and a missing path is
+  named (read_events_safe would otherwise bless an absent file as ok).
+  `--seal` prints the 64-hex head of a fully intact chain-written
+  journal; every ChainError refusal (torn, broken, empty, not
+  chain-written) is a named one-line rejection, never a traceback.
+  `chain_report` gains an optional precomputed report so the CLI
+  verifies once and renders once. Graded by golden task 44 (12 checks)
+  tampering with real journal copies in fresh temp workspaces — edits,
+  deletions and reorders localized at the first mislinked index — and
+  demonstrated by example 33; matrix 44 tasks / 510 checks.
+
 ### Added — the auditor audits itself (doctor)
 
 - the doctor's gates are now graded at their failure edges: golden task 43
