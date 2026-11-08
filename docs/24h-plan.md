@@ -687,3 +687,21 @@ pad with empty commits.
   159; verify rode red for exactly one commit ((c) referenced example
   35 one commit before (d) landed it — recorded in the (c) message);
   audit 0, doctor 6/6
+
+- [ ] S41-E3 (stretch, announced at slot open): the HYDRION ONE blueprint
+  lands as design input and the README reaches dev-star grade — the
+  36-page product/research/engineering blueprint (v1.0, 2026-11-05) is
+  ported in full into docs/blueprint/ (six files: index + product +
+  architecture + platform + delivery + evidence; claims discipline
+  preserved — a proposed plan, never a claim of implemented capability),
+  and its §5 durable task lifecycle becomes real checked code:
+  openagentx/lifecycle.py (eleven canonical states, frozen terminals,
+  approval bound to the exact plan hash, append-only journal events with
+  redacted reasons, replay rebuilds byte-identical), graded by task 47
+  (drill lifecycle, 13 checks) and walked end-to-end by example 36; the
+  README grows the blueprint section, the lifecycle guarantee, a drill
+  catalog and honest re-counts (47 tasks / 550 checks, 36 demos, 45
+  modules); the slot opens by adopting an orphaned working-tree fix that
+  part 40's final commit message claimed but never committed (the
+  id-vs-drill comparison normalized its wall-clock column — a live flake
+  upstream, verified green before adoption)

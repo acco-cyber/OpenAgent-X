@@ -4749,14 +4749,17 @@ def _eval_only_drill(task: dict) -> list:
         " -> ".join(r.split()[0] for r in rows2)))
 
     # 7) a task id and its drill name resolve to the same task
+    #    (timings are reported, never graded — normalize the seconds column
+    #    away so the comparison is wall-clock-independent)
     sid = cli("eval", "--only", "45-species")
-    id_rows = [ln for ln in sid.stdout.splitlines()
-               if ln and not ln.startswith("eval:")]
-    drill_rows = [ln for ln in s1.stdout.splitlines()
-                  if ln and not ln.startswith("eval:")]
+
+    def timed_rows(stdout: str) -> list:
+        return [re.sub(r"\d+\.\d{3}s", "N.NNNs", ln)
+                for ln in stdout.splitlines()
+                if ln and not ln.startswith("eval:")]
     checks.append(Check(
         "id_and_drill_resolve_same",
-        sid.returncode == 0 and id_rows == drill_rows,
+        sid.returncode == 0 and timed_rows(sid.stdout) == timed_rows(s1.stdout),
         "same single report either way"))
 
     # 8) duplicate names dedupe — the matrix never runs twice
