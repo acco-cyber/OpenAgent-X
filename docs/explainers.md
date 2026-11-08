@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (42 tasks, 486 checks) is the repo's contract with
+The golden matrix (43 tasks, 498 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -514,6 +514,30 @@ the path named; the CLI exits 0 indexed / 1 nothing to index.
 the missing-directory probe all grade the fold, not the hide — an
 index that skipped a damaged journal or echoed a payload would fail
 `middle_torn_loud_error_row` / `no_payload_leak` / `empty_dir_loud`.
+
+### 43-doctor — the auditor audits itself: the gates graded at their edges
+**The run:** no agent runs here either; the drill drives
+`openagentx/doctor.py` over the real tree (6/6 gates) and over fresh
+temp workspaces planted step by step with the defects the gates
+exist to catch — a third-party import, a network import, a missing
+required file, a truncated JSON spec, an unknown drill name — parsed
+only, never executed, everything rebuilt per invocation.
+**The checks grade (12):** the real tree green (6/6); the verdict
+render byte-identical twice with no 10+-digit wall-clock number; a
+clean synthetic workspace green too (purity is the absence of
+offenders, not the presence of this repo); the planted `numpy` import
+caught by `stdlib_purity` with `foreign.py:numpy` named; the planted
+`socket` import caught by `offline_purity` with `netty.py:socket`
+named; the missing `gone.txt` named by `required_files`; the
+truncated spec folded into `golden_tasks_valid` carrying the real
+exception without crashing the doctor; the unknown-drill spec named
+by the same gate; the gates proven independent — one poisoned tree
+turns exactly the four planted gates red, never more; the CLI exits
+0 green / 1 red with the verdict and the failing gates in stdout.
+**Loud failure:** every probe grades the catch, not the silence — a
+doctor that swallowed an import, clamped a missing file or faked a
+verdict would fail `foreign_import_caught` / `missing_required_named`
+/ `red_gates_counted` / `cli_red_contract`.
 
 
 ## Adding a task

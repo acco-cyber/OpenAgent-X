@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -4205,6 +4206,141 @@ def _runs_drill(task: dict) -> list:
         f"cli exit {r0.returncode} indexed / {r1.returncode} empty"))
     return checks
 
+
+def _doctor_drill(task: dict) -> list:
+    """The auditor audits itself: the doctor's gates are graded at
+    their failure edges.
+
+    Honest contract: the real tree reports 6/6; a clean synthetic
+    workspace is green too (purity is the absence of offenders, not
+    the presence of this repo); a planted third-party import is caught
+    with file:module named (the probe file is parsed, never executed);
+    a network import is caught the same way; a missing required file
+    is named; a malformed spec folds into a failing gate carrying the
+    real exception without crashing the doctor; an unknown drill name
+    is named; the gates are independent (one poisoned tree turns
+    exactly the planted gates red, no more); the render is
+    byte-deterministic with no wall-clock; the CLI exits 0 green /
+    1 red and the red verdict names its failing gates. Every probe
+    lives in a fresh temp workspace per invocation.
+    """
+    import subprocess
+
+    from .doctor import render_doctor, run_doctor
+
+    checks: list = []
+    # 1) the real tree is green: 6/6 gates
+    real = run_doctor(".")
+    checks.append(Check(
+        "real_tree_green",
+        len(real) == 6 and all(ok for _, ok, _ in real),
+        f"{sum(ok for _, ok, _ in real)}/{len(real)} gates pass"))
+    # 2) the render is byte-deterministic (pure function of the gates)
+    out = render_doctor(real)
+    checks.append(Check(
+        "render_deterministic",
+        out == render_doctor(real),
+        "two renders byte-identical"))
+    # 3) no wall-clock anywhere in the render
+    checks.append(Check(
+        "no_wall_clock",
+        re.search(r"\d{10,}", out) is None,
+        "no 10+-digit number in the render"))
+    # 4) a clean synthetic workspace is green too
+    wd = _fresh_wd("doctor")
+    os.makedirs(os.path.join(wd, "openagentx"))
+    os.makedirs(os.path.join(wd, "scripts"))
+    os.makedirs(os.path.join(wd, "golden_tasks"))
+    with open(os.path.join(wd, "scripts", "required-files.txt"), "w",
+              encoding="utf-8") as fh:
+        fh.write("scripts/required-files.txt\n")
+    with open(os.path.join(wd, "golden_tasks", "01-clean.json"), "w",
+              encoding="utf-8") as fh:
+        fh.write(json.dumps({"id": "01-clean", "title": "shape probe",
+                             "drill": "loop"}))
+    clean = run_doctor(wd)
+    checks.append(Check(
+        "clean_workspace_green",
+        len(clean) == 6 and all(ok for _, ok, _ in clean),
+        f"{sum(ok for _, ok, _ in clean)}/{len(clean)} gates pass"))
+    # 5) a planted third-party import is caught, file and module named
+    #    (the probe file is parsed by the doctor, never executed)
+    with open(os.path.join(wd, "openagentx", "foreign.py"), "w",
+              encoding="utf-8") as fh:
+        fh.write("import numpy  # probe: parsed only, never executed\n")
+    fr = run_doctor(wd)
+    std = [c for c in fr if c[0] == "stdlib_purity"][0]
+    checks.append(Check(
+        "foreign_import_caught",
+        std[1] is False and "foreign.py:numpy" in std[2],
+        std[2]))
+    # 6) a planted network import is caught the same way
+    with open(os.path.join(wd, "openagentx", "netty.py"), "w",
+              encoding="utf-8") as fh:
+        fh.write("import socket  # probe\n")
+    nr = run_doctor(wd)
+    off = [c for c in nr if c[0] == "offline_purity"][0]
+    checks.append(Check(
+        "network_import_caught",
+        off[1] is False and "netty.py:socket" in off[2],
+        off[2]))
+    # 7) a missing required file is named
+    with open(os.path.join(wd, "scripts", "required-files.txt"), "a",
+              encoding="utf-8") as fh:
+        fh.write("gone.txt\n")
+    mr = run_doctor(wd)
+    req = [c for c in mr if c[0] == "required_files"][0]
+    checks.append(Check(
+        "missing_required_named",
+        req[1] is False and "gone.txt" in req[2],
+        req[2]))
+    # 8) a malformed spec folds into the gate with the real exception
+    #    (the doctor reports, never crashes)
+    with open(os.path.join(wd, "golden_tasks", "bad.json"), "w",
+              encoding="utf-8") as fh:
+        fh.write('{"id": "broken", "drill": ')
+    bad = run_doctor(wd)
+    gt = [c for c in bad if c[0] == "golden_tasks_valid"][0]
+    checks.append(Check(
+        "malformed_spec_folds",
+        gt[1] is False and "bad.json" in gt[2],
+        gt[2]))
+    # 9) an unknown drill name fails the same gate, file named
+    with open(os.path.join(wd, "golden_tasks", "ghost.json"), "w",
+              encoding="utf-8") as fh:
+        fh.write(json.dumps({"id": "99-ghost", "title": "ghost",
+                             "drill": "no_such_drill"}))
+    ghost = run_doctor(wd)
+    gt2 = [c for c in ghost if c[0] == "golden_tasks_valid"][0]
+    checks.append(Check(
+        "unknown_drill_named",
+        gt2[1] is False and "ghost.json" in gt2[2],
+        gt2[2]))
+    # 10) gates are independent: exactly the planted gates are red
+    red = sorted(n for n, ok, _ in ghost if not ok)
+    checks.append(Check(
+        "red_gates_counted",
+        red == ["golden_tasks_valid", "offline_purity", "required_files",
+                "stdlib_purity"],
+        f"red: {','.join(red)}"))
+    # 11) the CLI agrees on a green tree (its own interpreter, verdict
+    #     in stdout)
+    r0 = subprocess.run([sys.executable, "-m", "openagentx", "doctor", "."],
+                        capture_output=True, text=True)
+    checks.append(Check(
+        "cli_green_contract",
+        r0.returncode == 0 and "doctor: OK (6/6)" in r0.stdout,
+        f"exit {r0.returncode}, verdict in stdout"))
+    # 12) on a red tree the verdict turns loud red and names the gates
+    r1 = subprocess.run([sys.executable, "-m", "openagentx", "doctor", wd],
+                        capture_output=True, text=True)
+    checks.append(Check(
+        "cli_red_contract",
+        r1.returncode == 1 and "doctor: FAIL" in r1.stdout
+        and "stdlib_purity" in r1.stdout,
+        f"exit {r1.returncode}, failing gates named"))
+    return checks
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -4247,6 +4383,7 @@ DRILLS = {
     "doctest": _doctest_drill,
     "attest": _attest_drill,
     "runs": _runs_drill,
+    "doctor": _doctor_drill,
 }
 
 

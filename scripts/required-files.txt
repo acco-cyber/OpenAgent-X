@@ -149,3 +149,4 @@ examples/30_attest_artifact.py
 openagentx/runs.py
 golden_tasks/42-runs.json
 examples/31_runs_index.py
+golden_tasks/43-doctor.json
