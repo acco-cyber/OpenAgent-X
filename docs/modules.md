@@ -270,6 +270,26 @@ audit still run) while non-terminal cleanup is refused, every move an
 and notes), `replay()` a pure fold that re-validates every replayed move,
 and `render()` byte-deterministic with no wall-clock.
 
+### workforce
+The blueprint's agent workforce, permission tiers and capability router,
+as code. `AgentDefinition`, `PROFILES`, `profiles`, `check_permission`,
+`require`, `BudgetLedger`, `validate_task`, `validate_result`, `route`,
+`ModelCandidate`, `RoutingDecision`, `validate_handoff`,
+`require_independent_verifier`, `check_event_name`. Ported from
+`docs/blueprint/` §7/§11/§6: eight frozen specialist profiles
+(research P0, writing/memory P1, coding/data/math/browser/qa P2 — no
+profile ships with a P3/P4 tool in its allowlist), a two-gate
+invocation-time permission check (allowlist, then ceiling) whose signature
+has deliberately no prompt/override parameter — "denied actions do not
+become allowed through prompting" — a hard `BudgetLedger` that fails
+closed, task budgets capped by the contract (a task may ask for less,
+never for more), results gated on evidence (`completed` with zero evidence
+refs is a contract violation), the §6 routing pipeline with hard
+capability + data-policy filters before scoring, a fallback that must also
+pass the hard filters, and a persisted accept/reject reason per candidate,
+plus structured handoffs (acceptance criteria mandatory) and the
+independent-verifier rule. Guarded by golden task 48.
+
 ### fuzz
 Seeded fuzz harness — random traces, deterministic verdicts. `run_fuzz`,
 `run_fuzz_suite`, `render_fuzz`. Invariants: a seeded schedule attacks the

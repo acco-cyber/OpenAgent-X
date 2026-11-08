@@ -735,3 +735,12 @@ pad with empty commits.
   examples OK, doctests green, compileall clean; verify rode red for
   exactly one commit on two known edges ((d)'s README badge/inline still
   claimed 46 until (f)'s rewrite — recorded in the (d) message)
+- [ ] S42-E1 (stretch, announced at slot open): agent workforce contracts —
+  blueprint §7/§11/§6 as code: `openagentx/workforce.py` (module 46) with
+  the eight frozen specialist profiles under P0–P4 permission ceilings, the
+  two-gate invocation-time permission check with no prompt/override
+  parameter, a hard budget ledger that fails closed, evidence-gated
+  results, the capability-aware routing pipeline with persisted
+  accept/reject reasons, structured handoffs and the independent-verifier
+  rule; task 48 grades it at its edges; example 37 assembles all eight
+  agents on one objective, each in a small bounded portion.
