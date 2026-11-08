@@ -4341,6 +4341,177 @@ def _doctor_drill(task: dict) -> list:
         f"exit {r1.returncode}, failing gates named"))
     return checks
 
+
+def _chain_cli_drill(task: dict) -> list:
+    """Tamper evidence from the CLI: oax chain grades the operator
+    surface of the hash chain by tampering with real journals.
+
+    Honest contract: a chain-written fixture (written by the module's
+    own line writer over fixed canonical events, fresh temp workspace
+    per invocation) verifies with the stored head equal to an
+    independent recomputation and the genesis convention visible on
+    disk; the CLI's verify mode agrees byte-identically with the
+    module's render and exits 0 intact / 1 damaged; an edited payload
+    byte, a deleted line and a reordered pair are each localized at
+    the first mislinked index; a torn tail is an incomplete file —
+    the intact prefix still reports ok but the CLI exits 1 with the
+    +torn_tail mark; --seal prints exactly the module's seal (the
+    64-hex head) and every refusal (torn, empty, not chain-written)
+    is a named one-line rejection; plain journals verify honestly as
+    plain and still refuse to seal; a missing journal is named, never
+    blessed; the render is byte-deterministic with no wall-clock.
+    """
+    import json as _json
+    import subprocess
+
+    from .chain import (GENESIS, ChainedJournal, chain_report, head_of,
+                        seal, verify_journal)
+    from .events import Event, read_events
+
+    checks: list = []
+
+    def cli(*argv: str) -> subprocess.CompletedProcess:
+        return subprocess.run([sys.executable, "-m", "openagentx", "chain",
+                               *argv], capture_output=True, text=True)
+
+    # fixture: chain-written by the module's own writer, fixed ts
+    wd = _fresh_wd("chain_cli")
+    jp = os.path.join(wd, "journal.jsonl")
+    cj = ChainedJournal(jp)
+    cj.start_run("chain-cli")
+    events = []
+    for i, (t, pay) in enumerate([
+            ("run_start", {"run_id": "chain-cli"}),
+            ("step_start", {"step": 0}),
+            ("tool_call", {"tool": "write_file"}),
+            ("reply", {"text": "done"})]):
+        ev = Event(seq=i, run_id="chain-cli", ts=1000.0 + i, type=t,
+                   payload=pay)
+        events.append(ev)
+        with open(jp, "a", encoding="utf-8") as fh:
+            fh.write(cj._line(ev) + "\n")
+
+    def copy(name: str, mutate) -> str:
+        lines = open(jp, encoding="utf-8").read().splitlines()
+        mutate(lines)
+        path = os.path.join(wd, name)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(lines) + "\n")
+        return path
+
+    # 1) the fixture verifies; stored head == independent recomputation
+    r = verify_journal(jp)
+    evs = read_events(jp)
+    line0 = _json.loads(open(jp, encoding="utf-8").read().splitlines()[0])
+    checks.append(Check(
+        "chained_journal_verifies",
+        (r["ok"] is True and r["chained"] is True and r["n"] == 4
+         and r["head"] == head_of(evs)
+         and line0["chain"]["prev"] == GENESIS),
+        f"head==recompute {r['head'][:12]}, genesis on disk"))
+    # 2) the CLI agrees: byte-identical render, exit 0
+    c0, c0b = cli(jp), cli(jp)
+    checks.append(Check(
+        "cli_verify_green",
+        (c0.returncode == 0 and c0.stdout == c0b.stdout
+         and c0.stdout.startswith("chain ok: 4 events")
+         and c0.stdout.strip().endswith("chained")),
+        f"exit {c0.returncode}, render stable"))
+    # 3) an edited payload byte is localized at its own index
+    def edit_payload(lines):
+        obj = _json.loads(lines[1])
+        obj["payload"]["step"] = 99
+        lines[1] = _json.dumps(obj, sort_keys=True, ensure_ascii=False)
+    tp = copy("tampered.jsonl", edit_payload)
+    rt = verify_journal(tp)
+    ct = cli(tp)
+    checks.append(Check(
+        "tampered_payload_localized",
+        (rt["ok"] is False and rt["broken_at"] == 1 and ct.returncode == 1
+         and "BROKEN at index 1" in ct.stdout),
+        f"broken_at={rt['broken_at']}, cli exit {ct.returncode}"))
+    # 4) a deleted line breaks at the first mislink
+    dp = copy("deleted.jsonl", lambda lines: lines.pop(1))
+    rd = verify_journal(dp)
+    cd = cli(dp)
+    checks.append(Check(
+        "deleted_event_caught",
+        (rd["ok"] is False and rd["broken_at"] >= 1 and cd.returncode == 1
+         and f"BROKEN at index {rd['broken_at']}" in cd.stdout),
+        f"broken_at={rd['broken_at']}, cli exit {cd.returncode}"))
+    # 5) a reordered pair breaks the chain
+    def swap(lines):
+        lines[0], lines[1] = lines[1], lines[0]
+    rp = copy("reordered.jsonl", swap)
+    rr = verify_journal(rp)
+    cr = cli(rp)
+    checks.append(Check(
+        "reordered_events_caught",
+        (rr["ok"] is False and rr["broken_at"] >= 0 and cr.returncode == 1
+         and "BROKEN" in cr.stdout),
+        f"broken_at={rr['broken_at']}, cli exit {cr.returncode}"))
+    # 6) a torn tail is an incomplete file: prefix ok, CLI still exit 1
+    torn = open(jp, encoding="utf-8").read().splitlines()
+    torn_path = os.path.join(wd, "torn.jsonl")
+    with open(torn_path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(torn[:-1]) + "\n" + torn[-1][:40])
+    rtorn = verify_journal(torn_path)
+    ctor = cli(torn_path)
+    checks.append(Check(
+        "torn_tail_exit_one",
+        (rtorn["torn_tail"] is True and rtorn["ok"] is True
+         and ctor.returncode == 1 and "+torn_tail" in ctor.stdout),
+        f"prefix ok={rtorn['ok']}, cli exit {ctor.returncode}"))
+    # 7) --seal prints exactly the module's seal
+    cs = cli(jp, "--seal")
+    checks.append(Check(
+        "seal_matches_head",
+        (cs.returncode == 0 and cs.stdout.strip() == seal(jp)
+         and seal(jp) == r["head"] and len(seal(jp)) == 64),
+        f"cli seal == module seal == head ({seal(jp)[:12]})"))
+    # 8) every seal refusal is a named one-line rejection, exit 1
+    plain = os.path.join(wd, "plain.jsonl")
+    with open(plain, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(ev.to_json() for ev in events[:2]) + "\n")
+    empty = os.path.join(wd, "empty.jsonl")
+    open(empty, "w", encoding="utf-8").close()
+    cp, ce = cli(plain, "--seal"), cli(empty, "--seal")
+    ctorn = cli(torn_path, "--seal")
+    checks.append(Check(
+        "seal_refusals_named",
+        (cp.returncode == 1 and "not chain-written" in cp.stdout
+         and ce.returncode == 1 and "empty; nothing to seal" in ce.stdout
+         and ctorn.returncode == 1 and "torn tail" in ctorn.stdout
+         and all("Traceback" not in x.stdout for x in (cp, ce, ctorn))),
+        f"plain/empty/torn refused: {cp.returncode}/{ce.returncode}/"
+        f"{ctorn.returncode}"))
+    # 9) a plain journal verifies honestly as plain (exit 0 intact)
+    cpl = cli(plain)
+    checks.append(Check(
+        "plain_journal_honest",
+        (cpl.returncode == 0 and cpl.stdout.strip().endswith("plain")
+         and verify_journal(plain)["chained"] is False),
+        "chained:False reported, not faked"))
+    # 10) a missing journal is named, never blessed
+    cmiss = cli(os.path.join(wd, "gone.jsonl"))
+    checks.append(Check(
+        "missing_journal_named",
+        (cmiss.returncode == 1 and "no journal" in cmiss.stdout
+         and "gone.jsonl" in cmiss.stdout),
+        f"exit {cmiss.returncode}, path named"))
+    # 11) module render == CLI render (one render path)
+    checks.append(Check(
+        "render_deterministic",
+        (chain_report(jp) == chain_report(jp)
+         and chain_report(jp) == c0.stdout.strip()),
+        "module and CLI render byte-identical"))
+    # 12) no wall-clock anywhere in the render
+    checks.append(Check(
+        "no_wall_clock",
+        re.search(r"\d{10,}", chain_report(jp)) is None,
+        "no 10+-digit number in the render"))
+    return checks
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -4384,6 +4555,7 @@ DRILLS = {
     "attest": _attest_drill,
     "runs": _runs_drill,
     "doctor": _doctor_drill,
+    "chain_cli": _chain_cli_drill,
 }
 
 

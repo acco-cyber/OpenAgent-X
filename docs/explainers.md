@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (43 tasks, 498 checks) is the repo's contract with
+The golden matrix (44 tasks, 510 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -538,6 +538,31 @@ turns exactly the four planted gates red, never more; the CLI exits
 doctor that swallowed an import, clamped a missing file or faked a
 verdict would fail `foreign_import_caught` / `missing_required_named`
 / `red_gates_counted` / `cli_red_contract`.
+
+### 44-chain-cli — tamper evidence from the CLI: verify and seal
+**The run:** no agent runs here either; the drill writes a real
+chain-written journal with the module's own line writer over fixed
+canonical `Event`s in a fresh temp workspace, then tampers with real
+copies — one edited payload byte, one deleted line, one reordered
+pair, one truncated tail — and drives `oax chain` over every one,
+plus the seal refusals and the missing path.
+**The checks grade (12):** the fixture verifies with the stored head
+equal to an independent recomputation and the genesis convention
+(64 zeros) visible on disk; the CLI's verify render is byte-identical
+to the module's and stable twice, exit 0; the edited byte, the deleted
+line and the reordered pair are each localized at the first mislinked
+index with the CLI naming it; a torn tail is an incomplete file — the
+intact prefix still reports ok but the CLI exits 1 with `+torn_tail`;
+`--seal` prints exactly the module's seal (the 64-hex head); plain,
+empty and torn journals are refused with their reason named and no
+traceback; a plain journal verifies honestly as plain; a missing
+journal is named, never blessed; module render == CLI render; no
+10+-digit wall-clock number anywhere.
+**Loud failure:** every tamper probe grades the localization, not the
+silence — a CLI that blessed an edited journal, a torn file or an
+absent path would fail `tampered_payload_localized` /
+`torn_tail_exit_one` / `missing_journal_named`; a seal over
+unverifiable bytes would fail `seal_refusals_named`.
 
 
 ## Adding a task
