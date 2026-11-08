@@ -609,3 +609,16 @@ pad with empty commits.
   task-44 grading), tutorial verification-stack chain line, golden row
   44 + Current line, CHANGELOG section naming the blessing-hole closed,
   example 33 + manifest 155; audit 0, doctor 6/6
+
+- [ ] S39-E3 — redaction species round three: the boundary learns six
+  more high-confidence credential shapes (Google `AIza…` API keys,
+  GitLab personal access tokens, Stripe live/test secret keys, npm
+  tokens, JSON web tokens, PEM private key blocks) and every consumer
+  of the pattern table hardens at once — the runner's journal writes,
+  every view that re-redacts, `oax grep`'s rendered matches and
+  `oax audit`'s findings — graded by a new drill (task 45) at the
+  failure edges: each species caught, near-misses (a short AIza tail,
+  a 19-char GitLab token, a 15-char Stripe body, a 35-char npm token,
+  a JWT missing its signature, a CERTIFICATE block) left alone, the
+  five legacy species still caught, a planted tree found kind-by-kind
+  with every snippet redacted, and the repo itself still 0 findings

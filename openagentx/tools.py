@@ -127,6 +127,20 @@ def vault_value(key: str) -> str:
         # canonical AWS access-key shape: exactly 20 chars (AKIA + 16) so the
         # high-confidence pattern consumes the whole value — no residue leaks
         return "AKIA" + "IO3XT7Q9RL2M" + "4Y8K"
+    if key == "google":
+        # AIza + exactly 35 chars (the round-three pattern consumes it whole)
+        return "AIza" + "SyC4uv7Qop9LmN0xKd2Wn8jRt5eH" + "Kk1MmQz"
+    if key == "gitlab":
+        return "glpat-" + "G9xK2mQw7Rt5yUu1ZcXb"
+    if key == "stripe":
+        return "sk_" + "live_" + "C7dE9fG1hI3jK5lM"
+    if key == "npm":
+        return "npm_" + "Np4Qq8Rs2Tt6Uu0Vv3Ww7Xx1Yy" + "Zz5AaBb9Cc"
+    if key == "jwt":
+        return ("eyJ" + "hbGciOiJIUzI1NiIs" + "." + "eyJ" +
+                "zdWIiOiIxMjM0NTY3ODkwIn0" + "." + "SflKxwRJSMeKKF2QT4fwp")
+    if key == "private_key":
+        return "-----BEGIN " + "RSA " + "PRIVATE KEY-----"
     raise ToolError(f"unknown vault key '{key}'")
 
 
