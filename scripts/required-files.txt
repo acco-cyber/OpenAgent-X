@@ -152,3 +152,4 @@ examples/31_runs_index.py
 golden_tasks/43-doctor.json
 examples/32_doctor_gates_tour.py
 golden_tasks/44-chain-cli.json
+examples/33_chain_cli_tour.py
