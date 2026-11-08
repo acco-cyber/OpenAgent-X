@@ -152,6 +152,8 @@ class TaskLifecycle:
         self._state = CREATED
         self._approved_hash: str | None = None
         self._cleanups = 0
+        if journal is not None:
+            journal.start_run(self.task_id)
         self._append("lifecycle_created", {"task_id": self.task_id})
 
     # -- event plumbing ----------------------------------------------------
