@@ -124,7 +124,11 @@ Redaction is a view-layer guarantee with defense in depth
 high-confidence secret shapes to `[REDACTED:<kind>]`, and every view
 re-applies redaction to whatever it renders — so even a secret that leaked
 into a journal by accident cannot reach a report, dashboard, or mermaid
-export. See it end to end:
+export. The pattern table knows eleven credential species — round three
+added Google API keys, GitLab PATs, Stripe secret keys, npm tokens, JWTs
+and PEM private key blocks, and every consumer of the table (the runner
+boundary, the views, `oax grep`, `oax audit`) hardened at once. See it
+end to end (`examples/34_species_tour.py` walks all eleven):
 
 ```python
 import os, sys, tempfile

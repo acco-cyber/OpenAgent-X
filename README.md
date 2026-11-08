@@ -7,7 +7,7 @@
 [![CI](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml/badge.svg)](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](docs/tutorial.md)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-8A2BE2)](docs/adr/0002-stdlib-only-offline.md)
-[![Eval](https://img.shields.io/badge/eval-44_tasks_510_checks-brightgreen)](golden_tasks)
+[![Eval](https://img.shields.io/badge/eval-45_tasks_523_checks-brightgreen)](golden_tasks)
 [![Secret audit](https://img.shields.io/badge/secret_audit-0_findings-success)](docs/faq.md)
 [![Network](https://img.shields.io/badge/network-offline_first-orange)](docs/adr/0004-scripted-adapters.md)
 [![License](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
@@ -21,7 +21,7 @@ report a green check that did not actually run.
 Three pillars hold everything up: **the journal is the truth** (event-sourced,
 append-only, dense sequences), **redaction by default** (secrets die at the
 journal boundary and every view re-applies the mask), and **honest grading**
-(44 golden drills, 510 checks, harness errors fold into failing checks — never
+(45 golden drills, 523 checks, harness errors fold into failing checks — never
 silent passes). Ten ADRs in `docs/adr/` record why, with the costs admitted.
 
 | Navigate | | | |
@@ -48,7 +48,7 @@ What to look for in the video:
 
 - **`doctor`** — six gates pass before anything else runs: pure stdlib, no
   network modules, manifest present, golden tasks valid.
-- **`eval`** — 44 drills, 510/510 checks green, offline, in under two seconds.
+- **`eval`** — 45 drills, 523/523 checks green, offline, in under two seconds.
 - **`run --timeline`** — a real agent turn loop. Watch event `[004]`: the tool
   executed on the fixture secret, but the journal stored only
   `[REDACTED:github_token]` — the mask is applied at the boundary, and even
@@ -63,7 +63,7 @@ What to look for in the video:
 git clone https://github.com/acco-cyber/OpenAgent-X.git && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # thirty-three runnable end-to-end demos
+python3 -m openagentx examples # thirty-four runnable end-to-end demos
 ```
 
 No model keys, no SDKs, no services. The default adapter is `ScriptedLLM`:
@@ -199,7 +199,7 @@ same events, never from separate bookkeeping.
 ## The CLI at a glance
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (44 tasks / 510 checks)
+oax eval      # run every golden task drill, all green or exit 1   (45 tasks / 523 checks)
 oax chain     # verify a hash-chained journal (exit 1 = broken/torn/missing) or --seal the 64-hex head
 oax explain   # one golden task's spec + its prose explainer; --all renders the whole matrix index (exit 1 = prose missing)
 oax doctest   # every docstring example graded by stdlib doctest (exit 1 = rot)
@@ -406,6 +406,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | `examples/31_runs_index.py` | a directory of journals, one honest table | the multi-run tour: three canonical-Event journals (clean, torn tail, planted payload secret) plus noise indexed sorted with every row's counters equal to `oax stats` of that same journal (one grading path), the totals row additive only where true (durations never — spans overlap), the render byte-identical twice with no wall-clock and the secret never echoed, a torn tail flagged but still indexed, a middle tear folding into a loud `TornMiddleError` error row with no directory prefix leaked, the sort_keys artifact byte-identical twice and path-free, the CLI agreeing (exit 1 with a red row / 1 honest emptiness) |
 | `examples/32_doctor_gates_tour.py` | the auditor audits itself | the doctor gates tour: the real tree 6/6 with a byte-identical twice render and no wall-clock, a clean synthetic workspace green too, a planted `numpy` import caught with `foreign.py:numpy` named and a planted `socket` import caught the same way (probes parsed, never executed), a missing required file named, a truncated spec folded into its gate with the real exception, an unknown drill named, the gates proven independent (exactly the four planted gates red), the CLI agreeing (0 green / 1 red naming its failing gates) |
 | `examples/33_chain_cli_tour.py` | tamper evidence from the CLI | the chain CLI tour: a chain-written fixture (the module's own line writer over fixed canonical events) verified with the stored head equal to an independent recomputation and genesis on disk, `oax chain` byte-identical to the module render and `--seal` printing exactly the 64-hex seal, an edited payload byte, a deleted line and a reordered pair each localized at the first mislinked index, a torn tail an incomplete file (prefix ok but exit 1 with `+torn_tail`), every seal refusal named with no traceback, a plain journal honest, a missing journal named — never blessed |
+| `examples/34_species_tour.py` | redaction species round three | the eleven-species tour: each new shape (Google `AIza` key, GitLab PAT, Stripe secret, npm token, JWT, PEM private key block) planted at runtime and caught kind-by-kind through `redact()`, `oax audit` and `oax grep`'s rendered matches, near-misses left alone (short tails, an unsigned JWT, a CERTIFICATE block), the five legacy species still caught, a mixed line reporting exactly three redactions, the repo still auditing to 0 findings |
 | `examples/01`–`17` | foundations | hello-loop, redaction, team handoff, pack+sbom, memory+compact, cache+hooks, fanout+structured, retry+breaker, planner+snapshot, prompt layers, JIT tools, chaos+chain, diff+stats, bench+fuzz, property, pack2+graph, dashboard+mermaid |
 
 ## Why it matters

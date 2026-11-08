@@ -52,11 +52,16 @@ touch the network, so drills are reproducible byte-for-byte.
 ### redact
 Redaction engine — high-confidence secret patterns, structure-preserving.
 `redact(text)`, `redact_obj(obj)`. Invariants: high-confidence shapes
-(`ghp_…`-style tokens, AWS keys, Slack tokens, sk- prefixed keys) become
+(`ghp_…`-style tokens, AWS keys, Slack tokens, sk- prefixed keys — and
+since round three Google `AIza…` API keys, GitLab `glpat-` PATs, Stripe
+`sk_live_`/`sk_test_` secret keys, npm tokens, three-segment JWTs and
+PEM private key blocks; eleven species in all) become
 `[REDACTED:<kind>]`; the surrounding structure and non-secret bytes are
 untouched; redaction happens at the view layer *and* is re-applied by every
 view, so a secret that leaks into a journal by accident still cannot reach a
-rendered report, dashboard, or mermaid export (defense in depth).
+rendered report, dashboard, or mermaid export (defense in depth). Near-
+misses stay invisible — a short tail, an unsigned JWT, a CERTIFICATE block —
+the table is high-confidence, not a spell-checker (graded by task 45).
 
 ### trace
 Trace layer: safe loads, deterministic replay, canonical views. `load_trace`
@@ -422,9 +427,13 @@ tree turns exactly the planted gates red — the gates are independent.
 ### audit
 Secret scanner — the repo audits itself. `run_audit`. Invariants:
 token-shaped literals (`ghp_…`, AWS `AKIA…`, Slack `xoxb-`, `sk-ant-` /
-`sk-proj-`) are findings; fixture secrets in tests and demos must be
+`sk-proj-`, plus the round-three species: Google `AIza…` keys, GitLab
+`glpat-` PATs, Stripe `sk_live_`/`sk_test_` keys, npm tokens, JWTs and
+PEM private key blocks — every consumer walks the same eleven-species
+table) are findings; fixture secrets in tests and demos must be
 assembled at runtime by concatenation, which the scanner cannot see; the
-audit scans the repo including its own documentation.
+audit scans the repo including its own documentation, and the snippets
+it reports are themselves redacted (task 45 pins both edges).
 
 ### cli
 `oax` — the command line: `eval doctor audit examples trace report pack

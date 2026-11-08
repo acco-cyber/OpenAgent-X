@@ -6,6 +6,26 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — redaction species round three (species)
+
+- the boundary learns six more high-confidence credential shapes:
+  Google `AIza…` API keys (exactly 35 chars of tail — length itself is
+  the confidence), GitLab `glpat-` personal access tokens, Stripe
+  `sk_live_`/`sk_test_` secret keys, `npm_` tokens, three-segment JSON
+  web tokens (the signature segment required, so `alg=none` headers
+  stay honest prose) and PEM private key blocks (RSA / EC / OPENSSH /
+  PGP `BLOCK` variants included). Because `audit.py`, the runner's
+  journal boundary, every re-redacting view and `oax grep` all walk
+  the same `PATTERNS` table, every surface hardened at once with zero
+  new code paths — and the near-misses stay invisible (a short tail,
+  a JWT missing its signature, a CERTIFICATE block): high-confidence,
+  not a spell-checker. `vault_value` grows the six runtime-assembled
+  fixture keys, so the repository still audits to 0 findings. Graded
+  by golden task 45 (13 checks) — each species caught kind-by-kind,
+  the five legacy species still caught, a planted tree found with
+  snippets redacted, the grep render redacting and byte-identical —
+  and demonstrated by example 34; matrix 45 tasks / 523 checks.
+
 ### Added — tamper evidence from the CLI (chain)
 
 - `oax chain <journal>`: the hash chain's module API (seal /
