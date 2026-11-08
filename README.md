@@ -7,7 +7,7 @@
 [![CI](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml/badge.svg)](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](docs/tutorial.md)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-8A2BE2)](docs/adr/0002-stdlib-only-offline.md)
-[![Eval](https://img.shields.io/badge/eval-41_tasks_474_checks-brightgreen)](golden_tasks)
+[![Eval](https://img.shields.io/badge/eval-42_tasks_486_checks-brightgreen)](golden_tasks)
 [![Secret audit](https://img.shields.io/badge/secret_audit-0_findings-success)](docs/faq.md)
 [![Network](https://img.shields.io/badge/network-offline_first-orange)](docs/adr/0004-scripted-adapters.md)
 [![License](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
@@ -21,7 +21,7 @@ report a green check that did not actually run.
 Three pillars hold everything up: **the journal is the truth** (event-sourced,
 append-only, dense sequences), **redaction by default** (secrets die at the
 journal boundary and every view re-applies the mask), and **honest grading**
-(41 golden drills, 474 checks, harness errors fold into failing checks — never
+(42 golden drills, 486 checks, harness errors fold into failing checks — never
 silent passes). Ten ADRs in `docs/adr/` record why, with the costs admitted.
 
 | Navigate | | | |
@@ -48,7 +48,7 @@ What to look for in the video:
 
 - **`doctor`** — six gates pass before anything else runs: pure stdlib, no
   network modules, manifest present, golden tasks valid.
-- **`eval`** — 41 drills, 474/474 checks green, offline, in under two seconds.
+- **`eval`** — 42 drills, 486/486 checks green, offline, in under two seconds.
 - **`run --timeline`** — a real agent turn loop. Watch event `[004]`: the tool
   executed on the fixture secret, but the journal stored only
   `[REDACTED:github_token]` — the mask is applied at the boundary, and even
@@ -199,7 +199,7 @@ same events, never from separate bookkeeping.
 ## The CLI at a glance
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (41 tasks / 474 checks)
+oax eval      # run every golden task drill, all green or exit 1   (42 tasks / 486 checks)
 oax explain   # one golden task's spec + its prose explainer; --all renders the whole matrix index (exit 1 = prose missing)
 oax doctest   # every docstring example graded by stdlib doctest (exit 1 = rot)
 oax attest    # one artifact binding every gate — doctor/audit/doctests/manifest/matrix (exit 1 = any gate red)
@@ -375,7 +375,7 @@ not a strawman of any specific project:
 |---|---|---|
 | Source of truth | in-memory agent state; logs are best-effort | append-only JSONL journal; replay is a pure fold of it |
 | Secrets | flow into logs and prompts verbatim | redacted at the journal boundary, re-masked by every view; `oax audit .` scans the tree itself |
-| Grading | mocked calls or "it should pass" scripts | 41 golden drills execute real behavior; exceptions fold into a failing `harness_error` check |
+| Grading | mocked calls or "it should pass" scripts | 42 golden drills execute real behavior; exceptions fold into a failing `harness_error` check |
 | Dependencies | SDK + runtime + keys before hello-world | pure stdlib; the full matrix runs offline, zero keys |
 | Determinism | wall-clock and network inside the loop | same events → same replay state; semantic diff ignores the clock, `--strict` doesn't |
 | Tamper evidence | usually none | opt-in hash chains; edits localize to the exact seq |

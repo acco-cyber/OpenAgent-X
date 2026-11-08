@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (41 tasks, 474 checks) is the repo's contract with
+The golden matrix (42 tasks, 486 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -486,6 +486,35 @@ hash; the CLI exits 0 green / 1 red with the render on stdout.
 **Loud failure:** a planted credential on disk — attest names the file
 and the finding kind without ever echoing the secret, and the verdict
 goes red the moment one gate is red.
+
+### 42-runs — the multi-run index: a directory of journals, one honest table
+**The run:** no agent runs here either; the drill builds a fresh
+temp directory of four synthetic journals written as canonical
+`Event` JSON with fixed timestamps (one clean, one with a torn tail,
+one torn in the middle, one carrying a runtime-assembled planted
+secret in a payload) plus one noise file, then drives
+`openagentx/runs.py` over it — the exact code path an operator's
+`oax runs <dir>` executes.
+**The checks grade (12):** rows sorted by file name with the render
+byte-identical twice; every row's counters equal `run_stats` of that
+same journal (one grading path — the index can never disagree with
+`oax stats`); the totals row sums exactly what the rows sum (10 events
+/ 3 calls / 3 results / 1 fail — the drill's first run caught its own
+assertion saying 11 and was corrected against the real sum, never
+against a wish) and never claims a duration (spans overlap); a torn
+tail is flagged but still indexed with the intact prefix counted; a
+middle-torn journal folds into a loud `TornMiddleError` error row with
+no directory prefix leaked; the planted payload secret never reaches
+the render or the artifact; an empty directory is honest emptiness
+(`ok` False, loud render); non-JSONL files are ignored; the artifact is
+byte-identical twice under `sort_keys` with no directory path; no
+10+-digit wall-clock number anywhere; a missing directory raises with
+the path named; the CLI exits 0 indexed / 1 nothing to index.
+**Loud failure:** the middle-torn probe, the planted-secret probe and
+the missing-directory probe all grade the fold, not the hide — an
+index that skipped a damaged journal or echoed a payload would fail
+`middle_torn_loud_error_row` / `no_payload_leak` / `empty_dir_loud`.
+
 
 ## Adding a task
 

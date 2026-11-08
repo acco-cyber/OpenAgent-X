@@ -4035,6 +4035,176 @@ def _attest_drill(task: dict) -> list:
         f"cli exit {r0.returncode} green / {r1.returncode} red"))
     return checks
 
+def _runs_drill(task: dict) -> list:
+    """The multi-run index: a directory of journals, one honest table.
+
+    Honest contract: a fresh directory of synthetic journals (canonical
+    ``Event`` JSON, fixed timestamps) indexes with rows sorted by file
+    name and every row's counters equal to ``run_stats`` of that same
+    journal — one grading path, the index can never disagree with the
+    per-journal view; the totals row sums exactly what the rows sum and
+    never claims a duration; a torn tail is flagged but still indexed
+    (intact prefix counted); a journal torn in the middle folds into a
+    loud error row carrying the real exception with no directory prefix
+    leaked; a runtime-assembled planted secret inside a payload never
+    reaches the render or the artifact (counters, never payloads); an
+    empty directory is honest emptiness (ok False, CLI exit 1); non-JSON
+    files are ignored; the render is byte-deterministic with no
+    wall-clock; the artifact is byte-identical twice under sort_keys;
+    the CLI exits 0 indexed / 1 nothing to index.
+    """
+    from .events import Event, read_events_safe
+    from .runs import SUMMED, artifact_json, index_runs, render_runs
+    from .stats import run_stats
+
+    checks: list = []
+    token = "ghp_" + "A1b2C3d4E5" * 3 + "F9ab12"
+
+    def _ev(i: int, typ: str, payload: dict) -> str:
+        return Event(seq=i, run_id="probe", type=typ, payload=payload,
+                     ts=1000.0 + i).to_json()
+
+    def _journal(lines: list, name: str, wd: str) -> str:
+        path = os.path.join(wd, name)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(lines) + "\n")
+        return path
+
+    def _a_lines() -> list:
+        return [_ev(0, "run_start", {"run_id": "probe"}),
+                _ev(1, "step_start", {"step": 0}),
+                _ev(2, "tool_call", {"tool": "search"}),
+                _ev(3, "tool_result", {"tool": "search", "ok": True}),
+                _ev(4, "tool_call", {"tool": "write"}),
+                _ev(5, "tool_result", {"tool": "write", "ok": False})]
+
+    # 1) the workspace: four journals + noise, rows sorted, deterministic
+    wd = _fresh_wd("runs")
+    _journal(_a_lines(), "a.jsonl", wd)
+    torn_line = _ev(0, "run_start", {"run_id": "probe"})[:48]
+    _journal([_ev(0, "run_start", {"run_id": "probe"}),
+              _ev(1, "tool_call", {"tool": "grep"}), torn_line],
+             "b.jsonl", wd)
+    _journal(_a_lines()[:2] + ['{"seq": 2, "run_id": "probe", "type": "too']
+             + _a_lines()[3:], "c.jsonl", wd)
+    _journal([_ev(0, "run_start", {"run_id": "probe"}),
+              _ev(1, "tool_result", {"tool": "env", "ok": True,
+                                     "out": "token=" + token})],
+             "d.jsonl", wd)
+    with open(os.path.join(wd, "notes.txt"), "w", encoding="utf-8") as fh:
+        fh.write("noise\n")
+    idx = index_runs(wd)
+    render1 = render_runs(idx)
+    names = [r["name"] for r in idx["rows"]]
+    checks.append(Check(
+        "rows_sorted_deterministic",
+        (names == sorted(names) and names == ["a.jsonl", "b.jsonl",
+                                              "c.jsonl", "d.jsonl"]
+         and render1 == render_runs(index_runs(wd))),
+        f"{names}, render byte-identical twice"))
+    # 2) one grading path: every row equals run_stats of that journal
+    match = all(all(r[k] == run_stats(os.path.join(wd, r["name"]))[k]
+                    for k in SUMMED + ("redactions",))
+                for r in idx["rows"] if "error" not in r)
+    checks.append(Check(
+        "counters_match_stats", match,
+        "a/b/d rows equal run_stats (events, tool counters, redactions)"))
+    # 3) the totals row sums exactly what the rows sum, never a duration
+    ok_rows = [r for r in idx["rows"] if "error" not in r]
+    totals_ok = all(idx["totals"][k] == sum(r[k] for r in ok_rows)
+                    for k in SUMMED)
+    checks.append(Check(
+        "totals_additive_where_true",
+        (totals_ok and idx["totals"] == {"events": 10, "tool_calls": 3,
+                                         "tool_results": 3, "tool_fails": 1}
+         and "duration" not in idx["totals"]
+         and "durations not summed" in render1),
+        f"totals {idx['totals']}, no duration anywhere"))
+    # 4) a torn tail is flagged but still indexed (intact prefix counted)
+    brow = next(r for r in idx["rows"] if r["name"] == "b.jsonl")
+    b_events, _t = read_events_safe(os.path.join(wd, "b.jsonl"))
+    checks.append(Check(
+        "torn_tail_flagged_not_filtered",
+        (brow["torn"] is True and brow["events"] == len(b_events) == 2
+         and idx["torn"] == 1 and "(1 torn)" in render1
+         and " torn" in render1.splitlines()[2]),
+        f"b.jsonl torn=True, {brow['events']} intact events counted"))
+    # 5) a middle-torn journal folds into a loud error row
+    crow = next(r for r in idx["rows"] if r["name"] == "c.jsonl")
+    checks.append(Check(
+        "middle_torn_loud_error_row",
+        (idx["ok"] is False and "error" in crow
+         and crow["error"].startswith("TornMiddleError")
+         and "c.jsonl" in crow["error"]
+         and wd not in crow["error"]
+         and "ERROR" in render1),
+        crow["error"][:64]))
+    # 6) a planted payload secret never reaches the render or artifact
+    art = artifact_json(idx)
+    checks.append(Check(
+        "no_payload_leak",
+        (token not in render1 and token not in art),
+        "runtime-assembled token in d.jsonl payload; render + artifact "
+        "carry counters only"))
+    # 7) an empty directory is honest emptiness
+    empty = _fresh_wd("runs-empty")
+    eidx = index_runs(empty)
+    checks.append(Check(
+        "empty_dir_loud",
+        (eidx["journals"] == 0 and eidx["ok"] is False
+         and render_runs(eidx).startswith("runs: 0 journals — nothing to "
+                                          "index")),
+        "journals=0, ok=False, loud render"))
+    # 8) non-JSONL files are ignored, only journals counted
+    checks.append(Check(
+        "non_jsonl_ignored",
+        (idx["journals"] == 4 and idx["rows"][0]["name"].endswith(".jsonl")),
+        "notes.txt present, 4 journals indexed"))
+    # 9) the artifact is deterministic, sorted, path-free
+    art2 = artifact_json(index_runs(wd))
+    checks.append(Check(
+        "artifact_deterministic",
+        (art == art2 and art.startswith('{"events":')
+         and json.loads(art)["ok"] is False
+         and wd not in art),
+        "artifact byte-identical twice, sort_keys, no directory path"))
+    # 10) the render carries no wall-clock
+    import re
+    checks.append(Check(
+        "render_no_wall_clock",
+        (re.search(r"\d{10,}", render1) is None
+         and re.search(r"\d{10,}", render_runs(eidx)) is None),
+        "no 10+-digit number in any render"))
+    # 11) a missing directory raises with the path named
+    missing = os.path.join(wd, "nope")
+    raised = ""
+    try:
+        index_runs(missing)
+    except NotADirectoryError as e:
+        raised = str(e)
+    checks.append(Check(
+        "missing_dir_raises",
+        (isinstance(raised, str) and "nope" in raised
+         and "is not a directory" in raised),
+        raised[:56]))
+    # 12) the CLI agrees: exit 0 indexed / 1 nothing to index
+    import subprocess
+    import sys
+    wd2 = _fresh_wd("runs-cli")
+    _journal(_a_lines(), "a.jsonl", wd2)
+    _journal(_a_lines(), "b.jsonl", wd2)
+    r0 = subprocess.run([sys.executable, "-m", "openagentx", "runs", wd2],
+                        capture_output=True, text=True)
+    r1 = subprocess.run([sys.executable, "-m", "openagentx", "runs", empty],
+                        capture_output=True, text=True)
+    checks.append(Check(
+        "cli_exit_contract",
+        (r0.returncode == 0 and r1.returncode == 1
+         and r0.stdout.startswith("runs: 2 journals, 12 events — OK")
+         and "nothing to index" in r1.stdout),
+        f"cli exit {r0.returncode} indexed / {r1.returncode} empty"))
+    return checks
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -4076,6 +4246,7 @@ DRILLS = {
     "explain": _explain_drill,
     "doctest": _doctest_drill,
     "attest": _attest_drill,
+    "runs": _runs_drill,
 }
 
 

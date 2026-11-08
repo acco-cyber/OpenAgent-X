@@ -47,8 +47,9 @@ failing `harness_error` check. The matrix only grows.
 | 39 | explain | explain (14) | the explainer view: spec + prose joined, deterministic render, no-prose reported loudly, prose coverage cross-checked both ways, CLI 0 found / 1 missing, matrix index covers all tasks sorted with deterministic render and loud NO-PROSE ghosts |
 | 40 | doctest | doctest (13) | docstring self-checks: the examples are graded, not decorative — real tree green (53 examples / 17 modules, floor pinned), every module reported sorted with none skipped, no-example modules counted honestly, poisoned docstring fails loudly with Failed example / Expected / Got, import bomb folds with the real exception, redaction example really graded (runtime-assembled fixture), render byte-deterministic with no wall-clock, one failure poisons the aggregate, CLI 0 green / 1 failing, floor flags enforced from the CLI (--min-examples 9999 fails loudly naming the floor) |
 | 41 | attest | attest (12) | the release attestation: one command, one artifact, every gate — the real tree attests green with the five gates in fixed order (doctor, audit, doctests, manifest, matrix), doctest counts floor-pinned (53 examples / 17 modules), the matrix gate covers every task with prose and every expect key, the manifest gate's tree hash matches an independent build, a synthetic probe tree attests green (root-parametric gates), an import bomb folds the doctest gate red with the real exception, a runtime-assembled planted secret turns the verdict red with the file named and the secret never echoed, a crashing gate folds red carrying the real exception, renders byte-deterministic with no wall-clock, the artifact is byte-identical twice and carries the 64-hex tree hash, CLI 0 green / 1 red |
+| 42 | runs | runs (12) | the multi-run index: a directory of journals, one honest table — four synthetic journals (clean, torn-tail, middle-torn, payload-secret) plus noise indexed sorted by file name with the render byte-identical twice, every row's counters equal to run_stats of that same journal (one grading path — the index can never disagree with oax stats), the totals row sums exactly what the rows sum and never claims a duration (spans overlap), a torn tail flagged but still indexed with the intact prefix counted, a middle-torn journal folds into a loud TornMiddleError error row with no directory prefix leaked, a runtime-assembled planted payload secret never reaches the render or the artifact, an empty directory is honest emptiness (ok False, loud render), non-JSONL files ignored, the artifact byte-identical twice under sort_keys with no directory path, no wall-clock number anywhere, a missing directory raises with the path named, CLI 0 indexed / 1 nothing to index |
 
-Run: `python3 -m openagentx eval` (all green or exit 1). Current: **41 tasks, 474 checks**.
+Run: `python3 -m openagentx eval` (all green or exit 1). Current: **42 tasks, 486 checks**.
 
 ## Adding a task (rules)
 
@@ -66,7 +67,7 @@ Run: `python3 -m openagentx eval` (all green or exit 1). Current: **41 tasks, 47
    `planner_script[]` + `step_scripts[][]`; `snapshot` needs `script[]` +
    `expect.checkpoints[]`; `prompt` needs `layers{}` + `entry` +
    `expect.render`; `audit` needs
-   `expect.planted_*`; `pack`/`sbom`/`doctest`/`attest` need no
+   `expect.planted_*`; `pack`/`sbom`/`doctest`/`attest`/`runs` need no
    script at all.
 4. Any fixture secret must be runtime-concatenated inside Python — never in JSON.
 5. Checks must observe real behavior from *this* run; no snapshots/caches.
