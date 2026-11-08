@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (46 tasks, 537 checks) is the repo's contract with
+The golden matrix (47 tasks, 550 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -612,6 +612,39 @@ are the full run's checks; an empty directory is honest emptiness
 A subset that silently ran the rest would fail
 `unknown_named_nothing_runs`; a listing that drifted from the spec
 directory would fail `list_inventory_complete`.
+
+### 47-lifecycle — the blueprint's durable task lifecycle, as code
+
+The run: `openagentx/lifecycle.py` (ported from
+`docs/blueprint/02-architecture.md` §5) is graded directly — no runner, no
+scripted turns; the state machine IS the subject. The drill builds machines
+at every canonical state and walks the edges: the happy path
+CREATED → PLANNED → APPROVED → RUNNING → VERIFYING → COMPLETED through real
+events, the waiting/blocked/recovery side paths, the approval flow, replay
+from a durable on-disk journal, and the redaction boundary.
+
+The checks grade: the transition table in code equals the documented
+blueprint table exactly (all 11 states, `transitions_match_blueprint`) and
+the three terminals are the only zero-out states; the happy path completes
+with a dense journal (created + 5 transitions + approval); eleven illegal
+moves — including `VERIFYING -> RUNNING`, terminal exits and an unknown
+state — raise `IllegalTransition` and append nothing; approval is bound to
+`plan_hash(plan)` and `start()` with a different plan raises
+`ApprovalMismatch` with zero appends while the journal records the exact
+hash; the `PLANNED -> RUNNING` low-risk path is recorded `pre_approved`
+with no phantom approval; cancellation is terminal yet cleanup is still
+journaled after the terminal move (and refused outside terminals); replay
+from the durable journal re-validates every move and renders
+byte-identically (no wall-clock); the event log is an immutable dense
+tuple; a reason carrying a runtime-assembled fixture token is stored and
+rendered only as `[REDACTED:github_token]`; the plan hash is canonical
+(key order irrelevant) and content-sensitive.
+
+Loud failure: a drift between `TRANSITIONS` and the documented table fails
+`transitions_match_blueprint`; an approval that accepts a different plan
+fails `approval_hash_binding`; a replay that reorders or launders history
+fails `replay_rebuilds_identically`; a raw secret surviving the boundary
+fails `reasons_redacted_at_boundary`.
 
 ## Adding a task
 

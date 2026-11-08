@@ -4827,6 +4827,272 @@ def _eval_only_drill(task: dict) -> list:
         le.stdout.strip()[:70]))
     return checks
 
+
+def _lifecycle_drill(task: dict) -> list:
+    """The blueprint's durable task lifecycle, graded at its edges.
+
+    Honest contract: the transition table in code matches the documented
+    blueprint §5 table exactly (drift is a failing check, not doc rot);
+    terminals are frozen; the happy path completes through real events;
+    illegal moves raise without appending anything; approval is bound to
+    the exact plan hash and a different plan is refused with nothing
+    appended; the pre-approved low-risk path stays honest; terminal
+    states still record cleanup while non-terminal cleanup is refused;
+    replay is a pure fold whose render is byte-identical; the event log
+    is append-only and dense; reasons cross the redaction boundary; the
+    plan hash is canonical and content-sensitive.
+    """
+    from .lifecycle import (ApprovalMismatch, IllegalTransition,
+                            LifecycleError, TaskLifecycle, TRANSITIONS,
+                            CANONICAL_STATES, TERMINAL_STATES, plan_hash)
+
+    checks: list = []
+
+    # blueprint §5 table, transcribed from docs/blueprint/02-architecture.md
+    blueprint_table = {
+        "CREATED": {"PLANNED", "CANCELLED", "FAILED"},
+        "PLANNED": {"APPROVED", "RUNNING", "WAITING_FOR_USER"},
+        "APPROVED": {"RUNNING", "CANCELLED"},
+        "RUNNING": {"VERIFYING", "WAITING_FOR_USER", "BLOCKED", "FAILED",
+                    "CANCELLED", "RECOVERY"},
+        "VERIFYING": {"COMPLETED", "RECOVERY", "BLOCKED", "FAILED"},
+        "WAITING_FOR_USER": {"APPROVED", "RUNNING", "CANCELLED"},
+        "BLOCKED": {"RUNNING", "CANCELLED", "FAILED"},
+        "RECOVERY": {"RUNNING", "BLOCKED", "FAILED"},
+        "COMPLETED": set(),
+        "FAILED": set(),
+        "CANCELLED": set(),
+    }
+
+    def machine_at(state: str) -> "TaskLifecycle":
+        paths = {
+            "CREATED": [],
+            "PLANNED": ["PLANNED"],
+            "APPROVED": ["PLANNED", "APPROVED"],
+            "RUNNING": ["PLANNED", "APPROVED", "RUNNING"],
+            "VERIFYING": ["PLANNED", "APPROVED", "RUNNING", "VERIFYING"],
+            "WAITING_FOR_USER": ["PLANNED", "WAITING_FOR_USER"],
+            "BLOCKED": ["PLANNED", "APPROVED", "RUNNING", "BLOCKED"],
+            "RECOVERY": ["PLANNED", "APPROVED", "RUNNING", "RECOVERY"],
+            "COMPLETED": ["PLANNED", "APPROVED", "RUNNING", "VERIFYING",
+                          "COMPLETED"],
+            "FAILED": ["PLANNED", "APPROVED", "RUNNING", "FAILED"],
+            "CANCELLED": ["CANCELLED"],
+        }
+        m = TaskLifecycle("lc-probe")
+        for s in paths[state]:
+            if s == "APPROVED":
+                m.approve({"objective": "probe"})
+            elif s == "RUNNING":
+                m.start({"objective": "probe"})
+            else:
+                m.transition(s)
+        assert m.state == state, (m.state, state)
+        return m
+
+    # 1) the table in code IS the documented table
+    code_table = {s: set(v) for s, v in TRANSITIONS.items()}
+    checks.append(Check(
+        "transitions_match_blueprint",
+        code_table == blueprint_table,
+        "the 11-state transition table matches blueprint §5 verbatim"))
+
+    # 2) terminals frozen, exactly three, states complete
+    empty = sorted(s for s in TRANSITIONS if len(TRANSITIONS[s]) == 0)
+    checks.append(Check(
+        "terminals_frozen_and_complete",
+        sorted(CANONICAL_STATES) == sorted(blueprint_table)
+        and len(CANONICAL_STATES) == 11
+        and empty == sorted(TERMINAL_STATES) == ["CANCELLED", "COMPLETED",
+                                                 "FAILED"],
+        "11 states; COMPLETED/FAILED/CANCELLED are the only zero-out states"))
+
+    # 3) the happy path through real events
+    m = TaskLifecycle("lc-happy")
+    plan = {"objective": "sourced technical report", "risk": "low"}
+    m.transition("PLANNED")
+    m.approve(plan)
+    m.start(plan)
+    m.transition("VERIFYING")
+    m.transition("COMPLETED")
+    seqs = [ev.seq for ev in m.events]
+    checks.append(Check(
+        "happy_path_completes",
+        m.state == "COMPLETED" and seqs == list(range(len(seqs)))
+        and m.events[0].type == "lifecycle_created"
+        and sum(ev.type == "lifecycle_transition" for ev in m.events) == 5
+        and any(ev.type == "lifecycle_approval" for ev in m.events),
+        f"{len(m.events)} events, seq dense 0..{len(seqs) - 1}, COMPLETED"))
+
+    # 4) illegal moves refuse loudly and append nothing
+    probes = [("CREATED", "COMPLETED"), ("CREATED", "RUNNING"),
+              ("VERIFYING", "RUNNING"), ("VERIFYING", "WAITING_FOR_USER"),
+              ("COMPLETED", "PLANNED"), ("FAILED", "RECOVERY"),
+              ("CANCELLED", "RUNNING"), ("BLOCKED", "COMPLETED"),
+              ("RECOVERY", "COMPLETED"), ("APPROVED", "VERIFYING"),
+              ("RUNNING", "DESTROYED")]
+    clean = []
+    for src, dst in probes:
+        mp = machine_at(src)
+        n0, s0 = len(mp.events), mp.state
+        try:
+            mp.transition(dst)
+            clean.append(False)
+        except IllegalTransition:
+            clean.append(mp.state == s0 and len(mp.events) == n0)
+    checks.append(Check(
+        "illegal_transitions_refuse_cleanly",
+        all(clean) and len(clean) == len(probes),
+        f"{len(probes)} illegal moves refused with zero appends"))
+
+    # 5) waiting for user resumes and re-binds the approval hash
+    m = machine_at("RUNNING")
+    m.transition("WAITING_FOR_USER", reason="need user input")
+    waited = m.state == "WAITING_FOR_USER"
+    plan2 = {"objective": "revised after review"}
+    m.approve(plan2)
+    m.start(plan2)
+    checks.append(Check(
+        "waiting_resume_rebinds_hash",
+        waited and m.state == "RUNNING"
+        and m.approved_hash == plan_hash(plan2),
+        "RUNNING -> WAITING_FOR_USER -> APPROVED -> RUNNING, hash rebound"))
+
+    # 6) blocked and recovery paths, exactly as the table says
+    mb = machine_at("RUNNING")
+    mb.transition("BLOCKED")
+    mb.transition("RUNNING")
+    mr = machine_at("RUNNING")
+    mr.transition("RECOVERY")
+    mr.transition("BLOCKED")
+    try:
+        mr.transition("COMPLETED")
+        rec_terminal_refused = False
+    except IllegalTransition:
+        rec_terminal_refused = True
+    mr2 = machine_at("RUNNING")
+    mr2.transition("RECOVERY")
+    mr2.transition("RUNNING")
+    checks.append(Check(
+        "blocked_and_recovery_paths",
+        mb.state == "RUNNING" and mr.state == "BLOCKED"
+        and rec_terminal_refused and mr2.state == "RUNNING",
+        "BLOCKED->RUNNING, RECOVERY->BLOCKED, RECOVERY->COMPLETED refused, "
+        "RECOVERY->RUNNING"))
+
+    # 7) approval is bound to the exact plan hash
+    m = machine_at("APPROVED")
+    approved_hash = plan_hash({"objective": "probe"})
+    n0 = len(m.events)
+    try:
+        m.start({"objective": "probe", "extra": 1})
+        wrong_refused = False
+    except ApprovalMismatch:
+        wrong_refused = m.state == "APPROVED" and len(m.events) == n0
+    m.start({"objective": "probe"})
+    approval_ev = [e for e in m.events if e.type == "lifecycle_approval"][0]
+    checks.append(Check(
+        "approval_hash_binding",
+        wrong_refused and m.state == "RUNNING"
+        and approval_ev.payload["action_hash"] == approved_hash,
+        "wrong plan refused with zero appends; journal records the hash"))
+
+    # 8) the low-risk pre-approved path stays honest
+    m = machine_at("PLANNED")
+    m.start()
+    ev = m.events[-1]
+    checks.append(Check(
+        "pre_approved_low_risk_path",
+        m.state == "RUNNING" and ev.payload.get("pre_approved") is True
+        and m.approved_hash is None,
+        "PLANNED -> RUNNING recorded as pre_approved, no phantom approval"))
+
+    # 9) cancellation is terminal but cleanup still runs
+    m = machine_at("RUNNING")
+    m.cancel(reason="user stopped", actor="user")
+    cancelled = m.state == "CANCELLED"
+    m.record_cleanup("workspace archived")
+    cleanup_ev = m.events[-1]
+    last_transition = [e.seq for e in m.events
+                       if e.type == "lifecycle_transition"][-1]
+    fresh = machine_at("PLANNED")
+    try:
+        fresh.record_cleanup("early")
+        early_refused = False
+    except LifecycleError:
+        early_refused = True
+    checks.append(Check(
+        "cancel_records_terminal_cleanup",
+        cancelled and m.cleanups == 1
+        and cleanup_ev.type == "lifecycle_cleanup"
+        and cleanup_ev.seq > last_transition and early_refused,
+        "CANCELLED terminal; cleanup journaled after the terminal move; "
+        "non-terminal cleanup refused"))
+
+    # 10) replay is a pure fold, byte-identical render, durable journal
+    wd = _fresh_wd("lifecycle")
+    jpath = os.path.join(wd, "lifecycle.jsonl")
+    jm = TaskLifecycle("lc-durable", journal=Journal(jpath))
+    plan_d = {"objective": "durable work", "steps": 3}
+    plan_d2 = {"objective": "durable work", "steps": 4}
+    jm.transition("PLANNED", reason="planned")
+    jm.approve(plan_d, actor="human")
+    jm.start(plan_d, actor="agent")
+    jm.transition("WAITING_FOR_USER", reason="need input")
+    jm.approve(plan_d2, actor="human")
+    jm.start(plan_d2, actor="agent")
+    jm.transition("VERIFYING", reason="tests done")
+    jm.transition("COMPLETED")
+    jm.record_cleanup("archived")
+    disk_events, torn = load_trace(jpath)
+    rm = TaskLifecycle.replay(disk_events)
+    checks.append(Check(
+        "replay_rebuilds_identically",
+        not torn and rm.state == "COMPLETED"
+        and rm.approved_hash == plan_hash(plan_d2) and rm.cleanups == 1
+        and rm.render() == jm.render()
+        and rm.task_id == "lc-durable",
+        f"{len(disk_events)} events durable on disk; replay render "
+        f"byte-identical"))
+
+    # 11) the event log is append-only and dense
+    m = machine_at("VERIFYING")
+    ev_tuple = m.events
+    try:
+        ev_tuple[0] = None
+        immutable = False
+    except TypeError:
+        immutable = True
+    dense = [e.seq for e in ev_tuple] == list(range(len(ev_tuple)))
+    checks.append(Check(
+        "journal_append_only_dense",
+        isinstance(ev_tuple, tuple) and immutable and dense,
+        f"{len(ev_tuple)} events as an immutable tuple, seq 0..{len(ev_tuple) - 1}"))
+
+    # 12) reasons cross the redaction boundary
+    m = TaskLifecycle("lc-redact")
+    tok = vault_value("github")
+    m.transition("PLANNED", reason=f"handle {tok} at the boundary")
+    ev = m.events[-1]
+    rendered = m.render()
+    checks.append(Check(
+        "reasons_redacted_at_boundary",
+        "[REDACTED:github_token]" in ev.payload["reason"]
+        and tok not in ev.payload["reason"] and tok not in rendered
+        and "[REDACTED:github_token]" in rendered,
+        "raw fixture token dies at the boundary; render redacted too"))
+
+    # 13) the plan hash is canonical and content-sensitive
+    h1 = plan_hash({"a": 1, "b": 2})
+    h2 = plan_hash({"b": 2, "a": 1})
+    h3 = plan_hash({"a": 1, "b": 3})
+    checks.append(Check(
+        "plan_hash_canonical_and_sensitive",
+        h1 == h2 and h1 != h3 and len(h1) == 64
+        and all(c in "0123456789abcdef" for c in h1),
+        "key order irrelevant, any content change changes the 64-hex hash"))
+    return checks
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -4873,6 +5139,7 @@ DRILLS = {
     "chain_cli": _chain_cli_drill,
     "species": _species_drill,
     "eval_only": _eval_only_drill,
+    "lifecycle": _lifecycle_drill,
 }
 
 

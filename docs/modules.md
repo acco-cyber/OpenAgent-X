@@ -253,6 +253,23 @@ run), every injection is ledgered, a faulted tool call never executes (zero
 side effects), and recovery composes with `RetryLLM` — scars visible,
 re-runs identical.
 
+### lifecycle
+The blueprint's durable task lifecycle, as code. `TaskLifecycle`,
+`TRANSITIONS`, `plan_hash`, `IllegalTransition`, `ApprovalMismatch`.
+Ported from `docs/blueprint/02-architecture.md` §5: eleven canonical
+states with the documented transition table (guarded verbatim by golden
+task 47 — a drift from the table is a failing check, not doc rot),
+COMPLETED/FAILED/CANCELLED frozen with zero outgoing transitions, approval
+bound to the exact plan hash (`approve()` records the SHA-256 of the
+canonical plan JSON; `start()` demands the same plan content back; a
+refused move appends nothing and leaves state unchanged), the low-risk
+`PLANNED -> RUNNING` path recorded `pre_approved` honestly, terminal
+states still accepting `record_cleanup` (blueprint: terminal; cleanup and
+audit still run) while non-terminal cleanup is refused, every move an
+`events.Event` crossing the redaction boundary (`redact_obj` on reasons
+and notes), `replay()` a pure fold that re-validates every replayed move,
+and `render()` byte-deterministic with no wall-clock.
+
 ### fuzz
 Seeded fuzz harness — random traces, deterministic verdicts. `run_fuzz`,
 `run_fuzz_suite`, `render_fuzz`. Invariants: a seeded schedule attacks the

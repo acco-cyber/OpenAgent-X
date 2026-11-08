@@ -1,0 +1,5 @@
+{
+  "id": "47-lifecycle",
+  "title": "the blueprint's durable task lifecycle as code: eleven canonical states with the documented transition table, frozen terminals, approval bound to the exact plan hash, illegal moves refused with zero appends, terminal cleanup still recorded, replay byte-identical, reasons redacted at the boundary",
+  "drill": "lifecycle"
+}
