@@ -1,6 +1,6 @@
 """oax — the OpenAgent-X command line.
 
-Subcommands: eval | doctor | doctest | attest | audit | examples | explain | trace | report | run |
+Subcommands: eval | doctor | doctest | attest | runs | audit | examples | explain | trace | report | run |
 pack | sbom | recall | compact | diff | stats | grep | replay | bench | fuzz |
 property | pack2 | graph | dashboard | mermaid. Every subcommand is offline
 and stdlib-only; exit codes are contracts (0 = green, 1 = anything else,
@@ -337,6 +337,19 @@ def _cmd_attest(args) -> int:
     return 0 if att["ok"] else 1
 
 
+def _cmd_runs(args) -> int:
+    """The multi-run index (exit 0 indexed / 1 nothing to index)."""
+    from .runs import index_runs, render_runs
+
+    try:
+        idx = index_runs(args.dir or ".")
+    except NotADirectoryError as e:
+        print(str(e))
+        return 1
+    print(render_runs(idx), end="")
+    return 0 if idx["ok"] else 1
+
+
 def _cmd_explain(args) -> int:
     """One golden task's spec + its prose explainer (exit 1 = missing)."""
     from .explain import explain_all, explain_task, render_explain, \
@@ -447,6 +460,13 @@ def build_parser() -> argparse.ArgumentParser:
                     help="also write the machine artifact as "
                          "byte-deterministic JSON")
     at.set_defaults(fn=_cmd_attest)
+
+    rn = sub.add_parser("runs",
+                        help="index every journal in a directory "
+                             "(exit 1 = nothing to index)")
+    rn.add_argument("dir", nargs="?", default=".",
+                    help="directory to scan for *.jsonl journals")
+    rn.set_defaults(fn=_cmd_runs)
 
     a = sub.add_parser("audit", help="secret-scan a tree")
     a.add_argument("root", nargs="?", default=".")

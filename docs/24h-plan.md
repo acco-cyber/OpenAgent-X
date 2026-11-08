@@ -511,3 +511,10 @@ pad with empty commits.
   148; the README count gate rode red for exactly one commit ((c)
   landed the matrix growth before the prose cascade — recorded in the
   (d) message, verify green again there); audit 0, doctor 6/6
+
+- [ ] S36-E3 — the multi-run index: `oax runs [dir]` — a directory of
+  journals becomes one deterministic table (rows sorted by file name,
+  torn tails flagged but never filtered, middle-torn journals loud error
+  rows carrying the real exception, totals additive only where true,
+  counters never payloads), graded by a new drill (task 42) and
+  demonstrated by example 31

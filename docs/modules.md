@@ -81,6 +81,23 @@ per-tool tables are derived from the same events; wall-clock span is
 reported but never graded; no timings in output, so the same file always
 yields the same text.
 
+### runs
+The multi-run index — a directory of journals becomes one honest table.
+`index_runs(dir)`, `totals_of(rows)`, `render_runs(idx)`, `artifact_json(idx)`.
+Invariants: every row's counters come from the same `run_stats` the
+single-journal view uses (one grading path — the index can never
+disagree with `oax stats`); counters and flags only, never payload text
+(a journal is raw secrets on disk) and no path beyond the file name;
+torn tails are flags, not filters — the intact prefix still counts and
+the row says `torn`, while a journal torn in the middle folds into a
+loud error row carrying the real exception with the redundant directory
+prefix stripped; additivity is claimed only where true (events and tool
+counters sum across journals; durations never — spans overlap); zero
+journals is an honest empty index (`ok` False), never fabricated green;
+rows sorted by file name, render byte-identical across calls, the
+machine artifact carries the per-row counters under `sort_keys` with no
+directory path so a byte-compare travels.
+
 ### jdiff
 Event-level journal diff — semantic comparison of two event streams.
 `diff_events`, `diff_journals(path_a, path_b, strict=False)`, `render_diff`.
