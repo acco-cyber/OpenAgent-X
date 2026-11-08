@@ -63,7 +63,7 @@ What to look for in the video:
 git clone https://github.com/acco-cyber/OpenAgent-X.git && cd OpenAgent-X
 python3 -m openagentx doctor   # purity gate: pure stdlib, no network modules
 python3 -m openagentx eval     # the honest golden matrix, all green or exit 1
-python3 -m openagentx examples # thirty runnable end-to-end demos
+python3 -m openagentx examples # thirty-one runnable end-to-end demos
 ```
 
 No model keys, no SDKs, no services. The default adapter is `ScriptedLLM`:
@@ -402,6 +402,7 @@ one theme end-to-end with real assertions (fail loud, exit non-zero):
 | `examples/28_explain.py` | the matrix explains itself | one golden task's spec and its prose joined in one deterministic render — fields checked against the JSON, byte-identical re-renders with no wall-clock, a ghost spec without prose reported loudly, a missing spec raising, and the prose map cross-checked against the matrix in both directions |
 | `examples/29_doctests_tour.py` | the examples are graded, not decorative | the docstring self-check tour: the real tree graded green (53 examples across 17 modules) with no-example modules counted honestly, the render byte-identical twice with no wall-clock, a poisoned docstring failing loudly with its Failed example / Expected / Got log, an import bomb folding with the real exception, one failure poisoning the aggregate, the CLI agreeing (exit 0 green / 1 failing), and floor flags failing loudly when the example set shrinks |
 | `examples/30_attest_artifact.py` | one artifact binding every gate | the attestation tour: a synthetic tree attests green through the same five-gate path (doctor, audit, doctests, manifest, matrix), the render byte-identical twice with counters only and no wall-clock, the sort_keys artifact byte-identical twice carrying the 64-hex tree hash, a runtime-assembled planted secret turning the verdict red with the file named and the secret never echoed, a crashing gate folding red with the real exception, the CLI agreeing (exit 0 green / 1 red), and the real repository attesting green |
+| `examples/31_runs_index.py` | a directory of journals, one honest table | the multi-run tour: three canonical-Event journals (clean, torn tail, planted payload secret) plus noise indexed sorted with every row's counters equal to `oax stats` of that same journal (one grading path), the totals row additive only where true (durations never — spans overlap), the render byte-identical twice with no wall-clock and the secret never echoed, a torn tail flagged but still indexed, a middle tear folding into a loud `TornMiddleError` error row with no directory prefix leaked, the sort_keys artifact byte-identical twice and path-free, the CLI agreeing (exit 1 with a red row / 1 honest emptiness) |
 | `examples/01`–`17` | foundations | hello-loop, redaction, team handoff, pack+sbom, memory+compact, cache+hooks, fanout+structured, retry+breaker, planner+snapshot, prompt layers, JIT tools, chaos+chain, diff+stats, bench+fuzz, property, pack2+graph, dashboard+mermaid |
 
 ## Why it matters
