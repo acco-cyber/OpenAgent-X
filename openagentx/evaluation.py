@@ -4727,17 +4727,54 @@ def list_golden_tasks(tasks_dir: str = "golden_tasks") -> list:
     )
 
 
-def run_eval(tasks_dir: str = "golden_tasks", workers: int = 1) -> tuple:
-    """Run every golden task. Returns (reports, all_ok).
+def task_brief(path: str) -> tuple:
+    """A task's (id, drill) read from its spec JSON — (path, '') if unreadable."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            spec = json.load(fh)
+        return str(spec.get("id", "")), str(spec.get("drill", ""))
+    except (OSError, json.JSONDecodeError):
+        return "", ""
 
-    Reports are always in task order. With ``workers > 1`` the drills run on
-    a thread pool: every drill works only inside its own fresh temp
-    workspace and reads nothing another drill writes, so the verdicts are
-    identical to the serial run — parallelism changes the wall-clock, never
-    the grade. Each report carries its own wall-clock seconds (reported,
-    never graded).
+
+def resolve_only(paths: list, names: list) -> tuple:
+    """Map ``--only`` names onto task paths. Returns (selected, unknown).
+
+    Each name matches a task **id** exactly (e.g. ``45-species``) or a
+    **drill name** (e.g. ``species`` — every task carrying that drill,
+    which may be more than one). The selection is deduplicated and stays
+    in task order; unknown names come back in input order so the caller
+    can reject them loudly before anything runs.
     """
-    paths = list_golden_tasks(tasks_dir)
+    by_id, by_drill = {}, {}
+    for p in paths:
+        tid, drill = task_brief(p)
+        if tid:
+            by_id[tid] = p
+        if drill:
+            by_drill.setdefault(drill, []).append(p)
+    selected, unknown = [], []
+    for name in names:
+        if name in by_id:
+            selected.append(by_id[name])
+        elif name in by_drill:
+            selected.extend(by_drill[name])
+        else:
+            unknown.append(name)
+    chosen = set(selected)
+    seen = set()
+    deduped = [p for p in paths if p in chosen and not (p in seen or seen.add(p))]
+    return deduped, unknown
+
+
+def run_selected(paths: list, workers: int = 1) -> tuple:
+    """Run exactly these task paths (timed). Returns (reports, all_ok).
+
+    The execution core shared by run_eval and the CLI's ``--only``
+    subset runs: one grading path, so a subset run grades identically to
+    the corresponding slice of the full run. Reports stay in the given
+    (task) order; workers change the wall-clock, never the grade.
+    """
     workers = max(1, min(int(workers), len(paths) or 1))
 
     def timed(path: str) -> DrillReport:
@@ -4754,3 +4791,16 @@ def run_eval(tasks_dir: str = "golden_tasks", workers: int = 1) -> tuple:
             reports = list(pool.map(timed, paths))  # pool.map keeps input order
     all_ok = bool(reports) and all(r.ok for r in reports)
     return reports, all_ok
+
+
+def run_eval(tasks_dir: str = "golden_tasks", workers: int = 1) -> tuple:
+    """Run every golden task. Returns (reports, all_ok).
+
+    Reports are always in task order. With ``workers > 1`` the drills run on
+    a thread pool: every drill works only inside its own fresh temp
+    workspace and reads nothing another drill writes, so the verdicts are
+    identical to the serial run — parallelism changes the wall-clock, never
+    the grade. Each report carries its own wall-clock seconds (reported,
+    never graded).
+    """
+    return run_selected(list_golden_tasks(tasks_dir), workers=workers)

@@ -648,3 +648,17 @@ pad with empty commits.
   + manifest 157; verify rode red for exactly one commit ((c)
   referenced example 34 one commit before (d) landed it — recorded in
   the (c) message); audit 0, doctor 6/6
+
+- [ ] S40-E3 — the matrix becomes addressable: `oax eval --list` prints
+  the honest inventory (id + drill rows sorted, the count named, exit 1
+  on emptiness) and `--only <names>` runs a named subset instead of all
+  45 drills — every name matches a task id exactly or a drill name (a
+  drill shared by several tasks selects all of them), duplicates dedupe,
+  unknown names are rejected loudly before anything runs (a subset you
+  can't name is not a subset; silently running the rest would bless the
+  typo); the selection shares run_selected with the full run (one
+  grading path — a subset grades identically to the corresponding slice
+  of the full run) and the exit contract is unchanged (0 green / 1 any
+  red); graded by a new drill (task 46) on the real matrix and on a
+  poisoned temp matrix — red tasks named, unknown named, empty names
+  named

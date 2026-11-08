@@ -22,10 +22,33 @@ from .doctor import run_doctor
 
 
 def _cmd_eval(args) -> int:
-    from .evaluation import run_eval
+    from .evaluation import list_golden_tasks, resolve_only, run_selected, task_brief
 
+    paths = list_golden_tasks(args.dir)
+    only = [n.strip() for n in str(args.only or "").split(",")] if args.only else []
+    selected, unknown = (resolve_only(paths, only) if only
+                         else (paths, []))
+    if unknown:
+        # reject loudly before anything runs: a subset you can't name is
+        # not a subset, and silently running the rest would bless the typo
+        for name in unknown:
+            print(f"eval: unknown --only name '{name}' "
+                  f"(not a task id or drill name in {args.dir})")
+        return 1
+    if args.list:
+        if not selected:
+            print(f"eval --list: no tasks in {args.dir}")
+            return 1
+        for p in selected:
+            tid, drill = task_brief(p)
+            print(f"{tid:<28} {drill}")
+        print(f"eval --list: {len(selected)} tasks in {args.dir}")
+        return 0
+    if not selected:
+        print(f"eval: no tasks in {args.dir}")
+        return 1
     t0 = time.perf_counter()
-    reports, ok = run_eval(args.dir, workers=args.workers)
+    reports, ok = run_selected(selected, workers=args.workers)
     wall = time.perf_counter() - t0
     for r in reports:
         print(f"{r.task_id:<28} {r.drill:<10} {r.passed}/{len(r.checks):<3} "
@@ -36,9 +59,10 @@ def _cmd_eval(args) -> int:
                     print(f"   FAIL {c.name}: {c.detail}")
     total = sum(len(r.checks) for r in reports)
     green = sum(r.passed for r in reports)
+    scope = f", only={args.only}" if only else ""
     print(f"eval: {len(reports)} tasks, {green}/{total} checks "
           f"{'green' if ok else 'FAILING'} (wall-clock {wall:.3f}s, "
-          f"workers={args.workers}; timings reported, never graded)")
+          f"workers={args.workers}{scope}; timings reported, never graded)")
     return 0 if ok else 1
 
 
@@ -453,6 +477,13 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--workers", type=int, default=1,
                    help="run drills on a thread pool (default 1 = serial; "
                         "verdicts are identical either way)")
+    e.add_argument("--only", default="",
+                   help="comma-separated task ids or drill names to run "
+                        "instead of the whole matrix; unknown names are "
+                        "rejected loudly and nothing runs")
+    e.add_argument("--list", action="store_true",
+                   help="print the task inventory (id + drill) instead of "
+                        "running; composes with --only; exit 1 on emptiness")
     e.set_defaults(fn=_cmd_eval)
 
     d = sub.add_parser("doctor", help="purity + integrity gate")
