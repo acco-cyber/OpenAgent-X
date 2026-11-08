@@ -688,7 +688,7 @@ pad with empty commits.
   35 one commit before (d) landed it — recorded in the (c) message);
   audit 0, doctor 6/6
 
-- [ ] S41-E3 (stretch, announced at slot open): the HYDRION ONE blueprint
+- [x] S41-E3 (stretch, announced at slot open): the HYDRION ONE blueprint
   lands as design input and the README reaches dev-star grade — the
   36-page product/research/engineering blueprint (v1.0, 2026-11-05) is
   ported in full into docs/blueprint/ (six files: index + product +
@@ -705,3 +705,33 @@ pad with empty commits.
   part 40's final commit message claimed but never committed (the
   id-vs-drill comparison normalized its wall-clock column — a live flake
   upstream, verified green before adoption)
+
+  ✅ the slot opened with a truth repair: the working tree carried a
+  wall-clock normalization fix in eval_only's id-vs-drill comparison that
+  part 40's final commit message (825fc1e) claimed but never committed —
+  adopted as (a) after verifying eval --only 46-eval-only green (14/14);
+  (b) ported the 36-page HYDRION ONE blueprint in full into docs/blueprint/
+  (six files, all 24 sections, the blueprint's own "proposed plan, not a
+  claim of implemented capability" status line preserved on every page,
+  manifest 159 -> 165); (c) openagentx/lifecycle.py — §5 as code (eleven
+  canonical states, the exact transition table, frozen terminals still
+  recording cleanup, approval bound to plan_hash with ApprovalMismatch on
+  drift and zero appends on refusal, pre_approved recorded honestly,
+  redact_obj on every journaled reason, replay a pure fold with
+  byte-identical render, 15 docstring doctests); (d) drill lifecycle (task
+  47, 13 checks) with explainers entry same-commit (gate 8), verify floor
+  47 + drills set + lifecycle, modules.md guide (verify's module gate),
+  golden row 47, manifest 166 — the drill's own first run was caught by
+  the harness honesty twice (an illegal PLANNED->CANCELLED path fixture,
+  and Journal.start_run before append) and both are recorded in the (d)
+  message; (e) example 36 walks every edge on a fresh temp dir, manifest
+  167; (f) the dev-star README: blueprint badge, the mermaid state
+  diagram, the built-vs-input consumption table, gallery row 36, every
+  stale count synced (47/550, thirty-six demos, 45 modules, the
+  long-stale "42 golden drills" comparison cell) with the demo bullet
+  made honest about the recording's age, tutorial step 7 lifecycle
+  paragraph, CHANGELOG section; matrix 47 tasks / 550 checks green
+  (was 537), verify OK (167 required files), audit 0, doctor 6/6,
+  examples OK, doctests green, compileall clean; verify rode red for
+  exactly one commit on two known edges ((d)'s README badge/inline still
+  claimed 46 until (f)'s rewrite — recorded in the (d) message)
