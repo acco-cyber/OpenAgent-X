@@ -168,3 +168,4 @@ golden_tasks/48-workforce.json
 examples/36_lifecycle_tour.py
 examples/37_workforce_assembly.py
 golden_tasks/49-catalog.json
+examples/38_catalog_tour.py
