@@ -364,3 +364,26 @@ own bar is the seven-gate verification: `node scripts/verify.mjs`,
 literals. That is the whole discipline: the journal is the truth, the
 views never disagree with it, and every green check came from real
 behavior in this run.
+
+## Step 11 — the agent catalog: every kind of work, contract-backed
+
+The blueprint's eight-profile workforce is the inner circle; the catalog
+is the whole company. `openagentx/catalog.py` holds 727 named specialist
+agents across 33 work categories — writing, coding, research, data,
+finance, legal, ops, and twenty-six more — and none of them is a sticker
+sheet: every spec materializes as a real `workforce.AgentDefinition`
+with a permission ceiling (the default catalog ships P0-P2 only) and an
+allowlist drawn from the same tier table the runner enforces.
+
+```console
+$ oax agents --count
+727 agents / 33 categories / 727 contracts / 69 lineages
+$ oax agents --query "flaky test" --limit 2
+flaky_test_doctor     qa_testing  diagnoses order, timing and state leaks
+test_writer           coding      writes focused unit and edge-case tests
+```
+
+`compose()` turns one task into a bounded work order — a planner, three
+category specialists, and an independent critic — and redacts the task
+text *before* any prompt is rendered. Try it with a secret-shaped string
+and watch the event trail report the redaction instead of the leak.

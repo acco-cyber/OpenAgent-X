@@ -1,6 +1,6 @@
 # Per-drill explainers — what every golden task grades, and why
 
-The golden matrix (48 tasks, 564 checks) is the repo's contract with
+The golden matrix (49 tasks, 577 checks) is the repo's contract with
 itself: every claim the README, the docs and the CHANGELOG make is
 enforced by one of these drills. Each task is an offline, deterministic
 JSON spec executed against the real runner and real tools in a fresh temp
@@ -688,3 +688,14 @@ from *this* run, and an explainer entry on this page. The explainer gate
 in `scripts/verify.mjs` fails the build for any golden task without its
 `###` entry here — and for any entry here that does not name a real
 task. The matrix only grows, and so does its prose.
+
+### 49-catalog — the specialist agent catalog, contract-backed
+
+The 700-floor catalog graded at its edges: 727 agents across 33 work
+categories that cannot shrink below their pinned floors, ids unique and
+inside the workforce id contract, all 727 materialized as real
+`workforce.AgentDefinition` contracts whose every allowlisted tool passes
+its own permission gate with ceilings topping out at P2 (no P3/P4 reach),
+deterministic search/detect/compose, secret-shaped task text redacted
+before any prompt is rendered, an ordered event trail per work order, and
+a CLI whose `--count` reports the true totals.

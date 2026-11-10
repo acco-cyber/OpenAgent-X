@@ -5362,6 +5362,178 @@ def _workforce_drill(task: dict) -> list:
     return checks
 
 
+def _catalog_drill(task: dict) -> list:
+    """The specialist agent catalog, graded at its edges.
+
+    Honest contract: the catalog holds at least its pinned floors (700
+    agents, 30 categories) and cannot shrink below what the README
+    promises; ids are unique and satisfy the workforce id contract; every
+    spec materializes as a real :mod:`openagentx.workforce`
+    AgentDefinition whose whole allowlist passes its own permission gate;
+    the default catalog ships P0-P2 only — no P3/P4 tool is within any
+    spec's reach; search and detect are deterministic; compose() builds
+    plan/work/critique work orders over real contracts and redacts the
+    task before any prompt is rendered; the rebuild is bit-identical and
+    the CLI reports the true totals.
+    """
+    import re
+    import subprocess
+    import sys
+
+    from .catalog import (CATEGORIES, CATALOG_FLOOR, CATEGORY_FLOOR,
+                          SPECS, compose, detect as cat_detect, get as cat_get,
+                          search as cat_search, to_definition, total as cat_total)
+    from .tools import vault_value
+    from .workforce import AGENT_ID, TIERS, TOOL_TIERS, check_permission
+
+    checks: list = []
+    specs = SPECS()
+    cats = CATEGORIES
+
+    # 1) the catalog keeps its pinned floors — it cannot quietly shrink
+    checks.append(Check(
+        "catalog_floor_kept",
+        cat_total() >= CATALOG_FLOOR >= 700
+        and len(cats) >= CATEGORY_FLOOR >= 30,
+        f"{cat_total()} agents across {len(cats)} categories — "
+        "floors 700/30 pinned and checked"))
+
+    # 2) ids are unique and satisfy the workforce id contract
+    ids = [s.agent_id for s in specs]
+    checks.append(Check(
+        "agent_ids_unique_and_contract_clean",
+        len(ids) == len(set(ids))
+        and all(AGENT_ID.match(i) and len(i) <= 31 for i in ids),
+        "every agent_id is globally unique and matches the §7 id contract"))
+
+    # 3) every spec materializes as a governed workforce contract
+    try:
+        defs = [to_definition(s) for s in specs]
+        defs_ok = len(defs) == len(specs) and all(
+            d.agent_id == s.agent_id and d.version == "1.0.0"
+            for s, d in zip(specs, defs))
+        err = ""
+    except Exception as e:  # fold the exception into a failing check
+        defs, defs_ok, err = [], False, f" ({type(e).__name__})"
+    checks.append(Check(
+        "every_spec_materializes_as_workforce_contract", defs_ok,
+        f"{len(specs)} AgentDefinition constructions verified{err}"))
+
+    # 4) every allowlisted tool passes its own permission gate
+    gate_ok = bool(defs) and all(
+        check_permission(d, t).allowed
+        for d in defs for t in d.allowed_tools)
+    checks.append(Check(
+        "allowlists_pass_their_own_permission_gate", gate_ok,
+        "every allowlisted tool of every spec clears the two-gate check"))
+
+    # 5) the default catalog ships P0-P2 only — no privileged reach
+    p3p4 = [d for d in defs
+            if d.permission_ceiling not in ("P0", "P1", "P2")]
+    over = [d for d in defs
+            for t in d.allowed_tools
+            if TIERS[TOOL_TIERS[t]]
+            > TIERS[d.permission_ceiling]]
+    checks.append(Check(
+        "no_p3_p4_reach_in_default_catalog", not p3p4 and not over,
+        "ceilings top out at P2 and no tool tier exceeds its ceiling"))
+
+    # 6) every category is well-formed and the roster is balanced
+    small = [c for c, v in cats.items()
+             if len(v["roles"]) < 14 or not v["charter"] or not v["lineage"]]
+    checks.append(Check(
+        "category_roster_wellformed_and_balanced", not small,
+        f"{len(cats)} categories, each >= 14 named roles with charter "
+        f"and lineage (smallest: {len(cats) and min(len(v['roles']) for v in cats.values())})"))
+
+    # 7) search is relevant and deterministic
+    hits = cat_search("refactor flaky tests", k=5)
+    det = cat_search("refactor flaky tests", k=5)
+    stems = ("refactor", "flaky", "test")
+    on_topic = all(any(st in s.agent_id for st in stems) for s in hits)
+    checks.append(Check(
+        "search_finds_relevant_specialists",
+        bool(hits) and hits == det and on_topic
+        and hits[0].agent_id == "refactor_pilot"
+        and sum(1 for s in hits
+                if s.category in ("coding", "qa_testing")) >= 3,
+        "the same query always returns the same roster; every hit names "
+        f"a query stem; top hit {hits[0].agent_id if hits else 'none'} is "
+        "the refactor specialist and the majority sit in coding/qa"))
+
+    # 8) detect routes by keywords with an honest default
+    det_ok = (cat_detect("write a blog post") == "writing"
+              and cat_detect("fix the flaky test") == "qa_testing"
+              and cat_detect("review the contract clause") == "legal"
+              and cat_detect("quantum wobble") == "research")
+    checks.append(Check(
+        "detect_routes_by_keywords", det_ok,
+        "coding/qa/legal keywords route; unknown tasks land in research"))
+
+    # 9) compose builds plan -> work xk -> critique over real contracts
+    wo = compose("review the lease before we sign", k=3)
+    phases = [p["phase"] for p in wo["phases"]]
+    contracts_ok = all(p["agent"] in wo["contracts"] for p in wo["phases"])
+    checks.append(Check(
+        "compose_work_order_plan_work_critique",
+        phases == ["plan", "work", "work", "work", "critique"]
+        and contracts_ok
+        and all(s.category == "legal" for s in
+                [cat_get(p["agent"]) for p in wo["phases"][1:4]]),
+        f"work order for a legal-flavored lease task routed to "
+        f"{wo['category']} with planner + 3 specialists + critic, "
+        "each phase backed by a contract"))
+
+    # 10) the task is redacted before any prompt is rendered
+    secret = vault_value("github")
+    leaky = compose(f"ship the release with {secret}")
+    prompts = " ".join(p["prompt"] for p in leaky["phases"])
+    checks.append(Check(
+        "compose_redacts_before_prompting",
+        "[REDACTED:" in prompts and "ghp_" not in prompts
+        and "catalog:task_redacted:1" in leaky["events"],
+        "secret-shaped task text never reaches a rendered prompt; the "
+        "event trail records the redaction"))
+
+    # 11) the work order's event trail is event-sourced and ordered
+    ev = wo["events"]
+    checks.append(Check(
+        "work_order_events_event_sourced",
+        len(ev) == 3 and ev[0] == "catalog:task_clean"
+        and ev[1] == f"catalog:category:{wo['category']}"
+        and ev[2].startswith("catalog:roster:1+3+1"),
+        "category and roster decisions are recorded as ordered events"))
+
+    # 12) the rebuild is bit-identical
+    same = (SPECS() == SPECS()
+            and all(to_definition(s) == to_definition(s)
+                    for s in specs[:50])
+            and compose("plan the sprint") == compose("plan the sprint"))
+    checks.append(Check(
+        "catalog_rebuild_is_deterministic", same,
+        "specs, contracts and composed work orders are identical across "
+        "rebuilds"))
+
+    # 13) the CLI reports the true totals (the --count path reads no
+    # workspace files, so the plain invocation matches chain_cli's shape)
+    try:
+        r = subprocess.run([sys.executable, "-m", "openagentx", "agents",
+                            "--count"], capture_output=True, text=True,
+                           timeout=120)
+        m = re.match(r"(\d+) agents / (\d+) categories", r.stdout)
+        cli_ok = (r.returncode == 0 and m is not None
+                  and int(m.group(1)) == cat_total()
+                  and int(m.group(2)) == len(cats))
+        detail = r.stdout.strip().splitlines()[0] if r.stdout else r.stderr[-80:]
+    except Exception as e:
+        cli_ok, detail = False, f"harness_error: {type(e).__name__}: {e}"
+    checks.append(Check(
+        "cli_agents_reports_true_totals", cli_ok,
+        f"oax agents --count: {detail}"))
+
+    return checks
+
+
 DRILLS = {
     "loop": _loop_drill,
     "redact": _redact_drill,
@@ -5410,6 +5582,7 @@ DRILLS = {
     "eval_only": _eval_only_drill,
     "lifecycle": _lifecycle_drill,
     "workforce": _workforce_drill,
+    "catalog": _catalog_drill,
 }
 
 

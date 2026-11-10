@@ -167,3 +167,4 @@ golden_tasks/47-lifecycle.json
 golden_tasks/48-workforce.json
 examples/36_lifecycle_tour.py
 examples/37_workforce_assembly.py
+golden_tasks/49-catalog.json

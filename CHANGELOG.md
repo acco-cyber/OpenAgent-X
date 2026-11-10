@@ -6,6 +6,14 @@ run on every commit (and in CI).
 
 ## [Unreleased]
 
+### Added — the specialist agent catalog (catalog)
+- `openagentx/catalog.py` + `catalog_data.py`: 727 named specialist agents
+  across 33 work categories, each materializing as a real
+  `workforce.AgentDefinition` (P0-P2 ceilings, tier-table allowlists),
+  with deterministic search/detect and a redaction-first
+  `compose()` work order; `oax agents` CLI. Golden task 49 grades it
+  with 13 checks. Matrix: 49 tasks / 577 checks.
+
 ### Added — the agent workforce, permission tiers and capability routing as code (workforce)
 
 - [`openagentx/workforce.py`](../openagentx/workforce.py) (module 46) ports

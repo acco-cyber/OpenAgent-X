@@ -51,7 +51,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from . import redact, workforce
+from .redact import redact
+from .workforce import (AGENT_ID, TIERS, TOOL_TIERS,
+                        AgentDefinition, check_permission)
 from .catalog_data import CATEGORIES
 
 __all__ = [
@@ -85,7 +87,8 @@ _DETECT: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("qa_testing", ("test", "flaky", "regression", "coverage")),
     ("devops", ("deploy", "pipeline", "docker", "k8s", "ci ", "rollout")),
     ("data", ("sql", "csv", "dataset", "metric", "spreadsheet")),
-    ("legal", ("contract", "clause", "nda", "terms", "compliance")),
+    ("legal", ("contract", "clause", "nda", "terms", "compliance",
+               "lease", "legal", "agreement", "liability")),
     ("finance", ("budget", "invoice", "cash", "runway", "pricing model")),
     ("security", ("vulnerab", "threat", "auth flow", "hardening")),
     ("marketing", ("campaign", "launch", "audience", "positioning")),
@@ -121,17 +124,17 @@ def _build() -> tuple[AgentSpec, ...]:
         c = CATEGORIES[cat]
         for slug, name, blurb in c["roles"]:
             agent_id = slug
-            if not workforce.AGENT_ID.match(agent_id) or len(agent_id) > _MAX_ID:
+            if not AGENT_ID.match(agent_id) or len(agent_id) > _MAX_ID:
                 raise CatalogError(f"agent_id {agent_id!r} violates the id contract")
             if agent_id in seen:
                 raise CatalogError(f"duplicate agent_id {agent_id!r}")
             seen.add(agent_id)
             for t in c["tools"]:
-                if t not in workforce.TOOL_TIERS:
+                if t not in TOOL_TIERS:
                     raise CatalogError(f"{agent_id}: tool {t!r} is outside the tier table")
-                if workforce.TIERS[workforce.TOOL_TIERS[t]] > workforce.TIERS[c["ceiling"]]:
+                if TIERS[TOOL_TIERS[t]] > TIERS[c["ceiling"]]:
                     raise CatalogError(
-                        f"{agent_id}: tool {t!r} needs {workforce.TOOL_TIERS[t]} "
+                        f"{agent_id}: tool {t!r} needs {TOOL_TIERS[t]} "
                         f"but the ceiling is {c['ceiling']}")
             if c["ceiling"] not in ("P0", "P1", "P2"):
                 raise CatalogError(
@@ -197,7 +200,7 @@ def search(query: str, category: str | None = None,
     for s in SPECS():
         if category is not None and s.category != category:
             continue
-        hay = " ".join((s.agent_id, s.name, s.blurb, s.category, s.charter))
+        hay = " ".join((s.agent_id, s.name, s.blurb))
         hl = "".join(ch if ch.isalnum() else " " for ch in hay.lower()).split()
         score = sum(1 for w in hl if any(w.startswith(t) for t in tokens))
         if score > 0:
@@ -206,7 +209,7 @@ def search(query: str, category: str | None = None,
     return tuple(s for _, _, s in scored[:max(1, k)])
 
 
-def to_definition(spec: AgentSpec) -> workforce.AgentDefinition:
+def to_definition(spec: AgentSpec) -> AgentDefinition:
     """Materialize a spec as a governed §7 contract.
 
     >>> from openagentx import catalog
@@ -215,7 +218,7 @@ def to_definition(spec: AgentSpec) -> workforce.AgentDefinition:
     ('blog_post_drafter', '1.0.0', 'search')
     """
     calls, tokens = _CEILING_BUDGET[spec.ceiling]
-    return workforce.AgentDefinition(
+    return AgentDefinition(
         agent_id=spec.agent_id, version="1.0.0",
         supported_task_types=spec.task_types,
         required_capabilities=spec.capabilities,
@@ -253,7 +256,7 @@ def compose(task: str, category: str | None = None, k: int = 3) -> dict:
     independent critic.  Returns a deterministic dict of phases, events
     and the materialized workforce contracts.
     """
-    clean, n = redact.redact(str(task))
+    clean, n = redact(str(task))
     cat = category if category in CATEGORIES else detect(clean)
     if cat not in CATEGORIES:
         raise CatalogError(f"unknown category {cat!r}")
@@ -310,7 +313,7 @@ def check_catalog() -> dict:
         if d.agent_id != spec.agent_id:
             raise CatalogError("definition mismatch")
         for t in d.allowed_tools:
-            decision = workforce.check_permission(d, t)
+            decision = check_permission(d, t)
             if not decision.allowed:
                 raise CatalogError(
                     f"{spec.agent_id}: allowlisted tool {t!r} failed its own gate")

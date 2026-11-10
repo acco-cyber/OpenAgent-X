@@ -7,7 +7,7 @@
 [![CI](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml/badge.svg)](https://github.com/acco-cyber/OpenAgent-X/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](docs/tutorial.md)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero-8A2BE2)](docs/adr/0002-stdlib-only-offline.md)
-[![Eval](https://img.shields.io/badge/eval-48_tasks_564_checks-brightgreen)](golden_tasks)
+[![Eval](https://img.shields.io/badge/eval-49_tasks_577_checks-brightgreen)](golden_tasks)
 [![Secret audit](https://img.shields.io/badge/secret_audit-0_findings-success)](docs/faq.md)
 [![Network](https://img.shields.io/badge/network-offline_first-orange)](docs/adr/0004-scripted-adapters.md)
 [![Blueprint](https://img.shields.io/badge/design_blueprint-24_sections_ported-0F766E)](docs/blueprint/)
@@ -25,7 +25,7 @@ that lives in [docs/blueprint/](docs/blueprint/).
 Three pillars hold everything up: **the journal is the truth** (event-sourced,
 append-only, dense sequences), **redaction by default** (secrets die at the
 journal boundary and every view re-applies the mask), and **honest grading**
-(48 golden drills, 564 checks, harness errors fold into failing checks — never
+(49 golden drills, 577 checks, harness errors fold into failing checks — never
 silent passes). Ten ADRs in `docs/adr/` record why, with the costs admitted.
 
 | Navigate | | | |
@@ -204,7 +204,7 @@ same events, never from separate bookkeeping.
 ## The CLI at a glance
 
 ```
-oax eval      # run every golden task drill, all green or exit 1   (48 tasks / 564 checks)
+oax eval      # run every golden task drill, all green or exit 1   (49 tasks / 577 checks)
 #            --only species,chain   run a named subset (task ids or drill names; unknown = exit 1)
 #            --list                 print the inventory (id + drill), composes with --only
 oax chain     # verify a hash-chained journal (exit 1 = broken/torn/missing) or --seal the 64-hex head
