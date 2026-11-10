@@ -762,3 +762,37 @@ pad with empty commits.
   48 tasks / 564 checks green (was 550); verify rode red for one commit
   on two known README-count edges after (b) and one known example edge
   after (c), all closed by (d) and recorded in the respective messages.
+- [x] S43-E1 (stretch, announced at slot open): the specialist agent
+  catalog — 700+ contract-backed agents across every work category,
+  composed into bounded work orders, redaction-first, deterministic,
+  with the README front door rebuilt around it (verified why-video,
+  agent badge, catalog section).
+
+  ✅ the slot landed the catalog stretch in full: (a) module 47 —
+  openagentx/catalog.py + catalog_data.py, seventeen curated categories /
+  407 named specialists, every spec materializing as a real
+  workforce.AgentDefinition (P0-P2 ceilings only, tier-table allowlists),
+  compose() building planner -> k specialists -> independent critic work
+  orders with the task redacted before any prompt is rendered, the
+  deterministic prefix-aware search, check_catalog's re-verified
+  invariants, and the oax agents CLI (--count/--category/--query/
+  --definition); modules.md catalog guide same-commit (module-guide
+  gate); (b) batch two to 727 agents / 33 categories / 69 cited public
+  lineages (grounded in an online sweep of the public agent ecosystem),
+  floors pinned CATALOG_FLOOR=700 / CATEGORY_FLOOR=30 so the table cannot
+  shrink below the README; (c) drill catalog (task 49, 13 checks) with
+  explainers entry same-commit (gate 8), verify floor 48 -> 49 + drills
+  set, README counts synced same-commit, golden row 49, tutorial Step 11,
+  CHANGELOG, manifest 170; two honest root fixes the drill's first run
+  caught (search's haystack scored the category-wide charter and flooded
+  whole categories — now the specialist's own mandate; the depgraph drill
+  rightly rejected package-level import edges — module-qualified imports
+  everywhere); (d) example 38 the catalog tour, manifest 171; (e) README
+  front door: verified why-video embed (AI Agents, Clearly Explained —
+  Jeff Su, oEmbed-confirmed), agents-727 badge, the full catalog section
+  with the four promises and the oax agents transcript, CLI glance,
+  gallery row 38, counts synced everywhere (thirty-eight demos, 47
+  modules, 49/577); matrix 49 tasks / 577 checks green (was 564); verify
+  OK at the close, audit 0, doctor 6/6, examples OK, doctests green,
+  secret grep 0; five of six commits rode verify green — (a) and (b)
+  predate the drill, (c) closed the matrix at 577/577 in-commit.
