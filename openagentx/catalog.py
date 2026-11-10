@@ -65,8 +65,8 @@ _MAX_ID = 31
 
 #: Honest floors the catalog pins about itself (checked in check_catalog,
 #: the drill and the CLI).  Raised as the catalog grows.
-CATALOG_FLOOR = 400
-CATEGORY_FLOOR = 15
+CATALOG_FLOOR = 700
+CATEGORY_FLOOR = 30
 
 _PLANNER_ID = "requirement_interpreter"
 _CRITIC_ID = "copy_editor"
