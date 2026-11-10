@@ -468,6 +468,44 @@ def _tools_for(wd: str):
     return builtin_tools(wd)
 
 
+def _cmd_agents(args) -> int:
+    """The specialist catalog (exit 0 on a clean roster)."""
+    from . import catalog
+
+    if args.definition:
+        try:
+            spec = catalog.get(args.definition)
+        except catalog.CatalogError as e:
+            print(str(e))
+            return 1
+        d = catalog.to_definition(spec)
+        print(f"{spec.name} ({spec.agent_id}) — {spec.category}")
+        print(f"  {spec.blurb}")
+        print(f"  ceiling={d.permission_ceiling} tools={','.join(d.allowed_tools)}")
+        print(f"  budget={d.max_tool_calls} calls / {d.max_tokens} tokens; "
+              f"verify={','.join(d.verification_policy)}")
+        return 0
+    if args.count:
+        try:
+            s = catalog.check_catalog()
+        except catalog.CatalogError as e:
+            print("catalog invariant FAILED: " + str(e))
+            return 1
+        print(f"{s['agents']} agents / {s['categories']} categories / "
+              f"{s['contracts']} contracts / {s['lineages']} lineages")
+        return 0
+    if args.query:
+        picks = catalog.search(args.query, category=args.category or None,
+                               k=args.limit)
+        for s in picks:
+            print(f"{s.agent_id:32s} {s.category:18s} {s.blurb}")
+        return 0 if picks else 1
+    for c in catalog.categories():
+        n = sum(1 for s in catalog.SPECS() if s.category == c)
+        print(f"{c:22s} {n:3d} — {catalog.CATEGORIES[c]['charter']}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="oax", description="OpenAgent-X control plane")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -546,6 +584,20 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--title", default="OpenAgent-X trace")
     r.set_defaults(fn=_cmd_report)
 
+    ag = sub.add_parser("agents",
+                        help="the specialist catalog: count, list, search, "
+                             "or materialize a workforce contract")
+    ag.add_argument("--count", action="store_true",
+                    help="verify every invariant and print honest totals")
+    ag.add_argument("--category", default="",
+                    help="restrict listing/searching to one category")
+    ag.add_argument("--query", default="",
+                    help="deterministic keyword search over the catalog")
+    ag.add_argument("--definition", default="",
+                    help="print one spec as its workforce contract")
+    ag.add_argument("--limit", type=int, default=8,
+                    help="max hits for --query (default 8)")
+    ag.set_defaults(fn=_cmd_agents)
     pk = sub.add_parser("pack", help="deterministic tree manifest (build/check)")
     pk.add_argument("root", nargs="?", default=".")
     pk.add_argument("--out", default="", help="write canonical manifest JSON here")

@@ -290,6 +290,23 @@ pass the hard filters, and a persisted accept/reject reason per candidate,
 plus structured handoffs (acceptance criteria mandatory) and the
 independent-verifier rule. Guarded by golden task 48.
 
+### catalog
+The specialist agent catalog — the §7 workforce discipline scaled to every
+kind of knowledge work. `AgentSpec`, `SPECS`, `total`, `categories`, `get`,
+`search`, `to_definition`, `compose`, `detect`, `check_catalog`,
+`lineages`, `CATALOG_FLOOR`. Curated data lives in `catalog_data.py`
+(charter, tier-table tools, ceiling, task types, capabilities, public
+lineage, named roles per category). Invariants: every id satisfies the
+workforce id contract and is globally unique; every category tool is in
+the §11 tier table and within its ceiling; the default catalog ships
+P0–P2 only — no P3/P4 tool is within any spec's reach; `to_definition`
+materializes a real `workforce.AgentDefinition` so every specialist is a
+governed contract, not a sticker sheet; `compose` redacts the task before
+any prompt is rendered, picks a planner, k category specialists and an
+independent critic, and returns deterministic phases/events/contracts;
+`check_catalog` re-verifies the whole table (floors included) and the
+`oax agents` CLI is its thin skin. Guarded by golden task 49.
+
 ### fuzz
 Seeded fuzz harness — random traces, deterministic verdicts. `run_fuzz`,
 `run_fuzz_suite`, `render_fuzz`. Invariants: a seeded schedule attacks the
